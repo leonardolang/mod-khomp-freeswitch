@@ -1,20 +1,41 @@
 /*  
-    KHOMP channel provider for Asterisk PBX
-    Copyright (C) 2007-2008 Khomp Ind. & Com.  
+    KHOMP endpoint provider for FreeSWITCH(tm)
+    Copyright (C) 2007-2009 Khomp Ind. & Com.  
   
-  This library is free software; you can redistribute it and/or  
-  modify it under the terms of the GNU Lesser General Public  
-  License as published by the Free Software Foundation; either  
-  version 2.1 of the License, or (at your option) any later version.  
+  The contents of this file are subject to the Mozilla Public License Version 1.1
+  (the "License"); you may not use this file except in compliance with the
+  License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
+
+  Software distributed under the License is distributed on an "AS IS" basis,
+  WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
+  the specific language governing rights and limitations under the License.
+
+  Alternatively, the contents of this file may be used under the terms of the
+  "GNU Lesser General Public License 2.1" license (the “LGPL" License), in which
+  case the provisions of "LGPL License" are applicable instead of those above.
+
+  If you wish to allow use of your version of this file only under the terms of
+  the LGPL License and not to allow others to use your version of this file under
+  the MPL, indicate your decision by deleting the provisions above and replace them
+  with the notice and other provisions required by the LGPL License. If you do not
+  delete the provisions above, a recipient may use your version of this file under
+  either the MPL or the LGPL License.
+
+  The LGPL header follows below:
+
+    This library is free software; you can redistribute it and/or  
+    modify it under the terms of the GNU Lesser General Public  
+    License as published by the Free Software Foundation; either  
+    version 2.1 of the License, or (at your option) any later version.  
   
-  This library is distributed in the hope that it will be useful,  
-  but WITHOUT ANY WARRANTY; without even the implied warranty of  
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-  Lesser General Public License for more details.  
+    This library is distributed in the hope that it will be useful,  
+    but WITHOUT ANY WARRANTY; without even the implied warranty of  
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
+    Lesser General Public License for more details.  
   
-  You should have received a copy of the GNU Lesser General Public  
-  License along with this library; if not, write to the Free Software  
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
+    You should have received a copy of the GNU Lesser General Public License
+    along with this library; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
   
 */
 
@@ -39,8 +60,8 @@
 #endif
 typedef int					int32;
 typedef unsigned int		uint32;
-typedef unsigned long long  intptr;
-typedef long                stackint;
+typedef uint64			    intptr;
+typedef intptr              stackint;
 typedef short int			int16;
 typedef unsigned short int	uint16;
 typedef char				int8;
@@ -272,26 +293,12 @@ struct KVoIPSeize
 
 #define CM_DISABLE_CALL_ANSWER_INFO 0x41
 
-#define CM_HOLD_SWITCH             0x4A
-
-#define CM_MPTY_CONF               0x4B
-
-#define CM_MPTY_SPLIT              0x4C
-
-#define CM_START_FAX_TX				0x50
-
-#define CM_CANCEL_FAX_TX			0x51
-
-#define CM_ADD_FAX_FILE				0x52
-
 
 #define CM_RESET_LINK				0xF1
 
 #define CM_CLEAR_LINK_ERROR_COUNTER 0xF2
 
 #define CM_SEND_DEVICE_SECURITY_KEY 0xF3
-
-#define CM_RESET_MODEM              0xF4
 
 
 #define EV_CHANNEL_FREE				0x01
@@ -373,13 +380,6 @@ struct KVoIPSeize
 
 #define EV_SMS_SEND_RESULT          0x46
 
-#define EV_CALL_MPTY_START			0x47
-
-#define EV_CALL_MPTY_STOP			0x48
-
-#define EV_GSM_COMMAND_STATUS		0x49
-
-
 #define EV_CHANNEL_FAIL				0x30
 
 #define EV_REFERENCE_FAIL			0x31
@@ -402,9 +402,6 @@ struct KVoIPSeize
 
 #define EV_REQUEST_DEVICE_SECURITY_KEY 0xF3
 
-#define EV_DISK_IS_FULL		0xF4
-
-
 #define CM_SEND_DTMF				0xD1
 
 #define CM_STOP_AUDIO 				0xD2
@@ -415,9 +412,6 @@ struct KVoIPSeize
 
 #define EV_SEIZURE					0x41
 
-#define EV_FAX_CHANNEL_FREE			0x50
-#define EV_FAX_FILE_SENT			0x51
-#define EV_FAX_FILE_FAIL			0x52
 #endif
 
    #define FC_REMOTE_FAIL			0x01
@@ -1252,7 +1246,7 @@ enum KGsmSmsCause
 #ifndef k3lVersion_h
 #define k3lVersion_h
 #define k3lApiMajorVersion	2
-#define k3lApiMinorVersion	1
+#define k3lApiMinorVersion	0
 #define k3lApiBuildVersion	0
 #endif
 #if !defined K3L_H
@@ -1272,9 +1266,7 @@ enum KDeviceType
     kdtFXS    = 9,
     kdtFXSSpx = 10,
     kdtGSM    = 11,
-    kdtGSMSpx = 12,
-	kdtFax    = 13,
-	kdtDevTypeCount
+    kdtGSMSpx = 12
 };
 enum KSignaling
 {
@@ -1296,8 +1288,6 @@ enum KSignaling
 	ksigCAS_EL7			= 15,
     ksigGSM             = 16,
 	ksigE1LC			= 17,
-	ksigISUP			= 18,
-	ksigFax				= 19,
 };
 enum KE1DeviceModel
 {
@@ -1368,11 +1358,6 @@ enum KGSMDeviceModel
 enum KGSMSpxDeviceModel
 {
     kdmGSMSpx   = 0
-};
-enum KFaxDeviceModel
-{
-	kdmFax   = 0,
-	kdmFaxEX = 1
 };
 enum KSystemObject
 {
@@ -1557,8 +1542,6 @@ enum KCodecIndex
 	kci8kHzGSM	= 0x03, 
 	kci8kHzADPCM= 0x04, 
 	kci8kHzULAW	= 0x05,
-	kci8kHzG729 = 0x06,
-	kci8kHziLBC = 0x07,
 	kciLastCodecEntryMark
 };
 enum KEchoCancellerConfig
@@ -1647,8 +1630,7 @@ enum KEventObjectId
 	koiDevice		= 0x00,
 	koiChannel		= 0x01,
 	koiPlayer		= 0x02,
-	koiLink			= 0x03,
-    koiSystem       = 0x04
+	koiLink			= 0x03
 };
 
 struct K3L_EVENT
@@ -1728,8 +1710,7 @@ enum KLibParams
     klpSeizureEventCompat,      
     klpDisableTDMBufferWarnings,
     klpDisableInternalVoIP,     
-    klpLogCallControl,          
-    klpDoNotLogApiInterface,    
+    klpLogCallControl,        
 	klpMaxParams
 };
 

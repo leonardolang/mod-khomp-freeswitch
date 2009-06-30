@@ -2,6 +2,10 @@
 #define _KHOMP_PVT_H_
 
 #include "globals.h"
+#include "mod_khomp.h"
+
+/* TODO: remove from here */
+#define KHOMP_PACKET_SIZE 16
 
 /*!
  \brief This struct holds a static linked list representing all the Khomp channels
@@ -11,7 +15,7 @@
 struct KhompPvt
 {
     typedef std::vector < KhompPvt * >      InnerVectorType;  /*!< Collection of pointers of KhompPvts */
-    typedef std::vector < PvtVectorType >        VectorType;  /*!< Collection of InnerVectorType */
+    typedef std::vector < InnerVectorType >      VectorType;  /*!< Collection of InnerVectorType */
 
     K3LAPI::target          _target;    /*!< The device/channel pair to bind this pvt to */
     switch_core_session_t * _session;   /*!< The session to which this pvt is associated with */
@@ -35,11 +39,16 @@ struct KhompPvt
     KhompPvt(K3LAPI::target & target)
     : _target(target), _session(NULL) {};
 
+    ~KhompPvt()
+    {
+        _session = NULL;
+    };
+
     K3LAPI::target & target()
     {
         return _target;
     }
-    
+
     void session(switch_core_session_t * newSession)
     {
         _session = newSession;
@@ -82,20 +91,23 @@ struct KhompPvt
       \return KhompPvt to be used on the call.
       */
     static KhompPvt * find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause);
-
+    
     static void initialize(void)
     {
         switch_mutex_init(&_pvts_mutex, SWITCH_MUTEX_NESTED, Globals::module_pool);
         
         for (unsigned dev = 0; dev < Globals::k3lapi.device_count(); dev++)
         {
-            _pvts.push_back(std::vector<KhompPvt*>());
+            _pvts.push_back(InnerVectorType());
 
             for (unsigned obj = 0; obj < Globals::k3lapi.channel_count(dev); obj++)
             {
                 K3LAPI::target tgt(Globals::k3lapi, K3LAPI::target::CHANNEL, dev, obj);
+
                 KhompPvt * pvt = new KhompPvt(tgt);
                 _pvts.back().push_back(pvt);
+
+				/* TODO: remove this from here */
                 Globals::k3lapi.command(dev, obj, CM_DISCONNECT, NULL); 
             }
         }
@@ -103,6 +115,7 @@ struct KhompPvt
 
     static void terminate()
     {
+        switch_mutex_lock(_pvts_mutex);
         
         for (VectorType::iterator it_dev = _pvts.begin(); it_dev != _pvts.end(); it_dev++)
         {
@@ -116,7 +129,5 @@ struct KhompPvt
         }
     }
 };
-
-
 
 #endif /* _KHOMP_PVT_H_*/
