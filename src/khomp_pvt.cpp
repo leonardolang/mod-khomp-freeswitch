@@ -1,7 +1,54 @@
+/*  
+    KHOMP endpoint driver for FreeSWITCH library.
+    Copyright (C) 2007-2009 Khomp Ind. & Com.  
+  
+  The contents of this file are subject to the Mozilla Public License Version 1.1
+  (the "License"); you may not use this file except in compliance with the
+  License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
+
+  Software distributed under the License is distributed on an "AS IS" basis,
+  WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
+  the specific language governing rights and limitations under the License.
+  
+*/
+
 #include "khomp_pvt.h"
 
 KhompPvt::VectorType  KhompPvt::_pvts;
 switch_mutex_t *      KhompPvt::_pvts_mutex;
+
+KhompPvt::KhompPvt(K3LAPI::target & target)
+: _target(target), _session(NULL),
+  _reader_frames(&_read_codec),
+  _writer_frames(&_write_codec)
+{
+    if (switch_core_codec_init(&_read_codec, "PCMA", NULL, 8000, 20, 1,
+                               SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
+                               Globals::module_pool) != SWITCH_STATUS_SUCCESS)
+	{
+		throw InitFailure();
+	}
+
+    if (switch_core_codec_init(&_write_codec, "PCMA", NULL, 8000, 20, 1,
+                               SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
+                               Globals::module_pool) != SWITCH_STATUS_SUCCESS)
+	{
+		throw InitFailure();
+	}
+}
+
+KhompPvt::~KhompPvt()
+{
+    _session = NULL;
+
+    if (_read_codec.implementation) {
+        switch_core_codec_destroy(&_read_codec);
+    }
+
+    if (_write_codec.implementation) {
+        switch_core_codec_destroy(&_write_codec);
+    }
+};
 
 KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause)
 {

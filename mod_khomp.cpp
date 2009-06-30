@@ -167,9 +167,12 @@ static void printChannels(switch_stream_handle_t* stream, unsigned int device,
 static switch_status_t tech_init(KhompPvt *tech_pvt, switch_core_session_t *session)
 {
     tech_pvt->flags = 0;
+
+    tech_pvt->_reader_frames.clear();
+    tech_pvt->_writer_frames.clear();
     
-    tech_pvt->_read_frame.data = tech_pvt->_databuf;
-    tech_pvt->_read_frame.buflen = sizeof(tech_pvt->_databuf);
+//    tech_pvt->_read_frame.data = tech_pvt->_databuf;
+//    tech_pvt->_read_frame.buflen = sizeof(tech_pvt->_databuf);
 
     switch_mutex_init(&tech_pvt->_mutex, SWITCH_MUTEX_NESTED, switch_core_session_get_pool(session));
     switch_mutex_init(&tech_pvt->flag_mutex, SWITCH_MUTEX_NESTED, switch_core_session_get_pool(session));
@@ -178,37 +181,12 @@ static switch_status_t tech_init(KhompPvt *tech_pvt, switch_core_session_t *sess
 
     tech_pvt->_session = session;
 
-    if (switch_core_codec_init(&tech_pvt->_read_codec,
-                               "PCMA",
-                               NULL,
-                               8000,
-                               20,
-                               1,
-                               SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE,
-                               NULL, switch_core_session_get_pool(tech_pvt->_session)) != SWITCH_STATUS_SUCCESS) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Can't load codec?\n");
-        return SWITCH_STATUS_GENERR;
-    } else {
-        if (switch_core_codec_init(&tech_pvt->_write_codec,
-                                   "PCMA",
-                                   NULL,
-                                   8000,
-                                   20,
-                                   1,
-                                   SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE,
-                                   NULL, switch_core_session_get_pool(tech_pvt->_session)) != SWITCH_STATUS_SUCCESS) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Can't load codec?\n");
-            switch_core_codec_destroy(&tech_pvt->_read_codec);
-            return SWITCH_STATUS_GENERR;
-        }
-    }
-
-    switch_core_session_set_read_codec(tech_pvt->_session, &tech_pvt->_read_codec);
-    switch_core_session_set_write_codec(tech_pvt->_session, &tech_pvt->_write_codec);
+    switch_core_session_set_read_codec(session, &tech_pvt->_read_codec);
+    switch_core_session_set_write_codec(session, &tech_pvt->_write_codec);
 
     switch_set_flag_locked(tech_pvt, TFLAG_CODEC);
 
-    tech_pvt->_read_frame.codec = &tech_pvt->_read_codec;
+//    tech_pvt->_read_frame.codec = &tech_pvt->_read_codec;
 
     switch_set_flag_locked(tech_pvt, TFLAG_IO);
 
@@ -292,14 +270,6 @@ static switch_status_t channel_on_hangup(switch_core_session_t *session)
     switch_clear_flag_locked(tech_pvt, TFLAG_IO);
     switch_clear_flag_locked(tech_pvt, TFLAG_VOICE);
     //switch_thread_cond_signal(tech_pvt->_cond);
-
-    if (tech_pvt->_read_codec.implementation) {
-        switch_core_codec_destroy(&tech_pvt->_read_codec);
-    }
-
-    if (tech_pvt->_write_codec.implementation) {
-        switch_core_codec_destroy(&tech_pvt->_write_codec);
-    }
 
     /* Make the channel available again */
     tech_pvt->session(NULL);
@@ -394,26 +364,33 @@ static switch_status_t channel_read_frame(switch_core_session_t *session, switch
 
     tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
-    tech_pvt->_read_frame.flags = SFF_NONE;
+//    tech_pvt->_read_frame.flags = SFF_NONE;
     *frame = NULL;
 
     while (switch_test_flag(tech_pvt, TFLAG_IO)) {
 
-        if (switch_test_flag(tech_pvt, TFLAG_BREAK)) {
+        if (switch_test_flag(tech_pvt, TFLAG_BREAK))
+        {
             switch_clear_flag(tech_pvt, TFLAG_BREAK);
-            goto cng;
+            *frame = tech_pvt->_reader_frames.cng();
+            return SWITCH_STATUS_SUCCESS;
         }
 
-        if (!switch_test_flag(tech_pvt, TFLAG_IO)) {
+        if (!switch_test_flag(tech_pvt, TFLAG_IO))
+        {
             return SWITCH_STATUS_FALSE;
         }
 
-        if (!tech_pvt->_read_frame.datalen) {
-            continue;
-        }
-        *frame = &tech_pvt->_read_frame;
+//        if (!tech_pvt->_read_frame.datalen)
+//        {
+//            continue;
+//        }
+
+        *frame = tech_pvt->_reader_frames.pick();
+
 #ifdef BIGENDIAN
-        if (switch_test_flag(tech_pvt, TFLAG_LINEAR)) {
+        if (switch_test_flag(tech_pvt, TFLAG_LINEAR))
+        {
             switch_swap_linear((*frame)->data, (int) (*frame)->datalen / 2);
         }
 #endif
@@ -425,13 +402,13 @@ static switch_status_t channel_read_frame(switch_core_session_t *session, switch
 
     return SWITCH_STATUS_FALSE;
 
-  cng:
-    data = (switch_byte_t *) tech_pvt->_read_frame.data;
-    data[0] = 65;
-    data[1] = 0;
-    tech_pvt->_read_frame.datalen = 2;
-    tech_pvt->_read_frame.flags = SFF_CNG;
-    *frame = &tech_pvt->_read_frame;
+//  cng:
+//    data = (switch_byte_t *) tech_pvt->_read_frame.data;
+//    data[0] = 65;
+//    data[1] = 0;
+//    tech_pvt->_read_frame.datalen = 2;
+//    tech_pvt->_read_frame.flags = SFF_CNG;
+//    *frame = &tech_pvt->_read_frame;
     return SWITCH_STATUS_SUCCESS;
 
 }
@@ -448,15 +425,18 @@ static switch_status_t channel_write_frame(switch_core_session_t *session, switc
     tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
-    if (!switch_test_flag(tech_pvt, TFLAG_IO)) {
+    if (!switch_test_flag(tech_pvt, TFLAG_IO))
+    {
         return SWITCH_STATUS_FALSE;
     }
 #ifdef BIGENDIAN
-    if (switch_test_flag(tech_pvt, TFLAG_LINEAR)) {
+    if (switch_test_flag(tech_pvt, TFLAG_LINEAR))
+    {
         switch_swap_linear(frame->data, (int) frame->datalen / 2);
     }
 #endif
 
+    // put frame on _writer_frames here
 
     return SWITCH_STATUS_SUCCESS;
 
@@ -610,16 +590,12 @@ static switch_status_t channel_receive_event(switch_core_session_t *session, swi
 
 SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
 {
-
     Globals::module_pool = pool;
 
     /* start config system! */
     Opt::initialize();
-    
+
     Opt::obtain();
-
-    //load_config();
-
 
     /* 
        Spawn our k3l global var that will be used along the module
@@ -628,19 +604,24 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
 
     /* Start the API and connect to KServer */
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Starting K3L...\n");
-    try {
+
+    try
+	{
         Globals::k3lapi.start();
         KhompPvt::initialize();
-    } catch (K3LAPI::start_failed & e) {
+    }
+	catch (K3LAPI::start_failed & e)
+	{
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "K3L not started. Reason:%s.\n", e.msg.c_str());
         return SWITCH_STATUS_TERM;
     }
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "K3L started.\n");
     
     k3lRegisterEventHandler( khomp_event_callback );
-    k3lRegisterAudioListener (NULL, khomp_audio_listener);
+    k3lRegisterAudioListener( NULL, khomp_audio_listener );
 
     *module_interface = switch_loadable_module_create_module_interface(pool, "mod_khomp");
+
     Globals::khomp_endpoint_interface = static_cast<switch_endpoint_interface_t*>(switch_loadable_module_create_interface(*module_interface, SWITCH_ENDPOINT_INTERFACE));
     Globals::khomp_endpoint_interface->interface_name = "khomp";
     Globals::khomp_endpoint_interface->io_routines = &khomp_io_routines;
@@ -674,7 +655,6 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_khomp_shutdown)
     }
     
     /* Free dynamically allocated strings */
-// TODO: what?
 //    switch_safe_free(Opt::_dialplan);
 //    switch_safe_free(Opt::_codec_string);
 //    switch_safe_free(Opt::_codec_rates_string);

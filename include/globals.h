@@ -17,6 +17,11 @@ extern "C"
 
 struct Globals
 {
+	static const unsigned int    packet_duration  = 16;                   // in ms
+	static const unsigned int        packet_size  = packet_duration *  8; // in bytes
+	static const unsigned int stream_buffer_size  = packet_size     *  4; // in bytes
+	static const unsigned int record_buffer_size  = packet_size     * 32; // in bytes
+
     static K3LAPI        k3lapi;
 
     /* Config options class */
@@ -32,6 +37,5 @@ struct Globals
     static unsigned int    flags;
     static switch_mutex_t *mutex;
 };
-
 
 #endif /* _GLOBALS_H_ */

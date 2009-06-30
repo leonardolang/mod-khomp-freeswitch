@@ -3,46 +3,41 @@
 
 #include "globals.h"
 #include "mod_khomp.h"
+#include "frame.h"
 
 /* TODO: remove from here */
 #define KHOMP_PACKET_SIZE 16
 
 /*!
- \brief This struct holds a static linked list representing all the Khomp channels
-        found in the host. It's also a place holder for session objects and some
-        other opaque members used by the module.
+ \brief This struct holds a static linked list representing all the Khomp 
+ channels found in the host. It's also a place holder for session objects 
+ and some other opaque members used by the module.
  */
 struct KhompPvt
 {
     typedef std::vector < KhompPvt * >      InnerVectorType;  /*!< Collection of pointers of KhompPvts */
-    typedef std::vector < InnerVectorType >      VectorType;  /*!< Collection of InnerVectorType */
+    typedef std::vector < InnerVectorType > VectorType;  /*!< Collection of InnerVectorType */
 
     K3LAPI::target          _target;    /*!< The device/channel pair to bind this pvt to */
     switch_core_session_t * _session;   /*!< The session to which this pvt is associated with */
+
+    struct InitFailure {};
 
     unsigned int flags; //TODO: Alterar o nome depois
 
     switch_codec_t _read_codec;
     switch_codec_t _write_codec;
 
-    switch_frame_t _read_frame;
-
-    switch_buffer_t * _audio_buffer;    /*!< Audio buffer used to write data in the khomp callback and read by FS callback */
-
-    unsigned char _databuf[SWITCH_RECOMMENDED_BUFFER_SIZE];
-
     switch_caller_profile_t *_caller_profile;
 
     switch_mutex_t *_mutex;
     switch_mutex_t *flag_mutex; //TODO: Alterar o nome depois
 
-    KhompPvt(K3LAPI::target & target)
-    : _target(target), _session(NULL) {};
+    FrameArray _reader_frames;
+    FrameArray _writer_frames;
 
-    ~KhompPvt()
-    {
-        _session = NULL;
-    };
+     KhompPvt(K3LAPI::target & target);
+    ~KhompPvt();
 
     K3LAPI::target & target()
     {
@@ -65,10 +60,6 @@ struct KhompPvt
     bool start_listen(bool conn_rx = true);
     bool stop_listen(void);
 
-    /* static stuff */
-    static switch_mutex_t *_pvts_mutex;
-
-    static VectorType _pvts; /*!< Static structure that contains all the pvts. Will be initialized by KhompPvt::initialize */
 
     static KhompPvt * get(int32 device, int32 object)
     {
@@ -92,9 +83,8 @@ struct KhompPvt
       */
     static KhompPvt * find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause);
     
-    static void initialize(void)
+    static void initialize_channels(void)
     {
-        switch_mutex_init(&_pvts_mutex, SWITCH_MUTEX_NESTED, Globals::module_pool);
         
         for (unsigned dev = 0; dev < Globals::k3lapi.device_count(); dev++)
         {
@@ -112,6 +102,14 @@ struct KhompPvt
             }
         }
     }
+    
+    static void initialize(void)
+    {
+        switch_mutex_init(&_pvts_mutex, SWITCH_MUTEX_NESTED, Globals::module_pool);
+
+        initialize_channels();
+
+    }
 
     static void terminate()
     {
@@ -119,7 +117,7 @@ struct KhompPvt
         
         for (VectorType::iterator it_dev = _pvts.begin(); it_dev != _pvts.end(); it_dev++)
         {
-			InnerVectorType & obj_vec = *it_dev;
+            InnerVectorType & obj_vec = *it_dev;
 
             for (InnerVectorType::iterator it_obj = obj_vec.begin(); it_obj != obj_vec.end(); it_obj++)
             {
@@ -128,6 +126,12 @@ struct KhompPvt
             }
         }
     }
+    
+    /* static stuff */
+    static switch_mutex_t *_pvts_mutex;
+
+    static VectorType _pvts; /*!< Static structure that contains all the pvts. Will be initialized by KhompPvt::initialize */
+
 };
 
 #endif /* _KHOMP_PVT_H_*/

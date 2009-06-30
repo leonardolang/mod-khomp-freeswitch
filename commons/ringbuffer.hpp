@@ -64,21 +64,27 @@ struct Ringbuffer_traits
 template <typename T>
 struct Ringbuffer: protected Ringbuffer_traits
 {
+    struct BufferFull  {};
+    struct BufferEmpty {};
+
     Ringbuffer(unsigned int size)
-    : ringbuffer_traits(sizeof(T), size)
+    : Ringbuffer_traits(sizeof(T), size)
     {
         _buffer = new T[_size];
+        _malloc = true;
     };
 
     Ringbuffer(unsigned int size, T * buffer)
-    : ringbuffer_traits(sizeof(T), size)
+    : Ringbuffer_traits(sizeof(T), size)
     {
         _buffer = buffer;
+        _malloc = false;
     };
 
     ~Ringbuffer()
     {
-        delete[] _buffer;
+        if (_malloc)
+          delete[] _buffer;
     }
 
     /***** BUFFER FUNCTIONS *****/
@@ -132,6 +138,46 @@ struct Ringbuffer: protected Ringbuffer_traits
         return traits_consume((const char *)_buffer, (char *) value, amount);
     }
 
+	/***** PARCIAL BUFFER FUNCTIONS (TWO-STAGE) *****/
+
+	T & producer_start(void)
+	{
+        unsigned int reader = _reader,
+                     writer = _writer;
+
+        if (((reader - writer) == 1) || (reader == 0 && writer == _size))
+            throw BufferFull();
+
+        return _buffer[writer-1];
+	}
+
+	void producer_commit(void)
+	{
+        unsigned int temp = _writer + 1;
+
+        if (temp > _size) _writer = 1;
+        else              _writer = temp;
+	}
+
+	T & consumer_start(void)
+	{
+        unsigned int reader = _reader,
+                     writer = _writer;
+
+        if ((writer - reader) == 1)
+            throw BufferEmpty();
+
+        return _buffer[reader];
+	}
+
+	void consumer_commit(void)
+	{
+        unsigned int temp = _reader + 1;
+
+        if (temp == _size) _reader = 0;
+        else               _reader = temp;
+	}
+
     /***** IO FUNCTIONS *****/
 
     /* returns the number of items written to from buffer to stream */
@@ -153,5 +199,6 @@ struct Ringbuffer: protected Ringbuffer_traits
     }
 
  protected:
-    T * _buffer;
+    T *  _buffer;
+    bool _malloc;
 };
