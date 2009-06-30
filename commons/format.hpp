@@ -84,7 +84,7 @@ struct Format
         {
             Argument & top = next_argument();
 
-            char temp[32];
+            char temp[64];
 
             if (!generic_verify(value, top.type()))
             {
@@ -134,7 +134,7 @@ struct Format
             {
                 case T_POINTER:
                 {
-                    char temp[16];
+                    char temp[32];
                     snprintf(temp, sizeof(temp), top.fmts().c_str(), value);
                     _result += temp;
                     break;

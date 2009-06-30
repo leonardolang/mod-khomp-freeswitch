@@ -12,26 +12,25 @@ extern "C"
     #include <switch.h>
 }
 
+/* As this is a static-variable-only struct, member variable *
+ * names need not to get "_" in front of the name            */
 
 struct Globals
 {
-
-    static K3LAPI _k3lapi;
+    static K3LAPI        k3lapi;
 
     /* Config options class */
-    static config_options _options;
+    static ConfigOptions options;
 
+    static switch_endpoint_interface_t *khomp_endpoint_interface;
+    static switch_api_interface_t      *api_interface;
+    static switch_memory_pool_t        *module_pool;
 
+    static int             running;
+    static int             calls;
 
-    static switch_endpoint_interface_t *_khomp_endpoint_interface;
-    static switch_api_interface_t *_api_interface;
-    static switch_memory_pool_t *_module_pool;
-    static int _running;
-
-    static unsigned int _flags;
-    static int _calls;
-    static switch_mutex_t *_mutex;
-
+    static unsigned int    flags;
+    static switch_mutex_t *mutex;
 };
 
 

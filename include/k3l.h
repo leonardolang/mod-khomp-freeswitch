@@ -18,8 +18,8 @@
   
 */
 
-#ifndef INCLUDED_K3LDEFS_H
-#define INCLUDED_K3LDEFS_H
+#ifndef _GENERATED_K3L_H_
+#define _GENERATED_K3L_H_
 #if !defined KLTYPEDEFS_H
 #define KLTYPEDEFS_H
 #if defined( _WINDOWS ) || defined( _Windows ) || defined( _WIN32 )
@@ -1784,4 +1784,4 @@ enum KISDNDebugFlag
 #define CM_LOG_CREATE_DISPATCHER        0x101
 #define CM_LOG_DESTROY_DISPATCHER       0x102
 
-#endif /* INCLUDED_K3LDEFS_H */
+#endif /* _GENERATED_K3L_H_ */

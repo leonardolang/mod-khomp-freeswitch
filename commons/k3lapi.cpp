@@ -49,6 +49,59 @@ void K3LAPI::mixer(int32 dev, int32 obj, byte track, KMixerSource src, int32 ind
        command(dev, obj, CM_MIXER, (const char *) &mix);
 }
 
+void K3LAPI::mixerRecord(int32 dev, int32 obj, byte track, KMixerSource src, int32 index)
+{
+	/* estes buffers *NAO PODEM SER ESTATICOS*! */
+    char cmd[] = { 0x3f, 0x03, (char)obj, (char)track, 0xff, 0xff };
+
+    switch (src)
+    {
+        case kmsChannel:
+            cmd[4] = 0x05;
+            cmd[5] = (char)index;
+            break;
+
+        case kmsNoDelayChannel:
+            cmd[4] = 0x0a;
+            cmd[5] = (char)index;
+            break;
+
+    	case kmsGenerator:
+            cmd[4] = 0x09;
+
+            switch ((KMixerTone)index)
+            {
+	            case kmtSilence:
+                    cmd[5] = 0x0F;
+                    break;
+	            case kmtDial:
+                    cmd[5] = 0x08;
+                    break;
+	            case kmtBusy:
+                    cmd[5] = 0x0D;
+                    break;
+
+	            case kmtFax:
+	            case kmtVoice:
+	            case kmtEndOf425:
+                case kmtCollect:
+                case kmtEndOfDtmf:
+                    /* TODO: exception, unable to generate */
+                    break;
+            }
+            break;
+
+	    case kmsCTbus:
+    	case kmsPlay:
+            /* TODO: exception, not implemented! */
+            break;
+    }
+
+    int32 dsp = get_dsp(dev, DSP_AUDIO);
+
+    raw_command(dev, dsp, cmd, sizeof(cmd));
+}
+
 void K3LAPI::mixerCTbus(int32 dev, int32 obj, byte track, KMixerSource src, int32 index)
 {
        KMixerCommand mix;
@@ -169,3 +222,18 @@ void K3LAPI::init(void)
         }
     }
 }
+
+int32 K3LAPI::get_dsp(int32 dev, K3LAPI::DspType type)
+{
+    switch (device_type(dev))
+    {
+        case kdtFXO:
+        case kdtFXOVoIP:
+        case kdtGSM:
+        case kdtGSMSpx:
+            return 0;
+        default:
+            return (type == DSP_AUDIO ? 1 : 0);
+    }
+}
+

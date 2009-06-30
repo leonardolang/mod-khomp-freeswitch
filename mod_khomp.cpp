@@ -117,9 +117,9 @@ static switch_status_t channel_on_init(switch_core_session_t *session)
        left in the initial state, nothing will happen. */
     switch_channel_set_state(channel, CS_ROUTING);
 
-    switch_mutex_lock(Globals::_mutex);
-    Globals::_calls++;
-    switch_mutex_unlock(Globals::_mutex);
+    switch_mutex_lock(Globals::mutex);
+    Globals::calls++;
+    switch_mutex_unlock(Globals::mutex);
 
     return SWITCH_STATUS_SUCCESS;
 }
@@ -186,7 +186,7 @@ static switch_status_t channel_on_hangup(switch_core_session_t *session)
     
     try 
     {
-        Globals::_k3lapi.command(tech_pvt->target(), CM_DISCONNECT, NULL);
+        Globals::k3lapi.command(tech_pvt->target(), CM_DISCONNECT);
     }
     catch(K3LAPI::failed_command & e)
     {
@@ -195,12 +195,12 @@ static switch_status_t channel_on_hangup(switch_core_session_t *session)
     }
     
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "%s Originator Hangup.\n", switch_channel_get_name(channel));
-    switch_mutex_lock(Globals::_mutex);
-    Globals::_calls--;
-    if (Globals::_calls < 0) {
-        Globals::_calls = 0;
+    switch_mutex_lock(Globals::mutex);
+    Globals::calls--;
+    if (Globals::calls < 0) {
+        Globals::calls = 0;
     }
-    switch_mutex_unlock(Globals::_mutex);
+    switch_mutex_unlock(Globals::mutex);
 
     return SWITCH_STATUS_SUCCESS;
 }
@@ -399,7 +399,7 @@ static switch_call_cause_t channel_outgoing_channel(switch_core_session_t *sessi
 
     /* We first need to find an available KhompPvt object to serve the session */
     
-    if ((*new_session = switch_core_session_request(Globals::_khomp_endpoint_interface, SWITCH_CALL_DIRECTION_OUTBOUND, pool)) != 0) {
+    if ((*new_session = switch_core_session_request(Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_OUTBOUND, pool)) != 0) {
         switch_channel_t *channel;
         switch_caller_profile_t *caller_profile;
         char name[128];
@@ -456,7 +456,7 @@ static switch_call_cause_t channel_outgoing_channel(switch_core_session_t *sessi
             char params[ 255 ];
             snprintf(params, sizeof(params), "dest_addr=\"%s\" orig_addr=\"%s\"", argv[2], outbound_profile->caller_id_number);
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "We are calling with params: %s.\n", params);
-            Globals::_k3lapi.command(tech_pvt->target(), CM_MAKE_CALL, params); 
+            Globals::k3lapi.command(tech_pvt->target(), CM_MAKE_CALL, params); 
         }
         catch(K3LAPI::failed_command & e)
         {
@@ -491,7 +491,7 @@ static switch_status_t channel_receive_event(switch_core_session_t *session, swi
 SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
 {
 
-    Globals::_module_pool = pool;
+    Globals::module_pool = pool;
 
     /* start config system! */
     Opt::initialize();
@@ -509,7 +509,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
     /* Start the API and connect to KServer */
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Starting K3L...\n");
     try {
-        Globals::_k3lapi.start();
+        Globals::k3lapi.start();
         KhompPvt::initialize();
     } catch (K3LAPI::start_failed & e) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "K3L not started. Reason:%s.\n", e.msg.c_str());
@@ -521,13 +521,13 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
     k3lRegisterAudioListener (NULL, khomp_audio_listener);
 
     *module_interface = switch_loadable_module_create_module_interface(pool, "mod_khomp");
-    Globals::_khomp_endpoint_interface = static_cast<switch_endpoint_interface_t*>(switch_loadable_module_create_interface(*module_interface, SWITCH_ENDPOINT_INTERFACE));
-    Globals::_khomp_endpoint_interface->interface_name = "khomp";
-    Globals::_khomp_endpoint_interface->io_routines = &khomp_io_routines;
-    Globals::_khomp_endpoint_interface->state_handler = &khomp_state_handlers;
+    Globals::khomp_endpoint_interface = static_cast<switch_endpoint_interface_t*>(switch_loadable_module_create_interface(*module_interface, SWITCH_ENDPOINT_INTERFACE));
+    Globals::khomp_endpoint_interface->interface_name = "khomp";
+    Globals::khomp_endpoint_interface->io_routines = &khomp_io_routines;
+    Globals::khomp_endpoint_interface->state_handler = &khomp_state_handlers;
 
     /* Add all the specific API functions */
-    SWITCH_ADD_API(Globals::_api_interface, "khomp", "Khomp Menu", khomp, KHOMP_SYNTAX);
+    SWITCH_ADD_API(Globals::api_interface, "khomp", "Khomp Menu", khomp, KHOMP_SYNTAX);
 
     /* indicate that the module should continue to be loaded */
     return SWITCH_STATUS_SUCCESS;
@@ -544,9 +544,9 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_khomp_shutdown)
 {
     int x = 0;
 
-    Globals::_running = -1;
+    Globals::running = -1;
 
-    while (Globals::_running) {
+    while (Globals::running) {
         if (x++ > 100) {
             break;
         }
@@ -554,14 +554,19 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_khomp_shutdown)
     }
     
     /* Free dynamically allocated strings */
-    switch_safe_free(Opt::_dialplan);
-    switch_safe_free(Opt::_codec_string);
-    switch_safe_free(Opt::_codec_rates_string);
-    switch_safe_free(Opt::_ip);
+// TODO: what?
+//    switch_safe_free(Opt::_dialplan);
+//    switch_safe_free(Opt::_codec_string);
+//    switch_safe_free(Opt::_codec_rates_string);
+//    switch_safe_free(Opt::_ip);
 
     /* Finnish him! */
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Stopping K3L...\n");
-    Globals::_k3lapi.stop();
+
+    Globals::k3lapi.stop();
+
+    KhompPvt::terminate();
+
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "the K3L API has been stopped!\n");
     
     return SWITCH_STATUS_SUCCESS;
@@ -624,11 +629,11 @@ static void printChannels(switch_stream_handle_t* stream, unsigned int device, u
         // Print all channels from all boards and links
         stream->write_function(stream, "|--------- Khomp ----------|\n");
         stream->write_function(stream, "| Board | Channel | Status |\n");
-        for (int board=0 ; board < Globals::_k3lapi.device_count() ; board++) {
-            for (int channel=0 ; channel < Globals::_k3lapi.channel_count(board) ; channel++) {
+        for (int board=0 ; board < Globals::k3lapi.device_count() ; board++) {
+            for (int channel=0 ; channel < Globals::k3lapi.channel_count(board) ; channel++) {
                 try {
                     K3L_CHANNEL_CONFIG channelConfig;
-                    channelConfig = Globals::_k3lapi.channel_config( board, channel );
+                    channelConfig = Globals::k3lapi.channel_config( board, channel );
                 }
                 catch (...){
                     stream->write_function(stream, "OOOPSS. Something went wrong, cleanup this mess!\n");
@@ -668,12 +673,12 @@ static void printLinks(switch_stream_handle_t* stream, unsigned int device, unsi
 
     // We want to see all links from all devices
     if (!device) {
-        for(int device=0 ; device < Globals::_k3lapi.device_count() ; device++)
+        for(int device=0 ; device < Globals::k3lapi.device_count() ; device++)
         {
-            K3L_LINK_CONFIG & config = Globals::_k3lapi.link_config(device, link);
+            K3L_LINK_CONFIG & config = Globals::k3lapi.link_config(device, link);
             K3L_LINK_STATUS   status;
 
-            for(int link=0 ; link < Globals::_k3lapi.link_count(device) ; link++)
+            for(int link=0 ; link < Globals::k3lapi.link_count(device) ; link++)
             {
                 const char * E1Status = "";
                 if (k3lGetDeviceStatus (device, link + ksoLink, &status, sizeof(status)) == ksSuccess)
@@ -769,13 +774,13 @@ static void printSystemSummary(switch_stream_handle_t* stream) {
                      , apiCfg.VpdVersionNeeded , apiCfg.StrVersion);
     }
 
-    for (unsigned int i = 0; i < Globals::_k3lapi.device_count(); i++)
+    for (unsigned int i = 0; i < Globals::k3lapi.device_count(); i++)
     {
-        K3L_DEVICE_CONFIG & devCfg = Globals::_k3lapi.device_config(i);
+        K3L_DEVICE_CONFIG & devCfg = Globals::k3lapi.device_config(i);
 
         stream->write_function(stream, " ------------------------------------------------------------------\n");
 
-        switch (Globals::_k3lapi.device_type(i))
+        switch (Globals::k3lapi.device_type(i))
         {
             /* E1 boards */
             case kdtE1:
@@ -848,7 +853,7 @@ static void printSystemSummary(switch_stream_handle_t* stream) {
             }
             default:
                 stream->write_function(stream, "| [[ %02d ]] Unknown type '%02d'! Please contact Khomp support for help! |\n"
-                    , i , Globals::_k3lapi.device_type(i));
+                    , i , Globals::k3lapi.device_type(i));
                 break;
         }
     }
@@ -866,7 +871,7 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
 	switch_channel_t *channel = NULL;
 	char name[128];
 	
-	if (!(session = switch_core_session_request(Globals::_khomp_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, NULL))) {
+	if (!(session = switch_core_session_request(Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, NULL))) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
 		return ksFail;
 	}
@@ -890,8 +895,8 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
 
     try
     {
-        cidNum = Globals::_k3lapi.get_param(event, "orig_addr");
-        destination_number = Globals::_k3lapi.get_param(event, "dest_addr");
+        cidNum = Globals::k3lapi.get_param(event, "orig_addr");
+        destination_number = Globals::k3lapi.get_param(event, "dest_addr");
     }
     catch ( K3LAPI::get_param_failed & err )
     {
@@ -967,7 +972,7 @@ static int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
     switch(e->Code)
     {
         case EV_NEW_CALL:   
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "New call on %u to %s. [EV_NEW_CALL]\n", obj, Globals::_k3lapi.get_param(e, "dest_addr").c_str());
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "New call on %u to %s. [EV_NEW_CALL]\n", obj, Globals::k3lapi.get_param(e, "dest_addr").c_str());
             if (khomp_channel_from_event(e->DeviceId, obj, e) != ksSuccess )
             {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_CONNECT]\n", e->DeviceId, obj);
@@ -975,8 +980,8 @@ static int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
             }
             try 
             {
-                Globals::_k3lapi.command(e->DeviceId, obj, CM_RINGBACK, NULL);
-                Globals::_k3lapi.command(e->DeviceId, obj, CM_CONNECT, NULL); 
+                Globals::k3lapi.command(e->DeviceId, obj, CM_RINGBACK, NULL);
+                Globals::k3lapi.command(e->DeviceId, obj, CM_CONNECT, NULL); 
             }
             catch (K3LAPI::failed_command & err)
             {
@@ -994,7 +999,11 @@ static int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Could not hangup channel: %u on board %u. Releasing board channel anyway. [EV_DISCONNECT]\n", obj, e->DeviceId);
                 try
                 {
-                    Globals::_k3lapi.command(e->DeviceId, obj, CM_STOP_LISTEN, NULL);
+                    /* Stop the audio callbacks */
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Stopping audio callbacks ...\n");
+                    KhompPvt::get(e->DeviceId, obj)->stop_listen();
+                    KhompPvt::get(e->DeviceId, obj)->stop_stream();
+
                     KhompPvt::get(e->DeviceId, obj)->session(NULL);
                 }
                 catch(K3LAPI::invalid_channel & err)
@@ -1015,8 +1024,10 @@ static int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Call will be answered on board %u, channel %u. [EV_CONNECT]\n", e->DeviceId, obj);
                 switch_channel_mark_answered(channel);
                 /* Start listening for audio */
-                const size_t buffer_size = 16;
-                Globals::_k3lapi.command(e->DeviceId, obj, CM_LISTEN, (const char *) &buffer_size);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Starting audio callbacks ...\n");
+                KhompPvt::get(e->DeviceId, obj)->start_stream();
+                KhompPvt::get(e->DeviceId, obj)->start_listen();
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Audio callbacks initialized successfully\n");
             /*
             }
             catch (K3LAPI::invalid_session & err)

@@ -12,13 +12,13 @@ ConfigOption::ConfigOption(std::string name, const ConfigOption::StringType & va
 
 ConfigOption::ConfigOption(std::string name, const ConfigOption::SignedIntType & value, const ConfigOption::SignedIntType defvalue,
                              ConfigOption::SignedIntType min, ConfigOption::SignedIntType max, ConfigOption::SignedIntType step, bool list_me)
-: _my_name(name), _value_data(new SignedIntData(const_cast<SignedIntType &>(value), defvalue, range<SignedIntType>(min, max, step))),
+: _my_name(name), _value_data(new SignedIntData(const_cast<SignedIntType &>(value), defvalue, Range<SignedIntType>(min, max, step))),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
 ConfigOption::ConfigOption(std::string name, const ConfigOption::UnsignedIntType & value, const ConfigOption::UnsignedIntType defvalue,
                              ConfigOption::UnsignedIntType min, ConfigOption::UnsignedIntType max, ConfigOption::UnsignedIntType step, bool list_me)
-: _my_name(name), _value_data(new UnsignedIntData(const_cast<UnsignedIntType &>(value), defvalue, range<UnsignedIntType>(min, max, step))),
+: _my_name(name), _value_data(new UnsignedIntData(const_cast<UnsignedIntType &>(value), defvalue, Range<UnsignedIntType>(min, max, step))),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
@@ -27,13 +27,13 @@ ConfigOption::ConfigOption(std::string name, const ConfigOption::BooleanType & v
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
-ConfigOption::ConfigOption(std::string name, ConfigOption::fun_type fun, std::string defvalue, string_allowed_type allowed, bool list_me)
-: _my_name(name), _value_data(new fun_data_type(fun, defvalue, allowed)),
+ConfigOption::ConfigOption(std::string name, ConfigOption::FunctionType fun, std::string defvalue, string_allowed_type allowed, bool list_me)
+: _my_name(name), _value_data(new FunctionData(fun, defvalue, allowed)),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
-ConfigOption::ConfigOption(std::string name, ConfigOption::fun_type fun, std::string defvalue, bool list_me)
-: _my_name(name), _value_data(new fun_data_type(fun, defvalue, string_allowed_type())),
+ConfigOption::ConfigOption(std::string name, ConfigOption::FunctionType fun, std::string defvalue, bool list_me)
+: _my_name(name), _value_data(new FunctionData(fun, defvalue, string_allowed_type())),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
@@ -82,7 +82,7 @@ void ConfigOption::set(ConfigOption::StringType value)
                         allowed_string += "'";
                     }
     
-                    throw config_process_failure(STG(FMT("value '%s' not allowed for option '%s' (allowed values:%s)")
+                    throw ConfigProcessFailure(STG(FMT("value '%s' not allowed for option '%s' (allowed values:%s)")
                         % value % _my_name % allowed_string));
                 }
                 break;
@@ -97,7 +97,7 @@ void ConfigOption::set(ConfigOption::StringType value)
         {
             try 
             {
-                fun_data_type & tmp = _value_data.get<fun_data_type>();
+                FunctionData & tmp = _value_data.get<FunctionData>();
                 tmp.fun_val(value);
                 _loaded = true;
                 break;
@@ -111,7 +111,7 @@ void ConfigOption::set(ConfigOption::StringType value)
 
         default:
         {
-            throw config_process_failure(STG(FMT("option '%s' is not of type string, nor function defined") % _my_name));
+            throw ConfigProcessFailure(STG(FMT("option '%s' is not of type string, nor function defined") % _my_name));
         }
     }
 }
@@ -122,14 +122,14 @@ void ConfigOption::set(ConfigOption::SignedIntType value)
     {
         SignedIntData & tmp = _value_data.get<SignedIntData>();
 
-        if (value < tmp.sint_range.minimum)
-            throw config_process_failure(STG(FMT("value '%d' out-of-range for option '%s' (too low)") % value % _my_name));
+        if (value < tmp.sint_Range.minimum)
+            throw ConfigProcessFailure(STG(FMT("value '%d' out-of-Range for option '%s' (too low)") % value % _my_name));
 
-        if (value > tmp.sint_range.maximum)
-            throw config_process_failure(STG(FMT("value '%d' out-of-range for option '%s' (too high)") % value % _my_name));
+        if (value > tmp.sint_Range.maximum)
+            throw ConfigProcessFailure(STG(FMT("value '%d' out-of-Range for option '%s' (too high)") % value % _my_name));
 
-        if (((value - tmp.sint_range.minimum) % tmp.sint_range.step) != 0)
-            throw config_process_failure(STG(FMT("value '%d' out-of-range for option '%s' (outside allowed step)") % value % _my_name));
+        if (((value - tmp.sint_Range.minimum) % tmp.sint_Range.step) != 0)
+            throw ConfigProcessFailure(STG(FMT("value '%d' out-of-Range for option '%s' (outside allowed step)") % value % _my_name));
 
         tmp.sint_val = value;
         _loaded = true;
@@ -146,14 +146,14 @@ void ConfigOption::set(ConfigOption::UnsignedIntType value)
     {
         UnsignedIntData & tmp = _value_data.get<UnsignedIntData>();
 
-        if (value < tmp.uint_range.minimum)
-            throw config_process_failure(STG(FMT("value '%d' out-of-range for option '%s' (too low)") % value % _my_name));
+        if (value < tmp.uint_Range.minimum)
+            throw ConfigProcessFailure(STG(FMT("value '%d' out-of-Range for option '%s' (too low)") % value % _my_name));
 
-        if (value > tmp.uint_range.maximum)
-            throw config_process_failure(STG(FMT("value '%d' out-of-range for option '%s' (too high)") % value % _my_name));
+        if (value > tmp.uint_Range.maximum)
+            throw ConfigProcessFailure(STG(FMT("value '%d' out-of-Range for option '%s' (too high)") % value % _my_name));
 
-        if (((value - tmp.uint_range.minimum) % tmp.uint_range.step) != 0)
-            throw config_process_failure(STG(FMT("value '%d' out-of-range for option '%s' (outside allowed step)") % value % _my_name));
+        if (((value - tmp.uint_Range.minimum) % tmp.uint_Range.step) != 0)
+            throw ConfigProcessFailure(STG(FMT("value '%d' out-of-Range for option '%s' (outside allowed step)") % value % _my_name));
 
         tmp.uint_val = value;
         _loaded = true;
@@ -210,12 +210,12 @@ const char ** ConfigOption::values(void)
                 SignedIntData & tmp = _value_data.get<SignedIntData>();
 
 
-                unsigned int count = ((tmp.sint_range.maximum - tmp.sint_range.minimum) / tmp.sint_range.step) + 1;
+                unsigned int count = ((tmp.sint_Range.maximum - tmp.sint_Range.minimum) / tmp.sint_Range.step) + 1;
                 unsigned int index = 0;
 
                 _values = new const char*[count + 1];
 
-                for (SignedIntType i = tmp.sint_range.minimum; i <= tmp.sint_range.maximum; i += tmp.sint_range.step, index++)
+                for (SignedIntType i = tmp.sint_Range.minimum; i <= tmp.sint_Range.maximum; i += tmp.sint_Range.step, index++)
                     _values[index] = strdup(STG(FMT("%d") % i).c_str());
 
                 _values[index] = NULL;
@@ -234,12 +234,12 @@ const char ** ConfigOption::values(void)
             {
                 UnsignedIntData & tmp = _value_data.get<UnsignedIntData>();
 
-                unsigned int count = ((tmp.uint_range.maximum - tmp.uint_range.minimum) / tmp.uint_range.step) + 1;
+                unsigned int count = ((tmp.uint_Range.maximum - tmp.uint_Range.minimum) / tmp.uint_Range.step) + 1;
                 unsigned int index = 0;
 
                 _values = new const char*[count + 1];
 
-                for (UnsignedIntType i = tmp.uint_range.minimum; i <= tmp.uint_range.maximum; i += tmp.uint_range.step, index++)
+                for (UnsignedIntType i = tmp.uint_Range.minimum; i <= tmp.uint_Range.maximum; i += tmp.uint_Range.step, index++)
                     _values[index] = strdup(STG(FMT("%d") % i).c_str());
 
                 _values[index] = NULL;
@@ -279,7 +279,7 @@ const char ** ConfigOption::values(void)
         {
             try
             {
-                fun_data_type & tmp = _value_data.get<fun_data_type>();
+                FunctionData & tmp = _value_data.get<FunctionData>();
             
                 _values = new const char*[ tmp.fun_allowed.size() + 1 ];
 
@@ -299,7 +299,7 @@ const char ** ConfigOption::values(void)
         }
 
         default:
-            throw config_process_failure(STG(FMT("unknown type identifier '%d'") % _value_data.which()));
+            throw ConfigProcessFailure(STG(FMT("unknown type identifier '%d'") % _value_data.which()));
     }
 };
 
@@ -376,7 +376,7 @@ void ConfigOption::commit(void)
         {
             try
             {
-                fun_data_type & tmp = _value_data.get<fun_data_type>();
+                FunctionData & tmp = _value_data.get<FunctionData>();
                 tmp.fun_val(tmp.fun_default);
             }
             catch(ValueType::InvalidType & e)
@@ -387,7 +387,7 @@ void ConfigOption::commit(void)
         }
 
         default:
-            throw config_process_failure(STG(FMT("unknown type identifier '%d'") % _value_data.which()));
+            throw ConfigProcessFailure(STG(FMT("unknown type identifier '%d'") % _value_data.which()));
     }
 
     _loaded = true;
@@ -396,7 +396,7 @@ void ConfigOption::commit(void)
 void ConfigOption::copy_from(ConfigOption & src)
 {
     if (src._value_data.which() != _value_data.which())
-        throw config_process_failure(STG(FMT("unable to copy options, source type differs from destination.")));
+        throw ConfigProcessFailure(STG(FMT("unable to copy options, source type differs from destination.")));
 
     if (!src._loaded)
         return;
@@ -480,7 +480,7 @@ void ConfigOption::copy_from(ConfigOption & src)
         {
             /* TO IMPLEMENT (NEEDS ANOTHER METHOD ON FUNCTION FOR GETTING VALUE) */
 
-//            fun_data_type & tmp = boost::get<fun_data_type>(_value_data);
+//            FunctionData & tmp = boost::get<FunctionData>(_value_data);
 //
 //            if (!tmp.loaded)
 //            {
@@ -491,7 +491,7 @@ void ConfigOption::copy_from(ConfigOption & src)
         }
 
         default:
-            throw config_process_failure(STG(FMT("unknown type identifier '%d'") % _value_data.which()));
+            throw ConfigProcessFailure(STG(FMT("unknown type identifier '%d'") % _value_data.which()));
     }
 
     _loaded = true;
@@ -534,7 +534,7 @@ void ConfigOptions::process(const char * name, const char * value)
     option_map_type::iterator iter = find_option(name);
 
     if (iter == _map.end())
-        throw config_process_failure(STG(FMT("unknown option '%s'") % name));
+        throw ConfigProcessFailure(STG(FMT("unknown option '%s'") % name));
 
     try
     {
@@ -554,12 +554,12 @@ void ConfigOptions::process(const char * name, const char * value)
                 set<ConfigOption::StringType>((*iter).first, std::string(value));
                 return;
             default:
-                throw config_process_failure(STG(FMT("unknown type identifier '%d'") % (*iter).second.type()));
+                throw ConfigProcessFailure(STG(FMT("unknown type identifier '%d'") % (*iter).second.type()));
         }
     }
     catch (Strings::invalid_value e)
     {
-        throw config_process_failure(STG(FMT("invalid value '%s' for option '%s'") % value % name));
+        throw ConfigProcessFailure(STG(FMT("invalid value '%s' for option '%s'") % value % name));
     }
 }
 
@@ -568,7 +568,7 @@ const char ** ConfigOptions::values(const char * name)
     option_map_type::iterator iter = find_option(name);
 
     if (iter == _map.end())
-        throw config_process_failure(STG(FMT("unknown option '%s'") % name));
+        throw ConfigProcessFailure(STG(FMT("unknown option '%s'") % name));
 
     return (*iter).second.values();
 }
@@ -618,7 +618,7 @@ ConfigOptions::messages_type ConfigOptions::commit(void)
         {
             (*i).second.commit();
         }
-        catch (config_process_failure e)
+        catch (ConfigProcessFailure e)
         {
             msgs.push_back(e.msg);
         }
@@ -643,10 +643,10 @@ void ConfigOptions::copy_from(ConfigOptions & source, std::string name)
     option_map_type::iterator iter_dst = find_option(name);
 
     if (iter_src == source._map.end())
-        throw config_process_failure(STG(FMT("unknown option '%s' on source") % name));
+        throw ConfigProcessFailure(STG(FMT("unknown option '%s' on source") % name));
 
     if (iter_dst == _map.end())
-        throw config_process_failure(STG(FMT("unknown option '%s' on destination") % name));
+        throw ConfigProcessFailure(STG(FMT("unknown option '%s' on destination") % name));
 
     iter_dst->second.copy_from(iter_src->second);
 }

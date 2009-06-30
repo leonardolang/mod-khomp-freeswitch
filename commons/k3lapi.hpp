@@ -170,6 +170,7 @@ struct K3LAPI
     /* envio de comandos para placa (sem identificadores) */
     
     void mixer(int32 dev, int32 obj, byte track, KMixerSource src, int32 index);
+    void mixerRecord(int32 dev, int32 obj, byte track, KMixerSource src, int32 index);
     void mixerCTbus(int32 dev, int32 obj, byte track, KMixerSource src, int32 index);
 
     void command (int32 dev, int32 obj, int32 code, std::string & str);
@@ -233,6 +234,11 @@ struct K3LAPI
         mixer((int32)tgt.device, (int32)tgt.object, track, src, index);
     }
 
+    void mixerRecord(target & tgt, byte track, KMixerSource src, int32 index)
+    {
+        mixerRecord((int32)tgt.device, (int32)tgt.object, track, src, index);
+    }
+
     void mixerCTbus(target & tgt, byte track, KMixerSource src, int32 index)
     {
         mixerCTbus((int32)tgt.device, (int32)tgt.object, track, src, index);
@@ -290,6 +296,16 @@ struct K3LAPI
 
     void init(void);
 
+    /* utilidades diversas e informacoes */
+
+    enum DspType
+    {
+        DSP_AUDIO,
+        DSP_SIGNALING,
+    };
+
+    int32 get_dsp(int32, DspType);
+	
  protected:
 
     unsigned int           _device_count;

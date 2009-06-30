@@ -1,17 +1,17 @@
 #include "globals.h"
 
 
-K3LAPI Globals::_k3lapi;
+K3LAPI Globals::k3lapi;
 
-config_options Globals::_options;
+ConfigOptions Globals::options;
 
-switch_endpoint_interface_t * Globals::_khomp_endpoint_interface;
-switch_api_interface_t * Globals::_api_interface;
-switch_memory_pool_t * Globals::_module_pool = NULL;
-int Globals::_running = 1;
+switch_endpoint_interface_t * Globals::khomp_endpoint_interface = NULL;
+switch_api_interface_t      * Globals::api_interface = NULL;
+switch_memory_pool_t        * Globals::module_pool = NULL;
+int                           Globals::running = 1;
 
-unsigned int Globals::_flags;
-int Globals::_calls;
-switch_mutex_t * Globals::_mutex;
+unsigned int     Globals::flags = 0;
+int              Globals::calls = 0;
+switch_mutex_t * Globals::mutex = NULL;
 
 

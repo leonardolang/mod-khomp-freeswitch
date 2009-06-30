@@ -5,7 +5,6 @@ switch_mutex_t *      KhompPvt::_pvts_mutex;
 
 KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause)
 {
-
     char *argv[3] = { 0 };
     int argc = 0;
     
@@ -35,7 +34,7 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
     if(*argv[0] == 'A' || *argv[0] == 'a')
     {
         board_low = 0;
-        board_high = Globals::_k3lapi.device_count();
+        board_high = Globals::k3lapi.device_count();
         // Lets make it reverse...
         if(*argv[0] == 'a')
         {
@@ -67,7 +66,7 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
     }
 
     /* Sanity checking */
-    if(board_low < 0 || board_high > Globals::_k3lapi.device_count())
+    if(board_low < 0 || board_high > Globals::k3lapi.device_count())
     {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Invalid board selection (%d-%d) !\n", board_low, board_high);
         return NULL;            
@@ -90,11 +89,11 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
         if(first_channel_available)
         {
             channel_low = 0;
-            channel_high = Globals::_k3lapi.channel_count(board);
+            channel_high = Globals::k3lapi.channel_count(board);
         }
         else
         {
-            if(channel_low < 0 || channel_high > Globals::_k3lapi.channel_count(board))
+            if(channel_low < 0 || channel_high > Globals::k3lapi.channel_count(board))
             {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Invalid channel selection (%d-%d) !\n", channel_low, channel_high);
                 switch_mutex_unlock(_pvts_mutex);
@@ -111,7 +110,7 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
             try 
             {
                 K3L_CHANNEL_CONFIG channelConfig;
-                channelConfig = Globals::_k3lapi.channel_config( board, channel );
+                channelConfig = Globals::k3lapi.channel_config( board, channel );
             }
             catch (...)
             {
@@ -129,7 +128,7 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
             if(status.CallStatus == kcsFree)
             {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Channel (%d-%d) is free, let's check if the session is available ...\n", board, channel);
-                pvt = KhompPvt::khompPvt(board, channel);
+                pvt = KhompPvt::get(board, channel);
                 if(pvt != NULL && pvt->session() == NULL)
                 {
                     pvt->session(new_session);
@@ -152,4 +151,92 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
     
     switch_mutex_unlock(_pvts_mutex);
     return pvt;
+}
+
+/* Helper functions - based on code from chan_khomp */
+
+bool KhompPvt::start_stream(void)
+{
+    if(switch_test_flag(this, TFLAG_STREAM))
+        return true;
+    
+    try
+    {
+        Globals::k3lapi.mixer(_target, 0, kmsPlay, _target.object);
+        Globals::k3lapi.command(_target, CM_START_STREAM_BUFFER);
+    }
+    catch(...)
+    {
+		return false;
+    }
+
+    switch_set_flag_locked(this, TFLAG_STREAM);
+    
+	return true;
+}
+
+bool KhompPvt::stop_stream(void)
+{
+    if(!switch_test_flag(this, TFLAG_STREAM))
+        return true;
+    
+    try
+    {
+        Globals::k3lapi.mixer(_target, 0, kmsGenerator, kmtSilence);
+	    Globals::k3lapi.command(_target, CM_STOP_STREAM_BUFFER);
+    }
+    catch(...)
+    {
+        return false;
+    }
+
+    switch_clear_flag_locked(this, TFLAG_STREAM);
+    
+	return true;
+}
+
+bool KhompPvt::start_listen(bool conn_rx)
+{
+    if(switch_test_flag(this, TFLAG_LISTEN))
+        return true;
+    
+	const size_t buffer_size = KHOMP_PACKET_SIZE;
+
+    if (conn_rx)
+    {
+        Globals::k3lapi.mixerRecord(_target, 0, kmsNoDelayChannel, target().object);
+        Globals::k3lapi.mixerRecord(_target, 1, kmsGenerator, kmtSilence);
+	}
+
+    try
+    {
+        Globals::k3lapi.command(_target, CM_LISTEN, (const char *) &buffer_size);
+    }
+    catch(...)
+    {
+        return false;
+    }
+
+    switch_set_flag_locked(this, TFLAG_LISTEN);
+    
+	return true;
+}
+
+bool KhompPvt::stop_listen(void)
+{
+    if(!switch_test_flag(this, TFLAG_LISTEN))
+        return true;
+    
+    try
+    {
+        Globals::k3lapi.command(_target, CM_STOP_LISTEN);
+    }
+    catch(...)
+    {
+        return false;
+    }
+
+	switch_clear_flag_locked(this, TFLAG_LISTEN);
+
+	return true;
 }
