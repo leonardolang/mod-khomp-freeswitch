@@ -1,3 +1,44 @@
+/*  
+    KHOMP generic endpoint/channel library.
+    Copyright (C) 2007-2009 Khomp Ind. & Com.  
+  
+  The contents of this file are subject to the Mozilla Public License Version 1.1
+  (the "License"); you may not use this file except in compliance with the
+  License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
+
+  Software distributed under the License is distributed on an "AS IS" basis,
+  WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
+  the specific language governing rights and limitations under the License.
+
+  Alternatively, the contents of this file may be used under the terms of the
+  "GNU Lesser General Public License 2.1" license (the â€œLGPL" License), in which
+  case the provisions of "LGPL License" are applicable instead of those above.
+
+  If you wish to allow use of your version of this file only under the terms of
+  the LGPL License and not to allow others to use your version of this file under
+  the MPL, indicate your decision by deleting the provisions above and replace them
+  with the notice and other provisions required by the LGPL License. If you do not
+  delete the provisions above, a recipient may use your version of this file under
+  either the MPL or the LGPL License.
+
+  The LGPL header follows below:
+
+    This library is free software; you can redistribute it and/or  
+    modify it under the terms of the GNU Lesser General Public  
+    License as published by the Free Software Foundation; either  
+    version 2.1 of the License, or (at your option) any later version.  
+  
+    This library is distributed in the hope that it will be useful,  
+    but WITHOUT ANY WARRANTY; without even the implied warranty of  
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
+    Lesser General Public License for more details.  
+  
+    You should have received a copy of the GNU Lesser General Public License
+    along with this library; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
+  
+*/
+
 #include <monitor.hpp>
 
 monitor::user_printer  monitor::_printer = NULL;
@@ -6,71 +47,71 @@ monitor::state_type    monitor::_state;
 bool                   monitor::_lazyreg;
 
 const char *monitor::finish_string =
-    "Fim do buffer de comunicação";            // 0x00
+    "Fim do buffer de comunicaÃ§Ã£o";            // 0x00
 
 const char *monitor::overflow_string =
-    "Estouro do buffer de comunicação";        // 0x01
+    "Estouro do buffer de comunicaÃ§Ã£o";        // 0x01
 
 const char *monitor::est_reg_strings[] =
 {
-    "Fim da troca de sinalização MFC",            // EST_REG-00 // 0x20
+    "Fim da troca de sinalizaÃ§Ã£o MFC",            // EST_REG-00 // 0x20
     "Iniciando troca MFC canal entrada",          // EST_REG-01 // 0x21
-    "Aguardando condição terminal local",         // EST_REG-02 // 0x22
-       "Aguardando retirada sinal",                  // EST_REG-03 // 0x23
-       "Aguardando retirada categoria",              // EST_REG-04 // 0x24
-       "Aguardando retirada da categoria p/ final",  // EST_REG-05 // 0x25
-       "Aguardando sinal para frente",               // EST_REG-06 // 0x26
-       "Aguardando identidade",                      // EST_REG-07 // 0x27
-       "Aguardando categoria/identidade",            // EST_REG-08 // 0x28
-       "Aguardando categoria",                       // EST_REG-09 // 0x29
-       "Aguardando condição do terminal remoto",     // EST_REG-10 // 0x2a
-       "Aguardando retirada do 'A3'",                // EST_REG-11 // 0x2b
-       "Aguardando dígito",                          // EST_REG-12 // 0x2c
-       "Aguardando sinal para trás",                 // EST_REG-13 // 0x2d
-       "Aguardando retirada do sinal",               // EST_REG-14 // 0x2e
-       "Aguardando retirada do 'A5'",                // EST_REG-15 // 0x2f
-       "Aguardando retirada do sinal p/ finalizar",  // EST_REG-16 // 0x30
+    "Aguardando condiÃ§Ã£o terminal local",         // EST_REG-02 // 0x22
+    "Aguardando retirada sinal",                  // EST_REG-03 // 0x23
+    "Aguardando retirada categoria",              // EST_REG-04 // 0x24
+    "Aguardando retirada da categoria p/ final",  // EST_REG-05 // 0x25
+    "Aguardando sinal para frente",               // EST_REG-06 // 0x26
+    "Aguardando identidade",                      // EST_REG-07 // 0x27
+    "Aguardando categoria/identidade",            // EST_REG-08 // 0x28
+    "Aguardando categoria",                       // EST_REG-09 // 0x29
+    "Aguardando condiÃ§Ã£o do terminal remoto",     // EST_REG-10 // 0x2a
+    "Aguardando retirada do 'A3'",                // EST_REG-11 // 0x2b
+    "Aguardando dÃ­gito",                          // EST_REG-12 // 0x2c
+    "Aguardando sinal para trÃ¡s",                 // EST_REG-13 // 0x2d
+    "Aguardando retirada do sinal",               // EST_REG-14 // 0x2e
+    "Aguardando retirada do 'A5'",                // EST_REG-15 // 0x2f
+    "Aguardando retirada do sinal p/ finalizar",  // EST_REG-16 // 0x30
 };
 
 const char *monitor::est_lin_strings[] =
 {
-    "Juntor de saída livre",                                  // EST_LIN-00 // 0x60
-    "Juntor de saída bloqueado",                              // EST_LIN-01 // 0x61
-    "Aguardando sinal de confirmação de ocupação",            // EST_LIN-02 // 0x62
-       "Aguardando sinal de conf. de ocupação p/ desligamento",  // EST_LIN-03 // 0x63
-    "Aguardando um IGMFC disponível",                         // EST_LIN-04 // 0x64
-       "Aguardando o termino da troca MFC",                      // EST_LIN-05 // 0x65
+    "Juntor de saÃ­da livre",                                  // EST_LIN-00 // 0x60
+    "Juntor de saÃ­da bloqueado",                              // EST_LIN-01 // 0x61
+    "Aguardando sinal de confirmaÃ§Ã£o de ocupaÃ§Ã£o",            // EST_LIN-02 // 0x62
+    "Aguardando sinal de conf. de ocupaÃ§Ã£o p/ desligamento",  // EST_LIN-03 // 0x63
+    "Aguardando um IGMFC disponÃ­vel",                         // EST_LIN-04 // 0x64
+    "Aguardando o termino da troca MFC",                      // EST_LIN-05 // 0x65
     "Aguardando o sinal de atendimento",                      // EST_LIN-06 // 0x66
-       "Em conversação",                                         // EST_LIN-07 // 0x67
+    "Em conversaÃ§Ã£o",                                         // EST_LIN-07 // 0x67
     "Aguardando desligamento local ou sinal reatendimento",   // EST_LIN-08 // 0x68
-       "Aguardando sinal de confirmação de desconexão",          // EST_LIN-09 // 0x69
+    "Aguardando sinal de confirmaÃ§Ã£o de desconexÃ£o",          // EST_LIN-09 // 0x69
     "Juntor de entrada (ou bidirecional) livre",              // EST_LIN-10 // 0x6a
-       "Juntor de entrada bloqueado",                            // EST_LIN-11 // 0x6b
+    "Juntor de entrada bloqueado",                            // EST_LIN-11 // 0x6b
     "Aguardando IGMFC",                                       // EST_LIN-12 // 0x6c
-    "Aguardando receber endereço, categoria ou identidade",   // EST_LIN-13 // 0x6d
+    "Aguardando receber endereÃ§o, categoria ou identidade",   // EST_LIN-13 // 0x6d
     "Aguardando termino da troca MFC",                        // EST_LIN-14 // 0x6e
     "Aguardando atendimento local ou desligamento frente",    // EST_LIN-15 // 0x6f
-    "Em conversação",                                         // EST_LIN-16 // 0x70
+    "Em conversaÃ§Ã£o",                                         // EST_LIN-16 // 0x70
 };
 
 const char *monitor::ig_init_strings[] =
 {
     "Inicia IGE (prepara p/juntor de entrada)", // 0xB0
-    "Inicia IGS (prepara p/juntor de saída)",   // 0xB1
+    "Inicia IGS (prepara p/juntor de saÃ­da)",   // 0xB1
 };
 
 const char *monitor::sin_reg_a_strings[] =
 {
     "A-00 Retirada do Sinal",                         // A-00
-    "A-01 Pedido p/ enviar próximo algarismo",        // A-01
+    "A-01 Pedido p/ enviar prÃ³ximo algarismo",        // A-01
     "A-02 Pedido p/ enviar primeiro algarismo",       // A-02
     "A-03 Receber sinais do grupo B",                 // A-03
     "A-04 Sinal de congestionamento",                 // A-04
     "A-05 Pedido p/ enviar identidade ou categoria",  // A-05
     "A-06 Reservado",                                 // A-06
-    "A-07 Pedido p/ enviar penúltimo algarismo",      // A-07
-    "A-08 Pedido p/ enviar ante-penúltimo algarismo", // A-08
-    "A-09 Pedido p/ enviar último algarismo",         // A-09
+    "A-07 Pedido p/ enviar penÃºltimo algarismo",      // A-07
+    "A-08 Pedido p/ enviar ante-penÃºltimo algarismo", // A-08
+    "A-09 Pedido p/ enviar Ãºltimo algarismo",         // A-09
     "A-10 Reservado",                                 // A-10
     "A-11 Reservado",                                 // A-11
     "A-12 Reservado",                                 // A-12
@@ -82,14 +123,14 @@ const char *monitor::sin_reg_a_strings[] =
 const char *monitor::sin_reg_b_strings[] =
 {
     "B-00 Retirada do Sinal",                        // B-00
-    "B-01 Assinante livre com tarifação",            // B-01
+    "B-01 Assinante livre com tarifaÃ§Ã£o",            // B-01
     "B-02 Assinante ocupado",                        // B-02
-    "B-03 Assinante com número mudado",              // B-03
+    "B-03 Assinante com nÃºmero mudado",              // B-03
     "B-04 Sinal de congestionamento" ,               // B-04
-    "B-05 Assinante livre sen tarifação",            // B-05
-    "B-06 Assinante livre com tarifação e retenção", // B-06
-    "B-07 Nível ou número vago",                     // B-07
-    "B-08 Assinante fora de serviço",                // B-08
+    "B-05 Assinante livre sen tarifaÃ§Ã£o",            // B-05
+    "B-06 Assinante livre com tarifaÃ§Ã£o e retenÃ§Ã£o", // B-06
+    "B-07 NÃ­vel ou nÃºmero vago",                     // B-07
+    "B-08 Assinante fora de serviÃ§o",                // B-08
     "B-09 Reservado",                                // B-09
     "B-10 Reservado",                                // B-10
     "B-11 Reservado",                                // B-11
@@ -112,23 +153,23 @@ const char *monitor::sin_reg_1_strings[] =
     "I-08 Algarismo: '8'",                       // I-08
     "I-09 Algarismo: '9'",                       // I-09
     "I-10 Algarismo: '0'",                       // I-10
-    "I-11 Inserção de semi supressor de eco",    // I-11
+    "I-11 InserÃ§Ã£o de semi supressor de eco",    // I-11
     "I-12 Pedido Recusado",                      // I-12
     "I-13 Acesso a equipamento de teste",        // I-13
-    "I-14 Trânsito Internacional",               // I-14
-    "I-15 Fim de número"                         // I-15
+    "I-14 TrÃ¢nsito Internacional",               // I-14
+    "I-15 Fim de nÃºmero"                         // I-15
 };
     
 const char *monitor::sin_reg_2_strings[] =
 {
     "II-00 Retirada do Sinal",                    // II-00
     "II-01 Assinante comum",                      // II-01
-    "II-02 Assinante com tarifação especial",     // II-02
-    "II-03 Equipamento de manutenção",            // II-03
-    "II-04 Telefone público local",               // II-04
+    "II-02 Assinante com tarifaÃ§Ã£o especial",     // II-02
+    "II-03 Equipamento de manutenÃ§Ã£o",            // II-03
+    "II-04 Telefone pÃºblico local",               // II-04
     "II-05 Telefonista",                          // II-05
-    "II-06 Equipamentos de comunicação de dados", // II-06
-    "II-07 Telefone público interurbano",         // II-07
+    "II-06 Equipamentos de comunicaÃ§Ã£o de dados", // II-06
+    "II-07 Telefone pÃºblico interurbano",         // II-07
     "II-08 Chamada a cobrar",                     // II-08
     "II-09 Assinante comum internacional",        // II-09
     "II-10 Reservado",                            // II-10
@@ -139,16 +180,16 @@ const char *monitor::sin_reg_2_strings[] =
     "II-15 Reserva"                               // II-15
 };
 
-/* mensagens de erro de estados/etc inválidos */
+/* mensagens de erro de estados/etc invÃ¡lidos */
 
 const char *monitor::error_unhandled_string =
     "Erro: evento desconhecido";
 
 const char *monitor::error_direction_string =
-    "Erro: direção de canal de sinalização não configurada";
+    "Erro: direÃ§Ã£o de canal de sinalizaÃ§Ã£o nÃ£o configurada";
 
 const char *monitor::error_no_group_string =
-    "Erro: grupo de MFCs não definido";
+    "Erro: grupo de MFCs nÃ£o definido";
 
 stt_code monitor::start(monitor::user_printer printer, monitor::mode_type mode, bool lazyreg)
 {
