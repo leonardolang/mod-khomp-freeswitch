@@ -39,16 +39,34 @@
   
 */
 
+/* WARNING: This is a generic ringbuffer abstraction, which works for single-sized elements,
+            partial elements, single/multi-elements read/writes. It is not wise to mix some
+            functions (partial element write / full element write), since it was not designed
+            with this use in mind.
+
+            Also, it works only for single-reader + single-writer, since it does not depends
+            on external mutex functions.
+ */
+
 #include <string.h>
+
+#include <cmath>
 #include <iostream>
 
 struct Ringbuffer_traits
 {
     Ringbuffer_traits(unsigned int block, unsigned int size)
-    : _block(block), _size(size), _reader(0), _writer(1) {};
+    : _block(block), _size(size), _reader(0), _writer(1),
+      _reader_partial(0), _writer_partial(1)
+    {
+//        fprintf(stderr, "===> creating buffer of block %d, size %d\n", _block, _size);
+    };
 
     bool         traits_provide(      char *, const char *, unsigned int);
     unsigned int traits_consume(const char *,       char *, unsigned int);
+
+    bool         traits_provide_partial(      char *, const char *, unsigned int);
+    unsigned int traits_consume_partial(const char *,       char *, unsigned int);
 
     unsigned int traits_get(      char *, std::istream &, unsigned int);
     unsigned int traits_put(const char *, std::ostream &, unsigned int);
@@ -59,6 +77,9 @@ struct Ringbuffer_traits
 
     volatile unsigned int   _reader;
     volatile unsigned int   _writer;
+
+    volatile unsigned int   _reader_partial;
+    volatile unsigned int   _writer_partial;
 };
 
 template <typename T>
@@ -94,6 +115,8 @@ struct Ringbuffer: protected Ringbuffer_traits
         unsigned int reader = _reader,
                      writer = _writer;
 
+//		fprintf(stderr, "%p> provide %d/%d!\n", this, reader, writer);
+
         if (((reader - writer) == 1) || (reader == 0 && writer == _size))
             return false;
 
@@ -102,8 +125,13 @@ struct Ringbuffer: protected Ringbuffer_traits
 
         _buffer[dest] = value;
 
-        if (temp > _size) _writer = 1;
-        else              _writer = temp;
+        if (temp > _size) writer = 1;
+        else              writer = temp;
+
+        _writer         = writer;
+        _writer_partial = writer * sizeof(T);
+
+//		fprintf(stderr, "%p> write: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
 
         return true;
     }
@@ -113,6 +141,8 @@ struct Ringbuffer: protected Ringbuffer_traits
         unsigned int reader = _reader,
                      writer = _writer;
 
+//		fprintf(stderr, "%p> consume %d/%d!\n", this, reader, writer);
+
         if ((writer - reader) == 1)
             return false;
 
@@ -120,8 +150,13 @@ struct Ringbuffer: protected Ringbuffer_traits
 
         unsigned int temp = reader + 1;
 
-        if (temp == _size) _reader = 0;
-        else               _reader = temp;
+        if (temp == _size) reader = 0;
+        else               reader = temp;
+
+        _reader         = reader;
+        _reader_partial = reader * sizeof(T);
+
+//		fprintf(stderr, "%p> read: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
 
         return true;
     }
@@ -132,7 +167,7 @@ struct Ringbuffer: protected Ringbuffer_traits
         return traits_provide((char *)_buffer, (const char *) value, amount);
     }
 
-    /* returns the number of itens that have been read */
+    /* returns the number of items that have been read */
     inline unsigned int consume(T * value, unsigned int amount)
     {
         return traits_consume((const char *)_buffer, (char *) value, amount);
@@ -140,10 +175,12 @@ struct Ringbuffer: protected Ringbuffer_traits
 
 	/***** PARCIAL BUFFER FUNCTIONS (TWO-STAGE) *****/
 
-	T & producer_start(void)
+	T & provider_start(void)
 	{
         unsigned int reader = _reader,
                      writer = _writer;
+
+//		fprintf(stderr, "%p> provider start %d/%d!\n", this, reader, writer);
 
         if (((reader - writer) == 1) || (reader == 0 && writer == _size))
             throw BufferFull();
@@ -151,18 +188,27 @@ struct Ringbuffer: protected Ringbuffer_traits
         return _buffer[writer-1];
 	}
 
-	void producer_commit(void)
+	void provider_commit(void)
 	{
         unsigned int temp = _writer + 1;
 
-        if (temp > _size) _writer = 1;
-        else              _writer = temp;
+//		fprintf(stderr, "%p> provider commit %d!\n", this, temp);
+
+        if (temp > _size)
+            temp = 1;
+
+        _writer         = temp;
+        _writer_partial = temp * sizeof(T);
+
+//		fprintf(stderr, "%p> write: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
 	}
 
 	T & consumer_start(void)
 	{
         unsigned int reader = _reader,
                      writer = _writer;
+
+//		fprintf(stderr, "%p> consumer start %d/%d!\n", this, reader, writer);
 
         if ((writer - reader) == 1)
             throw BufferEmpty();
@@ -174,9 +220,30 @@ struct Ringbuffer: protected Ringbuffer_traits
 	{
         unsigned int temp = _reader + 1;
 
-        if (temp == _size) _reader = 0;
-        else               _reader = temp;
+//		fprintf(stderr, "%p> consumer commit %d!\n", this, temp);
+
+        if (temp == _size)
+            temp = 0;
+
+        _reader         = temp;
+        _reader_partial = temp * sizeof(T);
+
+//		fprintf(stderr, "%p> read: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
 	}
+
+    /* writes everything or nothing, but works on bytes (may write incomplete elements) */
+	/* WARNING: do not mix this with full element provider */
+    inline bool provider_partial(const char *buffer, unsigned int amount)
+    {
+        return traits_provide_partial((char *)_buffer, buffer, amount);
+    }
+
+    /* returns the number of bytes that have been read (may read incomplete elements) */
+	/* WARNING: do not mix this with full element consumer */
+    inline unsigned int consumer_partial(char *buffer, unsigned int amount)
+    {
+        return traits_consume_partial((const char *)_buffer, buffer, amount);
+    }
 
     /***** IO FUNCTIONS *****/
 

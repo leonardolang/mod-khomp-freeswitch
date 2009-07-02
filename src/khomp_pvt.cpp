@@ -16,22 +16,23 @@
 
 KhompPvt::VectorType  KhompPvt::_pvts;
 switch_mutex_t *      KhompPvt::_pvts_mutex;
+char                  KhompPvt::_cng_buffer[128];
 
 KhompPvt::KhompPvt(K3LAPI::target & target)
 : _target(target), _session(NULL),
   _reader_frames(&_read_codec),
   _writer_frames(&_write_codec)
 {
-    if (switch_core_codec_init(&_read_codec, "PCMA", NULL, 8000, 20, 1,
-                               SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
-                               Globals::module_pool) != SWITCH_STATUS_SUCCESS)
+    if (switch_core_codec_init(&_read_codec, "PCMA", NULL, 8000, Globals::switch_packet_duration, 1,
+            SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
+                Globals::module_pool) != SWITCH_STATUS_SUCCESS)
 	{
 		throw InitFailure();
 	}
 
-    if (switch_core_codec_init(&_write_codec, "PCMA", NULL, 8000, 20, 1,
-                               SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
-                               Globals::module_pool) != SWITCH_STATUS_SUCCESS)
+    if (switch_core_codec_init(&_write_codec, "PCMA", NULL, 8000, Globals::switch_packet_duration, 1,
+            SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
+                Globals::module_pool) != SWITCH_STATUS_SUCCESS)
 	{
 		throw InitFailure();
 	}
@@ -49,6 +50,34 @@ KhompPvt::~KhompPvt()
         switch_core_codec_destroy(&_write_codec);
     }
 };
+
+
+switch_status_t KhompPvt::init(switch_core_session_t *new_session)
+{
+    clear();
+
+    session(new_session);
+
+    switch_mutex_init(&flag_mutex, SWITCH_MUTEX_NESTED,
+                switch_core_session_get_pool(_session));
+    //switch_mutex_destroy, where???
+
+    switch_core_session_set_private(_session, this);
+
+    if((switch_core_session_set_read_codec(_session, &_read_codec) !=
+                SWITCH_STATUS_SUCCESS) ||
+       (switch_core_session_set_write_codec(_session, &_write_codec) !=
+                SWITCH_STATUS_SUCCESS))
+    {
+        return SWITCH_STATUS_FALSE;
+    }
+
+    switch_set_flag_locked(this, (TFLAG_CODEC | TFLAG_IO));
+
+    return SWITCH_STATUS_SUCCESS;
+}
+
+
 
 KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause)
 {
@@ -204,7 +233,7 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
 
 bool KhompPvt::start_stream(void)
 {
-    if(switch_test_flag(this, TFLAG_STREAM))
+    if (switch_test_flag(this, TFLAG_STREAM))
         return true;
     
     try
@@ -214,6 +243,7 @@ bool KhompPvt::start_stream(void)
     }
     catch(...)
     {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending START_STREAM_BUFFER command!\n");
 		return false;
     }
 
@@ -224,7 +254,7 @@ bool KhompPvt::start_stream(void)
 
 bool KhompPvt::stop_stream(void)
 {
-    if(!switch_test_flag(this, TFLAG_STREAM))
+    if (!switch_test_flag(this, TFLAG_STREAM))
         return true;
     
     try
@@ -234,6 +264,7 @@ bool KhompPvt::stop_stream(void)
     }
     catch(...)
     {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending STOP_STREAM_BUFFER command!\n");
         return false;
     }
 
@@ -244,10 +275,10 @@ bool KhompPvt::stop_stream(void)
 
 bool KhompPvt::start_listen(bool conn_rx)
 {
-    if(switch_test_flag(this, TFLAG_LISTEN))
+    if (switch_test_flag(this, TFLAG_LISTEN))
         return true;
     
-	const size_t buffer_size = KHOMP_PACKET_SIZE;
+	const size_t buffer_size = Globals::boards_packet_duration;
 
     if (conn_rx)
     {
@@ -261,6 +292,7 @@ bool KhompPvt::start_listen(bool conn_rx)
     }
     catch(...)
     {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending LISTEN command!\n");
         return false;
     }
 
@@ -280,6 +312,7 @@ bool KhompPvt::stop_listen(void)
     }
     catch(...)
     {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending STOP_LISTEN command!\n");
         return false;
     }
 

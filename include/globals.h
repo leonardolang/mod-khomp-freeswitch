@@ -17,10 +17,13 @@ extern "C"
 
 struct Globals
 {
-	static const unsigned int    packet_duration  = 16;                   // in ms
-	static const unsigned int        packet_size  = packet_duration *  8; // in bytes
-	static const unsigned int stream_buffer_size  = packet_size     *  4; // in bytes
-	static const unsigned int record_buffer_size  = packet_size     * 32; // in bytes
+	static const unsigned int switch_packet_duration  =                          30; // in ms
+	static const unsigned int boards_packet_duration  =                          16; // in ms
+
+	static const unsigned int switch_packet_size      = switch_packet_duration *  8; // in bytes
+	static const unsigned int boards_packet_size      = boards_packet_duration *  8; // in bytes
+
+    static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
 
     static K3LAPI        k3lapi;
 

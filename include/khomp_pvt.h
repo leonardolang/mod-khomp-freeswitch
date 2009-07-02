@@ -5,9 +5,6 @@
 #include "mod_khomp.h"
 #include "frame.h"
 
-/* TODO: remove from here */
-#define KHOMP_PACKET_SIZE 16
-
 /*!
  \brief This struct holds a static linked list representing all the Khomp 
  channels found in the host. It's also a place holder for session objects 
@@ -18,23 +15,7 @@ struct KhompPvt
     typedef std::vector < KhompPvt * >      InnerVectorType;  /*!< Collection of pointers of KhompPvts */
     typedef std::vector < InnerVectorType > VectorType;  /*!< Collection of InnerVectorType */
 
-    K3LAPI::target          _target;    /*!< The device/channel pair to bind this pvt to */
-    switch_core_session_t * _session;   /*!< The session to which this pvt is associated with */
-
     struct InitFailure {};
-
-    unsigned int flags; //TODO: Alterar o nome depois
-
-    switch_codec_t _read_codec;
-    switch_codec_t _write_codec;
-
-    switch_caller_profile_t *_caller_profile;
-
-    switch_mutex_t *_mutex;
-    switch_mutex_t *flag_mutex; //TODO: Alterar o nome depois
-
-    FrameArray _reader_frames;
-    FrameArray _writer_frames;
 
      KhompPvt(K3LAPI::target & target);
     ~KhompPvt();
@@ -54,11 +35,42 @@ struct KhompPvt
         return _session;
     }
 
+    void clear()
+    {
+        flags = 0;
+
+        _reader_frames.clear();
+        _writer_frames.clear();
+
+        session(NULL);
+    }
+
+    /*!
+     \brief Will init part of our private structure and setup all the read/write
+     buffers along with the proper codecs. Right now, only PCMA.
+    */
+    switch_status_t init(switch_core_session_t *new_session);
+
     bool start_stream(void);
     bool stop_stream(void);
 
     bool start_listen(bool conn_rx = true);
     bool stop_listen(void);
+
+
+    K3LAPI::target          _target;    /*!< The device/channel pair to bind this pvt to */
+    switch_core_session_t * _session;   /*!< The session to which this pvt is associated with */
+    
+    switch_caller_profile_t *_caller_profile;
+
+    unsigned int flags;
+    switch_mutex_t *flag_mutex;
+
+    switch_codec_t _read_codec;
+    switch_codec_t _write_codec;
+
+    FrameSwitchManager _reader_frames;
+    FrameBoardsManager _writer_frames;
 
 
     static KhompPvt * get(int32 device, int32 object)
@@ -98,8 +110,23 @@ struct KhompPvt
                 _pvts.back().push_back(pvt);
 
 				/* TODO: remove this from here */
-                Globals::k3lapi.command(dev, obj, CM_DISCONNECT, NULL); 
+                try 
+                {
+                    Globals::k3lapi.command(dev, obj, CM_DISCONNECT, NULL); 
+                }
+                catch(...) {}
             }
+        }
+    }
+
+    static void initialize_cng_buffer(void)
+    {
+        bool turn = true;
+
+        for (unsigned int i = 0; i < Globals::cng_buffer_size; i++)
+        {
+            _cng_buffer[i] = (turn ? 0xD5 : 0xD4);
+            turn = !turn;
         }
     }
     
@@ -107,8 +134,8 @@ struct KhompPvt
     {
         switch_mutex_init(&_pvts_mutex, SWITCH_MUTEX_NESTED, Globals::module_pool);
 
+        initialize_cng_buffer();
         initialize_channels();
-
     }
 
     static void terminate()
@@ -129,9 +156,10 @@ struct KhompPvt
     
     /* static stuff */
     static switch_mutex_t *_pvts_mutex;
+    static VectorType      _pvts; /*!< Static structure that contains all the pvts. Will be initialized by KhompPvt::initialize */
 
-    static VectorType _pvts; /*!< Static structure that contains all the pvts. Will be initialized by KhompPvt::initialize */
-
+ public:
+    static char            _cng_buffer[Globals::cng_buffer_size];
 };
 
 #endif /* _KHOMP_PVT_H_*/

@@ -16,13 +16,11 @@
 
 #define ALLOC(T,s) ((T*)calloc(1,s))
 
-const unsigned int FrameArray::frame_count = Globals::stream_buffer_size / Globals::packet_size;
-
-/* Internal frame array structure. */
-FrameArray::FrameArray(switch_codec_t * codec)
+/* Internal frame manager structure. */
+FrameStorage::FrameStorage(switch_codec_t * codec, int packet_size)
 :  _frames(ALLOC(switch_frame_t, frame_count * sizeof(switch_frame_t))),
-   _buffer(ALLOC(          char, frame_count * Globals::stream_buffer_size)),
-   _audio(frame_count, _frames)
+   _buffer(ALLOC(          char, audio_count * packet_size)),
+   _index(0)
 {
 	for (unsigned int i = 0; i < frame_count; i++)
 	{
@@ -33,11 +31,11 @@ FrameArray::FrameArray(switch_codec_t * codec)
 		_frames[i].packetlen  = 0;
 		_frames[i].extra_data = 0;
 
-		_frames[i].data       = (char *) (_buffer + (i * Globals::stream_buffer_size));
-		_frames[i].datalen    = Globals::stream_buffer_size;
-		_frames[i].buflen     = Globals::stream_buffer_size;
+		_frames[i].data       = (char *)0;
+		_frames[i].datalen    = packet_size;
+		_frames[i].buflen     = packet_size;
 
-		_frames[i].samples    = 1;
+		_frames[i].samples    = packet_size; // packet_duration * 8
 		_frames[i].rate       = 8000;
 		_frames[i].payload    = 0;
 
@@ -55,11 +53,11 @@ FrameArray::FrameArray(switch_codec_t * codec)
 	_cng_frame.packetlen  = 0;
 	_cng_frame.extra_data = 0;
 
-	_cng_frame.data       = (void*)"a";
+	_cng_frame.data       = (void*)"A";
 	_cng_frame.datalen    = 2;
 	_cng_frame.buflen     = 2;
 
-	_cng_frame.samples    = 1;
+	_cng_frame.samples    = packet_size;
 	_cng_frame.rate       = 8000;
 	_cng_frame.payload    = 0;
 
@@ -89,7 +87,7 @@ FrameArray::FrameArray(switch_codec_t * codec)
 //	}
 };
 
-FrameArray::~FrameArray()
+FrameStorage::~FrameStorage()
 {
     free(_frames);
     free(_buffer);

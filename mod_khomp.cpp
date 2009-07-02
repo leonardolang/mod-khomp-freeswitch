@@ -158,42 +158,6 @@ void printLinks(switch_stream_handle_t* stream, unsigned int device,
 void printChannels(switch_stream_handle_t* stream, unsigned int device, 
         unsigned int link);
 
-
-
-/*!
- \brief Will init part of our private structure and setup all the read/write
- buffers along with the proper codecs. Right now, only PCMA.
- */
-switch_status_t tech_init(KhompPvt *tech_pvt, switch_core_session_t *session)
-{
-    tech_pvt->flags = 0;
-
-    tech_pvt->_reader_frames.clear();
-    tech_pvt->_writer_frames.clear();
-    
-//    tech_pvt->_read_frame.data = tech_pvt->_databuf;
-//    tech_pvt->_read_frame.buflen = sizeof(tech_pvt->_databuf);
-
-    switch_mutex_init(&tech_pvt->_mutex, SWITCH_MUTEX_NESTED, switch_core_session_get_pool(session));
-    switch_mutex_init(&tech_pvt->flag_mutex, SWITCH_MUTEX_NESTED, switch_core_session_get_pool(session));
-    
-    switch_core_session_set_private(session, tech_pvt);
-
-    tech_pvt->_session = session;
-
-    switch_core_session_set_read_codec(session, &tech_pvt->_read_codec);
-    switch_core_session_set_write_codec(session, &tech_pvt->_write_codec);
-
-    switch_set_flag_locked(tech_pvt, TFLAG_CODEC);
-
-//    tech_pvt->_read_frame.codec = &tech_pvt->_read_codec;
-
-    switch_set_flag_locked(tech_pvt, TFLAG_IO);
-
-    return SWITCH_STATUS_SUCCESS;
-
-}
-
 /*!
    \brief State methods they get called when the state changes to the specific state 
    returning SWITCH_STATUS_SUCCESS tells the core to execute the standard state method next
@@ -285,6 +249,8 @@ switch_status_t channel_on_hangup(switch_core_session_t *session)
     }
     
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "%s Originator Hangup.\n", switch_channel_get_name(channel));
+
+	// TODO: this one could have a structure for taking care of the locking.
     switch_mutex_lock(Globals::mutex);
     Globals::calls--;
     if (Globals::calls < 0) {
@@ -316,15 +282,18 @@ switch_status_t channel_kill_channel(switch_core_session_t *session, int sig)
 
     switch (sig) {
     case SWITCH_SIG_KILL:
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL KILL, SIGKILL!\n");
         switch_clear_flag_locked(tech_pvt, TFLAG_IO);
         switch_clear_flag_locked(tech_pvt, TFLAG_VOICE);
         switch_channel_hangup(channel, SWITCH_CAUSE_NORMAL_CLEARING);
         //switch_thread_cond_signal(tech_pvt->_cond);
         break;
     case SWITCH_SIG_BREAK:
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL KILL, BREAK!\n");
         switch_set_flag_locked(tech_pvt, TFLAG_BREAK);
         break;
     default:
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL KILL, WHAT?!\n");
         break;
     }
 
@@ -367,26 +336,44 @@ switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_
 //    tech_pvt->_read_frame.flags = SFF_NONE;
     *frame = NULL;
 
-    while (switch_test_flag(tech_pvt, TFLAG_IO)) {
+//	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+//        "We are here to read things! (%u,%02u).\n",
+//        tech_pvt->target().device, tech_pvt->target().object);
 
+    while (switch_test_flag(tech_pvt, TFLAG_IO))
+    {
         if (switch_test_flag(tech_pvt, TFLAG_BREAK))
         {
-            switch_clear_flag(tech_pvt, TFLAG_BREAK);
+            switch_clear_flag_locked(tech_pvt, TFLAG_BREAK);
+
             *frame = tech_pvt->_reader_frames.cng();
             return SWITCH_STATUS_SUCCESS;
         }
 
-        if (!switch_test_flag(tech_pvt, TFLAG_IO))
+        if (switch_test_flag(tech_pvt, TFLAG_LISTEN))
         {
-            return SWITCH_STATUS_FALSE;
+            *frame = tech_pvt->_reader_frames.pick();
+
+            if (!*frame)
+            {
+//          		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+//                    "Reader buffer empty, waiting... (%u,%02u).\n",
+//                    tech_pvt->target().device, tech_pvt->target().object);
+
+                switch_cond_next();
+                continue;
+            }
+//            else
+//            {
+//            	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+//                 "We are returning a new frame! (%u,%02u).\n",
+//                    tech_pvt->target().device, tech_pvt->target().object);
+//            }
         }
-
-//        if (!tech_pvt->_read_frame.datalen)
-//        {
-//            continue;
-//        }
-
-        *frame = tech_pvt->_reader_frames.pick();
+        else
+        {
+            *frame = tech_pvt->_reader_frames.cng();
+        }
 
 #ifdef BIGENDIAN
         if (switch_test_flag(tech_pvt, TFLAG_LINEAR))
@@ -394,11 +381,9 @@ switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_
             switch_swap_linear((*frame)->data, (int) (*frame)->datalen / 2);
         }
 #endif
+
         return SWITCH_STATUS_SUCCESS;
-
-        switch_cond_next();
     }
-
 
     return SWITCH_STATUS_FALSE;
 
@@ -409,7 +394,7 @@ switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_
 //    tech_pvt->_read_frame.datalen = 2;
 //    tech_pvt->_read_frame.flags = SFF_CNG;
 //    *frame = &tech_pvt->_read_frame;
-    return SWITCH_STATUS_SUCCESS;
+//    return SWITCH_STATUS_SUCCESS;
 
 }
 
@@ -425,6 +410,12 @@ switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame
     tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
+/*
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+        "We are here to write things! (%u,%02u).\n",
+        tech_pvt->target().device, tech_pvt->target().object);
+*/
+
     if (!switch_test_flag(tech_pvt, TFLAG_IO))
     {
         return SWITCH_STATUS_FALSE;
@@ -436,7 +427,15 @@ switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame
     }
 #endif
 
-    // put frame on _writer_frames here
+    if (frame) // && frame->flags != SFF_CNG)
+    {
+        if (!tech_pvt->_writer_frames.give((const char *)frame->data, (size_t)frame->datalen))
+        {
+       		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+                "Writer buffer full! (%u,%02u) (len=%u).\n",
+                tech_pvt->target().device, tech_pvt->target().object, frame->datalen);
+        }
+    }
 
     return SWITCH_STATUS_SUCCESS;
 
@@ -452,6 +451,9 @@ switch_status_t channel_answer_channel(switch_core_session_t *session)
 
     tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
+
+    tech_pvt->start_stream();
+    tech_pvt->start_listen();
 
     return SWITCH_STATUS_SUCCESS;
 }
@@ -474,7 +476,7 @@ switch_status_t channel_receive_message(switch_core_session_t *session, switch_c
     case SWITCH_MESSAGE_INDICATE_ANSWER:
         {
             channel_answer_channel(session);
-        }
+         }
         break;
     default:
         break;
@@ -484,92 +486,105 @@ switch_status_t channel_receive_message(switch_core_session_t *session, switch_c
 }
 
 /*!
-  \brief Make sure when you have 2 sessions in the same scope that you pass the appropriate one to the routines
-  that allocate memory or you will have 1 channel with memory allocated from another channel's pool!
+  \brief Make sure when you have 2 sessions in the same scope that you pass 
+  the appropriate one to the routines that allocate memory or you will have 
+  1 channel with memory allocated from another channel's pool!
 */
-switch_call_cause_t channel_outgoing_channel(switch_core_session_t *session, switch_event_t *var_event,
-                                                    switch_caller_profile_t *outbound_profile,
-                                                    switch_core_session_t **new_session, switch_memory_pool_t **pool, switch_originate_flag_t flags)
+static switch_call_cause_t channel_outgoing_channel
+        (switch_core_session_t *session, 
+         switch_event_t *var_event, 
+         switch_caller_profile_t *outbound_profile, 
+         switch_core_session_t **new_session, 
+         switch_memory_pool_t **pool, 
+         switch_originate_flag_t flags)
 {
 
-    char *argv[3] = { 0 };
-    int argc = 0;
-    KhompPvt *tech_pvt;
-    switch_call_cause_t cause = SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
-
-    /* We first need to find an available KhompPvt object to serve the session */
-    
-    if ((*new_session = switch_core_session_request(Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_OUTBOUND, pool)) != 0) {
-        switch_channel_t *channel;
-        switch_caller_profile_t *caller_profile;
-        char name[128];
-
-        if (outbound_profile) 
-        {
-            snprintf(name, sizeof(name), "%s", outbound_profile->destination_number);
-            
-            if ((argc = switch_separate_string(outbound_profile->destination_number, '/', argv, (sizeof(argv) / sizeof(argv[0])))) < 3)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Invalid dial string. Should be on the format:[Khomp/BoardID (or A for first free board)/CHANNEL (or A for first free channel)]\n");
-                switch_core_session_destroy(new_session);
-                return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
-            }
-
-            tech_pvt = KhompPvt::find_channel(name, *new_session, &cause);
-
-            if(tech_pvt == NULL || cause != SWITCH_CAUSE_SUCCESS)
-            {
-                switch_core_session_destroy(new_session);
-                return cause;
-            }
-                    
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Dialing to %s out from Board:%u, Channel:%u.\n",
-                                                                argv[2],
-                                                                tech_pvt->target().device,
-                                                                tech_pvt->target().object);
-        }
-        else
-        {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Doh! no caller profile\n");
-            switch_core_session_destroy(new_session);
-            return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
-        }
-        
-        switch_core_session_add_stream(*new_session, NULL);
-        channel = switch_core_session_get_channel(*new_session);
-        tech_init(tech_pvt, *new_session);
-
-        snprintf(name, sizeof(name), "Khomp/%d/%d/%s", tech_pvt->target().device, tech_pvt->target().object, argv[2]);
-        switch_channel_set_name(channel, name);
-        
-        caller_profile = switch_caller_profile_clone(*new_session, outbound_profile);
-        switch_channel_set_caller_profile(channel, caller_profile);
-        tech_pvt->_caller_profile = caller_profile;
-
-        switch_channel_set_flag(channel, CF_OUTBOUND);
-        switch_set_flag_locked(tech_pvt, TFLAG_OUTBOUND);
-        switch_channel_set_state(channel, CS_INIT);
-
-        try 
-        {
-            /* Lets make the call! */
-            char params[ 255 ];
-            snprintf(params, sizeof(params), "dest_addr=\"%s\" orig_addr=\"%s\"", argv[2], outbound_profile->caller_id_number);
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "We are calling with params: %s.\n", params);
-            Globals::k3lapi.command(tech_pvt->target(), CM_MAKE_CALL, params); 
-        }
-        catch(K3LAPI::failed_command & e)
-        {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not place call! Cause: code%x and rc%d.\n", e.code, e.rc);
-            switch_core_session_destroy(new_session);
-            return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
-        }
-
-        return SWITCH_CAUSE_SUCCESS;
+    if (!outbound_profile) 
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+                "No caller profile\n");
+        //switch_core_session_destroy(new_session);
+        return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
     }
 
-    return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
+    KhompPvt *tech_pvt;
+    switch_call_cause_t cause = SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
+    switch_channel_t *channel;
+    switch_caller_profile_t *caller_profile;
+    char name[128];
+    char *argv[3] = { 0 };
+    int argc = 0;
 
+
+    snprintf(name, sizeof(name), "%s", outbound_profile->destination_number);
+
+    //TODO: Change in the future.
+    if ((argc = switch_separate_string(outbound_profile->destination_number, 
+            '/', argv, 3)) < 3)
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+                "Invalid dial string. Should be on the format: "
+                "[Khomp/BoardID (or A for first free board)/CHANNEL "
+                "(or A for first free channel)]\n");
+        //switch_core_session_destroy(new_session);
+        return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
+    }
+    
+    if ((*new_session = switch_core_session_request(
+            Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_OUTBOUND, 
+            pool)) == 0) 
+    {
+        return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
+    }
+    
+    tech_pvt = KhompPvt::find_channel(name, *new_session, &cause);
+
+    if(tech_pvt == NULL || cause != SWITCH_CAUSE_SUCCESS)
+    {
+        switch_core_session_destroy(new_session);
+        return cause;
+    }
+            
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Dialing to %s"
+            " out from Board:%u, Channel:%u.\n", argv[2], 
+            tech_pvt->target().device, tech_pvt->target().object);
+    
+    switch_core_session_add_stream(*new_session, NULL);
+    channel = switch_core_session_get_channel(*new_session);
+    tech_pvt->init(*new_session);
+
+    snprintf(name, sizeof(name), "Khomp/%d/%d/%s", tech_pvt->target().device, 
+            tech_pvt->target().object, argv[2]);
+
+    switch_channel_set_name(channel, name);
+    
+    caller_profile = switch_caller_profile_clone(*new_session, outbound_profile);
+    switch_channel_set_caller_profile(channel, caller_profile);
+    tech_pvt->_caller_profile = caller_profile;
+
+    switch_channel_set_flag(channel, CF_OUTBOUND);
+    switch_set_flag_locked(tech_pvt, TFLAG_OUTBOUND);
+    switch_channel_set_state(channel, CS_INIT);
+
+    try 
+    {
+        /* Lets make the call! */
+        char params[ 255 ];
+        snprintf(params, sizeof(params), "dest_addr=\"%s\" orig_addr=\"%s\"", 
+                argv[2], outbound_profile->caller_id_number);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, 
+                "We are calling with params: %s.\n", params);
+        Globals::k3lapi.command(tech_pvt->target(), CM_MAKE_CALL, params); 
+    }
+    catch(K3LAPI::failed_command & e)
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+               "Could not place call! Cause: code%x and rc%d.\n", e.code, e.rc);
+        switch_core_session_destroy(new_session);
+        return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
+    }
+
+    return SWITCH_CAUSE_SUCCESS;
 }
 
 switch_status_t channel_receive_event(switch_core_session_t *session, switch_event_t *event)
@@ -983,7 +998,8 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
 
 	channel = switch_core_session_get_channel(session);
 
-	if (tech_init(tech_pvt, session) != SWITCH_STATUS_SUCCESS) {
+	//if (tech_init(tech_pvt, session) != SWITCH_STATUS_SUCCESS) {
+	if (tech_pvt->init(session) != SWITCH_STATUS_SUCCESS) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
 		switch_core_session_destroy(&session);
 		return ksFail;
@@ -1000,7 +1016,7 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
     }
     catch ( K3LAPI::get_param_failed & err )
     {
-        // TODO: Can we set NULL variables? What should we do if this fails?
+        /* TODO: Can we set NULL variables? What should we do if this fails? */
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Could not get param %s on channel %u, board %u.\n", err.name.c_str(), KChannel, KDeviceId);
     }
 
@@ -1075,7 +1091,7 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "New call on %u to %s. [EV_NEW_CALL]\n", obj, Globals::k3lapi.get_param(e, "dest_addr").c_str());
             if (khomp_channel_from_event(e->DeviceId, obj, e) != ksSuccess )
             {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_CONNECT]\n", e->DeviceId, obj);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_NEW_CALL]\n", e->DeviceId, obj);
                 return ksFail;
             }
             try 
@@ -1088,65 +1104,83 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not set board channel status! [EV_NEW_CALL]\n");
             }
             break;
-        case EV_DISCONNECT:
-            {
-                switch_core_session_t * session = KhompPvt::get(e->DeviceId, obj)->session();
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Called party dropped the call on: %u. Releasing channel. [EV_DISCONNECT]\n", obj);
-                if(session == NULL)
-                    break;
 
-                if (channel_on_hangup(session) != SWITCH_STATUS_SUCCESS)
-                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Could not hangup channel: %u on board %u. Releasing board channel anyway. [EV_DISCONNECT]\n", obj, e->DeviceId);
-                try
-                {
-                    /* Stop the audio callbacks */
-                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Stopping audio callbacks ...\n");
-                    KhompPvt::get(e->DeviceId, obj)->stop_listen();
-                    KhompPvt::get(e->DeviceId, obj)->stop_stream();
-                    KhompPvt::get(e->DeviceId, obj)->session(NULL);
-                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Audio callbacks stopped successfully\n");
-                }
-                catch(K3LAPI::invalid_channel & err)
-                {
-                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not send CM_DISCONNECT!\n");
-                }
-            }
+        case EV_DISCONNECT:
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Called party disconnected: %u. [EV_DISCONNECT]\n", obj);
+
+// TODO: before uncommenting: we need to check channel direction here. after that, we MAY ONLY
+//       send a CM_DISCONNECT, but should not clean any state associated with the call
+#if 0
+            switch_core_session_t * session = KhompPvt::get(e->DeviceId, obj)->session();
+
+            if(session == NULL)
+                break;
+
+            if (channel_on_hangup(session) != SWITCH_STATUS_SUCCESS)
+            	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Could not hangup channel: %u on board %u. Releasing board channel anyway. [EV_DISCONNECT]\n", obj, e->DeviceId);
+#endif
+
+			// TODO: handle KGSM Multiparty disconnect latter.
             break;
+
         case EV_CONNECT:
-           switch_core_session_t* session;
-           /*
             try
             {
-            */
-                session = KhompPvt::get(e->DeviceId, obj)->session();
-                switch_channel_t *channel;
-                channel = switch_core_session_get_channel(session);
+	            switch_core_session_t * session = KhompPvt::get(e->DeviceId, obj)->session();
+                switch_channel_t * channel = switch_core_session_get_channel(session);
+
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Call will be answered on board %u, channel %u. [EV_CONNECT]\n", e->DeviceId, obj);
                 switch_channel_mark_answered(channel);
+
                 /* Start listening for audio */
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Starting audio callbacks ...\n");
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Starting audio callbacks ...\n");
+
                 KhompPvt::get(e->DeviceId, obj)->start_stream();
                 KhompPvt::get(e->DeviceId, obj)->start_listen();
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Audio callbacks initialized successfully\n");
-            /*
+
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Audio callbacks initialized successfully\n");
             }
-            catch (K3LAPI::invalid_session & err)
+            catch (K3LAPI::failed_command & err)
             {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_CONNECT]\n", e->DeviceId, obj);
             }
-            */
             break;
+
         case EV_CALL_SUCCESS:
             /* TODO: Should we bridge here? Maybe check a certain variable if we should generate ringback? */
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Call on board %u, channel %u is ringing. [EV_CALL_SUCESS]\n", e->DeviceId, obj);
             break;
+
         case EV_CHANNEL_FREE:
+		{
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Channel %u on board %u is now free. [EV_CHANNEL_FREE]\n", obj, e->DeviceId);
+
+            //switch_core_session_t * session = KhompPvt::get(e->DeviceId, obj)->session();
+
+            KhompPvt *pvt = KhompPvt::get(e->DeviceId, obj);
+
+            if(!pvt) 
+            {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "KhompPvt is invalid\n");
+                break;
+            }
+
+
+            /* Stop the audio callbacks */
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Stopping audio callbacks ...\n");
+            pvt->stop_listen();
+            pvt->stop_stream();
+            pvt->session(NULL);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Audio callbacks stopped successfully\n");
+            
             break;
+		}
+
         case EV_NO_ANSWER:
             /* TODO: Destroy sessions and channels */
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "No one answered the call on board %u channel %u. [EV_NO_ANSWER]\n", e->DeviceId, obj);
             break;
+
         case EV_CALL_ANSWER_INFO:
             {
                 /* TODO: Set channel variable if we get this event */
@@ -1199,8 +1233,10 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
         case EV_PHYSICAL_LINK_UP:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Link %u on board %u is UP. [EV_PHYSICAL_LINK_UP]\n", e->DeviceId, obj);
             break;
+
         case EV_INTERNAL_FAIL:
             {
+				// TODO: use Verbose for this.
                 const char * msg = "";
                 switch(e->AddInfo)
                 {
@@ -1244,7 +1280,88 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, byte * read_buffer, int32 read_size)
 {
     KhompPvt * pvt = KhompPvt::get(deviceid, objectid);
-    /*TODO: write to the switch_buffer_t member, which will be read by channel_read_frame */
+
+    if (!pvt)
+        return;
+
+    /* add listener audio to the read buffer */
+    if (!pvt->_reader_frames.give((const char *)read_buffer, read_size))
+    {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+            "Reader buffer full! (%u,%02u).\n",
+            pvt->target().device, pvt->target().object);
+    }
+
+    /* push audio from the write buffer */
+    switch_frame_t * fr = pvt->_writer_frames.pick();
+
+    if (!fr)
+    {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+            "Writer buffer empty! (%u,%02u).\n",
+            pvt->target().device, pvt->target().object);
+
+        return;
+    }
+
+	if (!switch_test_flag(pvt, TFLAG_STREAM))
+	{
+	    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+            "Stream not enabled, skipping write...\n",
+            pvt->target().device, pvt->target().object);
+        return;
+    }
+
+    /* will be used below for CM_ADD_STREAM_BUFFER */
+    struct
+    {
+        const byte * buff;
+        size_t       size;
+    }
+    write_packet = { (const byte *)0, 0 };
+
+    /* what is the frame type? */
+    switch (fr->flags)
+    {
+        case SFF_NONE:
+        {
+            write_packet.buff = (const byte *) fr->data;
+            write_packet.size = (size_t)       fr->datalen;
+
+			try
+			{
+	            Globals::k3lapi.command(pvt->target(), CM_ADD_STREAM_BUFFER,
+    	            (const char *)&write_packet);
+			}
+			catch (K3LAPI::failed_command & e)
+			{
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error adding audio to stream buffer...\n");
+			}
+            break;
+        }
+
+        case SFF_CNG:
+        {
+            write_packet.buff = (const byte *) KhompPvt::_cng_buffer;
+            write_packet.size = (size_t)       Globals::cng_buffer_size;
+
+			try
+			{
+	            Globals::k3lapi.command(pvt->target(), CM_ADD_STREAM_BUFFER,
+    	            (const char *)&write_packet);
+			}
+			catch (K3LAPI::failed_command & e)
+			{
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error adding CNG to stream buffer...\n");
+			}
+            break;
+        }
+
+        default:
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DROPPING AUDIO...\n");
+            /* TODO: log something here... */
+            break;
+    }
 }
 
 /* For Emacs:

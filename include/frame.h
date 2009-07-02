@@ -22,38 +22,96 @@
 
 #include "globals.h"
 
-/* Internal frame array structure. */
-struct FrameArray
+struct FrameStorage
 {
-	static const unsigned int frame_count;
+	static const unsigned int frame_count = 6;
+	static const unsigned int audio_count = 4;
 
-    FrameArray(switch_codec_t *);
-    ~FrameArray();
+             FrameStorage(switch_codec_t * codec, int packet_size);
+    virtual ~FrameStorage();
+
+	inline switch_frame_t * next_frame(void)
+	{
+        return &(_frames[next_index()]);
+	}
+
+    inline unsigned int next_index()
+    {
+        unsigned int tmp = _index;
+
+        if (++_index >= frame_count)
+            _index = 0;
+
+        return tmp;
+    }
+
+    inline switch_frame_t * cng_frame(void)
+    {
+        return &_cng_frame;
+    }
+
+    char * audio_buffer()
+    {
+        return _buffer;
+    };
+
+ private:
+    switch_frame_t   _cng_frame;
+
+    switch_frame_t * _frames;
+    char           * _buffer;
+
+    unsigned int     _index;
+};
+
+/* Internal frame array structure. */
+template < int S >
+struct FrameManager: protected FrameStorage
+{
+    typedef char Packet[ S ];
+
+    typedef Ringbuffer < Packet >  AudioBuffer;
+
+    FrameManager(switch_codec_t * codec)
+    : FrameStorage(codec, S),
+      _audio(audio_count, (Packet*)audio_buffer())
+    {};
+
+//    ~FrameManager();
 
     // may throw Ringbuffer::BufferEmpty
 	switch_frame_t * pick(void)
 	{
-        switch_frame & f = _audio.consumer_start();
+        try
+        {
+            /* try to consume from buffer.. */
+            Packet & a = _audio.consumer_start();
 
-        /* advance now */
-        _audio.consumer_commit();
+            switch_frame * f = next_frame();
 
-        return &f;
+            /* adjust pointer */
+            f->data = (char *)(&a);
+
+            /* advance now */
+            _audio.consumer_commit();
+ 
+            return f;
+        }
+        catch (...) // AudioBuffer::BufferEmpty & e)
+        {
+            return NULL;
+        }
 	}
 
     // may throw Ringbuffer::BufferFull
 	bool give(const char * buf, unsigned int size)
 	{
-        switch_frame_t & f = _audio.producer_start();
-
-        memcpy((char *)f.data, buf, size);
-
-        _audio.producer_commit();
+        return _audio.provider_partial(buf, size);
     }
 
     switch_frame_t * cng(void)
     {
-        return &_cng_frame;
+        return cng_frame();
     }
 
     void clear()
@@ -62,10 +120,12 @@ struct FrameArray
     }
 
  protected:
-    switch_frame_t                 _cng_frame;
-    switch_frame_t               * _frames;
-    char                         * _buffer;
-    Ringbuffer < switch_frame_t >  _audio;
+    AudioBuffer      _audio;
+
+    unsigned int     _index;
 };
+
+typedef FrameManager < Globals::switch_packet_size > FrameSwitchManager;
+typedef FrameManager < Globals::boards_packet_size > FrameBoardsManager;
 
 #endif /* _FRAME_HPP_ */
