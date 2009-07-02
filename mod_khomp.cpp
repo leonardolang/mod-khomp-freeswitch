@@ -49,7 +49,7 @@
  \return ksSuccess if the event was treated
  \see K3L_EVENT Event specification
  */
-static int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e);
+int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e);
 
 /*!
  \brief Callback generated from K3L API everytime audio is available on the board.
@@ -59,7 +59,7 @@ static int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e);
  @param[in] read_size The buffer size, meaning the amount of data to be read
  \return ksSuccess if the event was treated
  */
-static void Kstdcall khomp_audio_listener(int32 deviceid, int32 objectid,
+void Kstdcall khomp_audio_listener(int32 deviceid, int32 objectid,
                                           byte * read_buffer, int32 read_size);
 
 /*!
@@ -80,14 +80,14 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_khomp_shutdown);
 SWITCH_MODULE_DEFINITION(mod_khomp, mod_khomp_load, mod_khomp_shutdown, NULL);
 
 /* State handlers for FreeSWITCH */
-static switch_status_t channel_on_init(switch_core_session_t *session);
-static switch_status_t channel_on_routing(switch_core_session_t *session);
-static switch_status_t channel_on_execute(switch_core_session_t *session);
-static switch_status_t channel_on_hangup(switch_core_session_t *session);
-static switch_status_t channel_on_exchange_media(
+switch_status_t channel_on_init(switch_core_session_t *session);
+switch_status_t channel_on_routing(switch_core_session_t *session);
+switch_status_t channel_on_execute(switch_core_session_t *session);
+switch_status_t channel_on_hangup(switch_core_session_t *session);
+switch_status_t channel_on_exchange_media(
         switch_core_session_t *session);
-static switch_status_t channel_on_soft_execute(switch_core_session_t *session);
-static switch_status_t channel_on_destroy(switch_core_session_t *session);
+switch_status_t channel_on_soft_execute(switch_core_session_t *session);
+switch_status_t channel_on_destroy(switch_core_session_t *session);
 
 switch_state_handler_table_t khomp_state_handlers = {
     /*.on_init */ channel_on_init,
@@ -105,28 +105,28 @@ switch_state_handler_table_t khomp_state_handlers = {
 };
 
 /* Callbacks for FreeSWITCH */
-static switch_call_cause_t channel_outgoing_channel(
+switch_call_cause_t channel_outgoing_channel(
         switch_core_session_t *session, 
         switch_event_t *var_event,
         switch_caller_profile_t *outbound_profile,
         switch_core_session_t **new_session, 
         switch_memory_pool_t **pool, 
         switch_originate_flag_t flags);
-static switch_status_t channel_read_frame(switch_core_session_t *session, 
+switch_status_t channel_read_frame(switch_core_session_t *session, 
         switch_frame_t **frame, 
         switch_io_flag_t flags, 
         int stream_id);
-static switch_status_t channel_write_frame(switch_core_session_t *session, 
+switch_status_t channel_write_frame(switch_core_session_t *session, 
         switch_frame_t *frame, 
         switch_io_flag_t flags, 
         int stream_id);
-static switch_status_t channel_kill_channel(switch_core_session_t *session, 
+switch_status_t channel_kill_channel(switch_core_session_t *session, 
         int sig);
-static switch_status_t channel_send_dtmf(switch_core_session_t *session, 
+switch_status_t channel_send_dtmf(switch_core_session_t *session, 
         const switch_dtmf_t *dtmf);
-static switch_status_t channel_receive_message(switch_core_session_t *session, 
+switch_status_t channel_receive_message(switch_core_session_t *session, 
         switch_core_session_message_t *msg);
-static switch_status_t channel_receive_event(switch_core_session_t *session, 
+switch_status_t channel_receive_event(switch_core_session_t *session, 
         switch_event_t *event);
 
 
@@ -146,16 +146,16 @@ SWITCH_STANDARD_API(khomp);
 /*!
  \brief Print a system summary for all the boards. [khomp show info]
  */
-static void printSystemSummary(switch_stream_handle_t* stream);
+void printSystemSummary(switch_stream_handle_t* stream);
 /*!
  \brief Print link status. [khomp show links]
  */
-static void printLinks(switch_stream_handle_t* stream, unsigned int device, 
+void printLinks(switch_stream_handle_t* stream, unsigned int device, 
         unsigned int link);
 /*!
  \brief Print board channel status. [khomp show channels]
  */
-static void printChannels(switch_stream_handle_t* stream, unsigned int device, 
+void printChannels(switch_stream_handle_t* stream, unsigned int device, 
         unsigned int link);
 
 
@@ -164,7 +164,7 @@ static void printChannels(switch_stream_handle_t* stream, unsigned int device,
  \brief Will init part of our private structure and setup all the read/write
  buffers along with the proper codecs. Right now, only PCMA.
  */
-static switch_status_t tech_init(KhompPvt *tech_pvt, switch_core_session_t *session)
+switch_status_t tech_init(KhompPvt *tech_pvt, switch_core_session_t *session)
 {
     tech_pvt->flags = 0;
 
@@ -199,7 +199,7 @@ static switch_status_t tech_init(KhompPvt *tech_pvt, switch_core_session_t *sess
    returning SWITCH_STATUS_SUCCESS tells the core to execute the standard state method next
    so if you fully implement the state you can return SWITCH_STATUS_FALSE to skip it.
 */
-static switch_status_t channel_on_init(switch_core_session_t *session)
+switch_status_t channel_on_init(switch_core_session_t *session)
 {
     KhompPvt * tech_pvt = static_cast< KhompPvt* >(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
@@ -222,7 +222,7 @@ static switch_status_t channel_on_init(switch_core_session_t *session)
     return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_on_routing(switch_core_session_t *session)
+switch_status_t channel_on_routing(switch_core_session_t *session)
 {
     switch_channel_t *channel = NULL;
     KhompPvt *tech_pvt = NULL;
@@ -238,7 +238,7 @@ static switch_status_t channel_on_routing(switch_core_session_t *session)
     return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_on_execute(switch_core_session_t *session)
+switch_status_t channel_on_execute(switch_core_session_t *session)
 {
 
     switch_channel_t *channel = NULL;
@@ -256,7 +256,7 @@ static switch_status_t channel_on_execute(switch_core_session_t *session)
     return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_on_hangup(switch_core_session_t *session)
+switch_status_t channel_on_hangup(switch_core_session_t *session)
 {
     switch_channel_t *channel = NULL;
     KhompPvt *tech_pvt = NULL;
@@ -295,14 +295,14 @@ static switch_status_t channel_on_hangup(switch_core_session_t *session)
     return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_on_destroy(switch_core_session_t *session)
+switch_status_t channel_on_destroy(switch_core_session_t *session)
 {
     /* Doesn't do anything for now */
     
 	return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_kill_channel(switch_core_session_t *session, int sig)
+switch_status_t channel_kill_channel(switch_core_session_t *session, int sig)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL KILL, kill = %d\n", sig);
     switch_channel_t *channel = NULL;
@@ -331,19 +331,19 @@ static switch_status_t channel_kill_channel(switch_core_session_t *session, int 
     return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_on_exchange_media(switch_core_session_t *session)
+switch_status_t channel_on_exchange_media(switch_core_session_t *session)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL LOOPBACK\n");
     return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_on_soft_execute(switch_core_session_t *session)
+switch_status_t channel_on_soft_execute(switch_core_session_t *session)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL TRANSMIT\n");
     return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_send_dtmf(switch_core_session_t *session, const switch_dtmf_t *dtmf)
+switch_status_t channel_send_dtmf(switch_core_session_t *session, const switch_dtmf_t *dtmf)
 {
     KhompPvt *tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     switch_assert(tech_pvt != NULL);
@@ -351,7 +351,7 @@ static switch_status_t channel_send_dtmf(switch_core_session_t *session, const s
     return SWITCH_STATUS_SUCCESS;
 }
 
-static switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_t **frame, switch_io_flag_t flags, int stream_id)
+switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_t **frame, switch_io_flag_t flags, int stream_id)
 {
     switch_channel_t *channel = NULL;
     KhompPvt *tech_pvt = NULL;
@@ -413,7 +413,7 @@ static switch_status_t channel_read_frame(switch_core_session_t *session, switch
 
 }
 
-static switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame_t *frame, switch_io_flag_t flags, int stream_id)
+switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame_t *frame, switch_io_flag_t flags, int stream_id)
 {
     switch_channel_t *channel = NULL;
     KhompPvt *tech_pvt = NULL;
@@ -442,7 +442,7 @@ static switch_status_t channel_write_frame(switch_core_session_t *session, switc
 
 }
 
-static switch_status_t channel_answer_channel(switch_core_session_t *session)
+switch_status_t channel_answer_channel(switch_core_session_t *session)
 {
     KhompPvt *tech_pvt;
     switch_channel_t *channel = NULL;
@@ -457,7 +457,7 @@ static switch_status_t channel_answer_channel(switch_core_session_t *session)
 }
 
 
-static switch_status_t channel_receive_message(switch_core_session_t *session, switch_core_session_message_t *msg)
+switch_status_t channel_receive_message(switch_core_session_t *session, switch_core_session_message_t *msg)
 {
     switch_channel_t *channel;
     KhompPvt *tech_pvt;
@@ -487,7 +487,7 @@ static switch_status_t channel_receive_message(switch_core_session_t *session, s
   \brief Make sure when you have 2 sessions in the same scope that you pass the appropriate one to the routines
   that allocate memory or you will have 1 channel with memory allocated from another channel's pool!
 */
-static switch_call_cause_t channel_outgoing_channel(switch_core_session_t *session, switch_event_t *var_event,
+switch_call_cause_t channel_outgoing_channel(switch_core_session_t *session, switch_event_t *var_event,
                                                     switch_caller_profile_t *outbound_profile,
                                                     switch_core_session_t **new_session, switch_memory_pool_t **pool, switch_originate_flag_t flags)
 {
@@ -572,7 +572,7 @@ static switch_call_cause_t channel_outgoing_channel(switch_core_session_t *sessi
 
 }
 
-static switch_status_t channel_receive_event(switch_core_session_t *session, switch_event_t *event)
+switch_status_t channel_receive_event(switch_core_session_t *session, switch_event_t *event)
 {
     struct KhompPvt *tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     char *body = switch_event_get_body(event);
@@ -724,7 +724,7 @@ done:
 
 }
 
-static void printChannels(switch_stream_handle_t* stream, unsigned int device, unsigned int link) {
+void printChannels(switch_stream_handle_t* stream, unsigned int device, unsigned int link) {
     if (!device) {
         // Print all channels from all boards and links
         stream->write_function(stream, "|--------- Khomp ----------|\n");
@@ -764,7 +764,7 @@ static void printChannels(switch_stream_handle_t* stream, unsigned int device, u
     }
 }
 
-static void printLinks(switch_stream_handle_t* stream, unsigned int device, unsigned int link)
+void printLinks(switch_stream_handle_t* stream, unsigned int device, unsigned int link)
 {
 
     stream->write_function(stream, "___________________________________________\n");
@@ -859,7 +859,7 @@ static void printLinks(switch_stream_handle_t* stream, unsigned int device, unsi
 }
 
 
-static void printSystemSummary(switch_stream_handle_t* stream) {
+void printSystemSummary(switch_stream_handle_t* stream) {
 
     K3L_API_CONFIG apiCfg;
 
@@ -1063,7 +1063,7 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
     return ksSuccess;
 }
 
-static int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
+int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 {                
     /* TODO: How do we make sure channels inside FreeSWITCH only change to valid states on K3L? */
 
@@ -1241,7 +1241,7 @@ static int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
     return ksSuccess;
 }
 
-static void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, byte * read_buffer, int32 read_size)
+void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, byte * read_buffer, int32 read_size)
 {
     KhompPvt * pvt = KhompPvt::get(deviceid, objectid);
     /*TODO: write to the switch_buffer_t member, which will be read by channel_read_frame */
