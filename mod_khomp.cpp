@@ -448,9 +448,11 @@ switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame
     {
         if (!tech_pvt->_writer_frames.give((const char *)frame->data, (size_t)frame->datalen))
         {
+            /*
        		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
                 "Writer buffer full! (%u,%02u) (len=%u).\n",
                 tech_pvt->target().device, tech_pvt->target().object, frame->datalen);
+             */
         }
     }
 
@@ -1105,7 +1107,7 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
     switch(e->Code)
     {
         case EV_NEW_CALL:   
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "New call on %u to %s. [EV_NEW_CALL]\n", obj, Globals::k3lapi.get_param(e, "dest_addr").c_str());
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "New call on %u to %s from %s. [EV_NEW_CALL]\n", obj, Globals::k3lapi.get_param(e, "dest_addr").c_str(), Globals::k3lapi.get_param(e, "orig_addr").c_str());
             if (khomp_channel_from_event(e->DeviceId, obj, e) != ksSuccess )
             {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_NEW_CALL]\n", e->DeviceId, obj);
