@@ -57,6 +57,8 @@ struct KhompPvt
     bool start_listen(bool conn_rx = true);
     bool stop_listen(void);
 
+    bool send_dtmf(char digit);
+    
 
     K3LAPI::target          _target;    /*!< The device/channel pair to bind this pvt to */
     switch_core_session_t * _session;   /*!< The session to which this pvt is associated with */

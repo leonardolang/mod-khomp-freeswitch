@@ -326,9 +326,14 @@ switch_status_t channel_on_soft_execute(switch_core_session_t *session)
 
 switch_status_t channel_send_dtmf(switch_core_session_t *session, const switch_dtmf_t *dtmf)
 {
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL SEND-DTMF\n");
+    
     KhompPvt *tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     switch_assert(tech_pvt != NULL);
 
+    if(!tech_pvt->send_dtmf(dtmf->digit))
+        return SWITCH_STATUS_FALSE;
+    
     return SWITCH_STATUS_SUCCESS;
 }
 
@@ -1225,9 +1230,38 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
                     break;
             }
         case EV_DTMF_DETECTED:
-            /* TODO: What to do with DTMF? */
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Board %u detected DTMF (%d) on channel %u. [EV_DTMF_DETECTED]\n", e->DeviceId, e->AddInfo, obj);
+        {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Board %u detected DTMF (%c) on channel %u. [EV_DTMF_DETECTED]\n", e->DeviceId, e->AddInfo, obj);
+
+            KhompPvt *pvt = KhompPvt::get(e->DeviceId, obj);
+
+            if(!pvt) 
+            {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "KhompPvt is invalid\n");
+                break;
+            }
+
+            switch_core_session_t * session = pvt->session();
+
+            if(!session) 
+            {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "session is invalid\n");
+                break;
+            }
+
+            switch_channel_t *channel = switch_core_session_get_channel(session);
+
+            if(channel)
+            {
+                switch_dtmf_t dtmf = { (char) e->AddInfo, switch_core_default_dtmf_duration(0) };
+                switch_channel_queue_dtmf(channel, &dtmf);
+            }
+            else
+            {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Received a DTMF for (%u/%u) but the channel is invalid !\n", e->DeviceId, obj);
+            }
             break;
+        }
         case EV_DTMF_SEND_FINISH:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Channel %u on board %u has sucessfully generated DTMF. [EV_DTMF_SEND_FINNISH]\n", obj, e->DeviceId);
             break;
@@ -1310,10 +1344,11 @@ void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, byte * read_
 
     if (!fr)
     {
+        /*
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
             "Writer buffer empty! (%u,%02u).\n",
             pvt->target().device, pvt->target().object);
-
+        */
         return;
     }
 

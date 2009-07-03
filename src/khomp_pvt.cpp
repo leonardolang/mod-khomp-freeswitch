@@ -320,3 +320,20 @@ bool KhompPvt::stop_listen(void)
 
 	return true;
 }
+
+bool KhompPvt::send_dtmf(char digit)
+{
+    try
+    {
+        Globals::k3lapi.command(_target, CM_SEND_DTMF, &digit);
+    }
+    catch(...)
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending SEND_DTMF command!\n");
+        return false;
+    }
+
+    return true;
+}
+
+
