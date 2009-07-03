@@ -165,6 +165,8 @@ void printChannels(switch_stream_handle_t* stream, unsigned int device,
 */
 switch_status_t channel_on_init(switch_core_session_t *session)
 {
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL INIT\n");
+    
     KhompPvt * tech_pvt = static_cast< KhompPvt* >(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
@@ -231,6 +233,14 @@ switch_status_t channel_on_hangup(switch_core_session_t *session)
     tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "%s CHANNEL HANGUP\n", switch_channel_get_name(channel));
+
+    /* Stop the audio callbacks */
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Stopping audio callbacks ...\n");
+    tech_pvt->stop_listen();
+    tech_pvt->stop_stream();
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Audio callbacks stopped successfully\n");
+    
     switch_clear_flag_locked(tech_pvt, TFLAG_IO);
     switch_clear_flag_locked(tech_pvt, TFLAG_VOICE);
     //switch_thread_cond_signal(tech_pvt->_cond);
@@ -264,6 +274,8 @@ switch_status_t channel_on_hangup(switch_core_session_t *session)
 switch_status_t channel_on_destroy(switch_core_session_t *session)
 {
     /* Doesn't do anything for now */
+
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL DESTROY\n");
     
 	return SWITCH_STATUS_SUCCESS;
 }
@@ -490,7 +502,7 @@ switch_status_t channel_receive_message(switch_core_session_t *session, switch_c
   the appropriate one to the routines that allocate memory or you will have 
   1 channel with memory allocated from another channel's pool!
 */
-static switch_call_cause_t channel_outgoing_channel
+switch_call_cause_t channel_outgoing_channel
         (switch_core_session_t *session, 
          switch_event_t *var_event, 
          switch_caller_profile_t *outbound_profile, 
@@ -1155,8 +1167,6 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 		{
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Channel %u on board %u is now free. [EV_CHANNEL_FREE]\n", obj, e->DeviceId);
 
-            //switch_core_session_t * session = KhompPvt::get(e->DeviceId, obj)->session();
-
             KhompPvt *pvt = KhompPvt::get(e->DeviceId, obj);
 
             if(!pvt) 
@@ -1165,13 +1175,16 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
                 break;
             }
 
+            switch_core_session_t * session = pvt->session();
 
-            /* Stop the audio callbacks */
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Stopping audio callbacks ...\n");
-            pvt->stop_listen();
-            pvt->stop_stream();
-            pvt->session(NULL);
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Audio callbacks stopped successfully\n");
+            if(!session) 
+            {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "session is invalid\n");
+                break;
+            }
+            
+            if (channel_on_hangup(session) != SWITCH_STATUS_SUCCESS)
+            	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Could not hangup channel: %u on board %u.\n", obj, e->DeviceId);
             
             break;
 		}
