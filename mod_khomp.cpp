@@ -49,7 +49,7 @@
  \return ksSuccess if the event was treated
  \see K3L_EVENT Event specification
  */
-int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e);
+extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e);
 
 /*!
  \brief Callback generated from K3L API everytime audio is available on the board.
@@ -59,7 +59,7 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e);
  @param[in] read_size The buffer size, meaning the amount of data to be read
  \return ksSuccess if the event was treated
  */
-void Kstdcall khomp_audio_listener(int32 deviceid, int32 objectid,
+extern "C" void Kstdcall khomp_audio_listener(int32 deviceid, int32 objectid,
                                           byte * read_buffer, int32 read_size);
 
 /*!
@@ -620,8 +620,6 @@ switch_status_t channel_receive_event(switch_core_session_t *session, switch_eve
 }
 
 
-
-
 SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
 {
     Globals::module_pool = pool;
@@ -629,6 +627,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
     /* start config system! */
     Opt::initialize();
 
+    /* read configuration first */
     Opt::obtain();
 
     /* 
@@ -636,24 +635,9 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
        for sending info to the boards
     */
 
-    /* Start the API and connect to KServer */
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Starting K3L...\n");
-
-    try
-	{
-        Globals::k3lapi.start();
-        KhompPvt::initialize();
-    }
-	catch (K3LAPI::start_failed & e)
-	{
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "K3L not started. Reason:%s.\n", e.msg.c_str());
+    if(!KhompPvt::initialize())
         return SWITCH_STATUS_TERM;
-    }
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "K3L started.\n");
     
-    k3lRegisterEventHandler( khomp_event_callback );
-    k3lRegisterAudioListener( NULL, khomp_audio_listener );
-
     *module_interface = switch_loadable_module_create_module_interface(pool, "mod_khomp");
 
     Globals::khomp_endpoint_interface = static_cast<switch_endpoint_interface_t*>(switch_loadable_module_create_interface(*module_interface, SWITCH_ENDPOINT_INTERFACE));
@@ -663,6 +647,8 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
 
     /* Add all the specific API functions */
     SWITCH_ADD_API(Globals::api_interface, "khomp", "Khomp Menu", khomp, KHOMP_SYNTAX);
+
+    KhompPvt::initialize_handlers();
 
     /* indicate that the module should continue to be loaded */
     return SWITCH_STATUS_SUCCESS;
@@ -1098,7 +1084,7 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
     return ksSuccess;
 }
 
-int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
+extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 {                
     /* TODO: How do we make sure channels inside FreeSWITCH only change to valid states on K3L? */
 
@@ -1326,7 +1312,7 @@ int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
     return ksSuccess;
 }
 
-void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, byte * read_buffer, int32 read_size)
+extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, byte * read_buffer, int32 read_size)
 {
     KhompPvt * pvt = KhompPvt::get(deviceid, objectid);
 

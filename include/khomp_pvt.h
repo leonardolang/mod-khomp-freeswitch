@@ -10,6 +10,11 @@
  channels found in the host. It's also a place holder for session objects 
  and some other opaque members used by the module.
  */
+
+extern "C" int32 Kstdcall khomp_event_callback (int32, K3L_EVENT *);
+extern "C" void Kstdcall khomp_audio_listener (int32, int32, byte *, int32);
+
+
 struct KhompPvt
 {
     typedef std::vector < KhompPvt * >      InnerVectorType;  /*!< Collection of pointers of KhompPvts */
@@ -97,6 +102,36 @@ struct KhompPvt
       */
     static KhompPvt * find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause);
     
+    static bool initialize_k3l()
+    {
+        /* Start the API and connect to KServer */
+        try
+        {
+            Globals::k3lapi.start();
+        }
+        catch (K3LAPI::start_failed & e)
+        {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "K3L not started. Reason:%s.\n", e.msg.c_str());
+            return false;
+        }
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "K3L started.\n");
+        return true;
+    }
+    
+    static bool initialize_handlers()
+    {
+        if (Globals::k3lapi.device_count() == 0)
+            return false;
+
+        k3lRegisterEventHandler( khomp_event_callback );
+        k3lRegisterAudioListener( NULL, khomp_audio_listener );
+        
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "K3l event and audio handlers registered.\n");
+
+        return true;
+
+    }
+    
     static void initialize_channels(void)
     {
         
@@ -131,13 +166,20 @@ struct KhompPvt
             turn = !turn;
         }
     }
-    
-    static void initialize(void)
+
+    static bool initialize(void)
     {
+
+        if(!initialize_k3l())
+            return false;
+
         switch_mutex_init(&_pvts_mutex, SWITCH_MUTEX_NESTED, Globals::module_pool);
 
         initialize_cng_buffer();
         initialize_channels();
+
+
+        return true;
     }
 
     static void terminate()
