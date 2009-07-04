@@ -40,22 +40,15 @@ struct KhompPvt
         return _session;
     }
 
-    void clear()
-    {
-        flags = 0;
-
-        _reader_frames.clear();
-        _writer_frames.clear();
-
-        session(NULL);
-    }
-
     /*!
      \brief Will init part of our private structure and setup all the read/write
      buffers along with the proper codecs. Right now, only PCMA.
     */
     switch_status_t init(switch_core_session_t *new_session);
 
+    
+    switch_status_t clear();
+    
     bool start_stream(void);
     bool stop_stream(void);
 

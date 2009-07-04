@@ -23,41 +23,33 @@ KhompPvt::KhompPvt(K3LAPI::target & target)
   _reader_frames(&_read_codec),
   _writer_frames(&_write_codec)
 {
+
+}
+
+KhompPvt::~KhompPvt()
+{
+    _session = NULL;
+};
+
+
+switch_status_t KhompPvt::init(switch_core_session_t *new_session)
+{
+    session(new_session);
+
     if (switch_core_codec_init(&_read_codec, "PCMA", NULL, 8000, Globals::switch_packet_duration, 1,
             SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
                 Globals::module_pool) != SWITCH_STATUS_SUCCESS)
 	{
-		throw InitFailure();
+		return SWITCH_STATUS_FALSE;
 	}
 
     if (switch_core_codec_init(&_write_codec, "PCMA", NULL, 8000, Globals::switch_packet_duration, 1,
             SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
                 Globals::module_pool) != SWITCH_STATUS_SUCCESS)
 	{
-		throw InitFailure();
+		return SWITCH_STATUS_FALSE;
 	}
-}
-
-KhompPvt::~KhompPvt()
-{
-    _session = NULL;
-
-    if (_read_codec.implementation) {
-        switch_core_codec_destroy(&_read_codec);
-    }
-
-    if (_write_codec.implementation) {
-        switch_core_codec_destroy(&_write_codec);
-    }
-};
-
-
-switch_status_t KhompPvt::init(switch_core_session_t *new_session)
-{
-    clear();
-
-    session(new_session);
-
+    
     switch_mutex_init(&flag_mutex, SWITCH_MUTEX_NESTED,
                 switch_core_session_get_pool(_session));
     //switch_mutex_destroy, where???
@@ -77,6 +69,25 @@ switch_status_t KhompPvt::init(switch_core_session_t *new_session)
     return SWITCH_STATUS_SUCCESS;
 }
 
+switch_status_t KhompPvt::clear()
+{
+    flags = 0;
+
+    _reader_frames.clear();
+    _writer_frames.clear();
+
+    if (_read_codec.implementation) 
+    {
+        switch_core_codec_destroy(&_read_codec);
+    }
+
+    if (_write_codec.implementation)
+    {
+        switch_core_codec_destroy(&_write_codec);
+    }
+
+    session(NULL);
+}
 
 
 KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause)

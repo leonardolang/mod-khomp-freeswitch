@@ -244,7 +244,7 @@ switch_status_t channel_on_hangup(switch_core_session_t *session)
     switch_clear_flag_locked(tech_pvt, TFLAG_IO);
     switch_clear_flag_locked(tech_pvt, TFLAG_VOICE);
     //switch_thread_cond_signal(tech_pvt->_cond);
-
+    
     /* Make the channel available again */
     tech_pvt->session(NULL);
     
@@ -267,7 +267,7 @@ switch_status_t channel_on_hangup(switch_core_session_t *session)
         Globals::calls = 0;
     }
     switch_mutex_unlock(Globals::mutex);
-
+    
     return SWITCH_STATUS_SUCCESS;
 }
 
@@ -471,9 +471,18 @@ switch_status_t channel_answer_channel(switch_core_session_t *session)
     tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL ANSWER\n");
+
+    /* Start listening for audio */
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Starting audio callbacks ...\n");
+
     tech_pvt->start_stream();
     tech_pvt->start_listen();
 
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Audio callbacks initialized successfully\n");
+
+    switch_channel_mark_answered(channel);
+    
     return SWITCH_STATUS_SUCCESS;
 }
 
@@ -483,7 +492,7 @@ switch_status_t channel_receive_message(switch_core_session_t *session, switch_c
     switch_channel_t *channel;
     KhompPvt *tech_pvt;
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "When the fuck is this called?.\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Received message %d from [%s].\n", msg->message_id, msg->from);
 
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
@@ -563,15 +572,15 @@ switch_call_cause_t channel_outgoing_channel
         switch_core_session_destroy(new_session);
         return cause;
     }
-            
+
+    tech_pvt->init(*new_session);
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Dialing to %s"
             " out from Board:%u, Channel:%u.\n", argv[2], 
             tech_pvt->target().device, tech_pvt->target().object);
     
     switch_core_session_add_stream(*new_session, NULL);
     channel = switch_core_session_get_channel(*new_session);
-    tech_pvt->init(*new_session);
-
+    
     snprintf(name, sizeof(name), "Khomp/%d/%d/%s", tech_pvt->target().device, 
             tech_pvt->target().object, argv[2]);
 
@@ -1135,15 +1144,9 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
                 switch_channel_t * channel = switch_core_session_get_channel(session);
 
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Call will be answered on board %u, channel %u. [EV_CONNECT]\n", e->DeviceId, obj);
-                switch_channel_mark_answered(channel);
 
-                /* Start listening for audio */
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Starting audio callbacks ...\n");
-
-                KhompPvt::get(e->DeviceId, obj)->start_stream();
-                KhompPvt::get(e->DeviceId, obj)->start_listen();
-
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Audio callbacks initialized successfully\n");
+                channel_answer_channel(session);
+                
             }
             catch (K3LAPI::failed_command & err)
             {
