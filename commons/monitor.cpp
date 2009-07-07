@@ -196,6 +196,7 @@ stt_code monitor::start(monitor::user_printer printer, monitor::mode_type mode, 
     _printer = printer;
     _mode    = mode;
     _lazyreg = lazyreg;
+	_lazyreg = lazyreg;
 
     /* we do not initialize the map here ( operator[] does that for us, later ) */
 

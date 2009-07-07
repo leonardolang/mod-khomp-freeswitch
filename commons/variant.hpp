@@ -39,57 +39,60 @@
   
 */
 
+#include <refcounter.hpp>
+
 #ifndef _VARIANT_H_
 #define _VARIANT_H_
 
+/* this is internal, should not be used by the user */
+struct NoArgumentDefined {};
+
+template < typename UserReturnType, typename UserArgumentType = NoArgumentDefined >
 struct VariantBaseType
 {
-    VariantBaseType() {}
+    typedef UserReturnType       ReturnType;
+    typedef UserArgumentType   ArgumentType;
 
-    virtual ~VariantBaseType() {}
+    virtual ~VariantBaseType() {};
 
     virtual int which() = 0;
+
+	virtual ReturnType visit(void)           { return ReturnType(); };
+	virtual ReturnType visit(ArgumentType)   { return ReturnType(); };
 };
 
-template < typename BaseType >
-struct Variant
+template < typename BaseType = VariantBaseType < void > >
+struct Variant: public RefCount < Variant < BaseType > >
 {
+    typedef typename BaseType::ReturnType        ReturnType;
+    typedef typename BaseType::ArgumentType    ArgumentType;
+
     struct InvalidType {};
 
-    Variant(BaseType * value) : _value(value)
-    {
-       _count = new int(1);
-    };
+    Variant(BaseType * value)
+	: _value(value) {};
 
-    Variant(const Variant & v) : _value(v._value), _count(v._count)
-    {
-       ++(*_count);
-    }
+    Variant(const Variant & v)
+	: _value(v._value) {};
 
-    ~Variant()
+    void unreference()
     {
-        --(*_count);
-
-        if (_value && !(*_count))
-        {
+        if (_value)
             delete _value;
-            delete _count;
-        }
     };
 
-    template < typename ReturnType >
-    ReturnType & get(void)
+    template < typename ValueType >
+    ValueType & get(void)
     {
         try
         {
-            ReturnType & ret = dynamic_cast < ReturnType & > (*_value);
+            ValueType & ret = dynamic_cast < ValueType & > (*_value);
             return ret;
         }
         catch (std::bad_cast & e)
         {
             throw InvalidType();
         }
-
     };
 
     int which()
@@ -97,9 +100,18 @@ struct Variant
         return _value->which();
     }
 
+    ReturnType visit(void)
+    {
+        return _value->visit();
+    }
+
+    ReturnType visit(ArgumentType arg)
+    {
+        return _value->visit(arg);
+    }
+
  protected:
     BaseType * _value;
-    int      * _count;
 };
 
 #endif /* _VARIANT_H_ */

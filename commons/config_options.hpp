@@ -65,7 +65,14 @@ struct ConfigOption
     typedef std::string  StringType;
 
     //typedef boost::function1<void, std::string>     
-    typedef void (*FunctionType)(std::string);
+    //typedef void (*FunctionType)(std::string);
+
+    struct BaseFunctionType
+    {
+        virtual void operator()(std::string) {};
+    };
+
+    typedef BaseFunctionType  FunctionType;
 
     typedef std::set < StringType >     string_allowed_type;
     
@@ -89,7 +96,7 @@ struct ConfigOption
         number_type minimum, maximum, step;
     };
 
-    struct SignedIntData : public VariantBaseType
+    struct SignedIntData : public VariantBaseType < void >
     {
         SignedIntData(SignedIntType & _sint_val, SignedIntType _sint_default, Range< SignedIntType > _sint_Range)
         : sint_val(_sint_val), sint_default(_sint_default), sint_Range(_sint_Range) {};
@@ -104,7 +111,7 @@ struct ConfigOption
         Range<SignedIntType>   sint_Range;
     };
 
-    struct UnsignedIntData : public VariantBaseType
+    struct UnsignedIntData : public VariantBaseType < void >
     {
         UnsignedIntData(UnsignedIntType & _uint_val, UnsignedIntType _uint_default, Range< UnsignedIntType > _uint_Range)
         : uint_val(_uint_val), uint_default(_uint_default), uint_Range(_uint_Range) {};
@@ -119,7 +126,7 @@ struct ConfigOption
         Range<UnsignedIntType>   uint_Range;
     };
 
-    struct BooleanData : public VariantBaseType
+    struct BooleanData : public VariantBaseType < void >
     {
         BooleanData(BooleanType & _bool_val, BooleanType _bool_default)
         : bool_val(_bool_val), bool_default(_bool_default) {};
@@ -133,7 +140,7 @@ struct ConfigOption
         BooleanType        bool_default;
     };
 
-    struct StringData : public VariantBaseType
+    struct StringData : public VariantBaseType < void >
     {
         StringData(std::string & _string_val, std::string _string_default, string_allowed_type _string_allowed)
         : string_val(_string_val), string_default(_string_default), string_allowed(_string_allowed) {};
@@ -148,7 +155,7 @@ struct ConfigOption
         string_allowed_type   string_allowed;
     };
 
-    struct FunctionData : public VariantBaseType
+    struct FunctionData : public VariantBaseType < void >
     {
         FunctionData(FunctionType _fun_val, std::string _fun_default, string_allowed_type _fun_allowed)
         : fun_val(_fun_val), fun_default(_fun_default), fun_allowed(_fun_allowed) {};
@@ -164,7 +171,7 @@ struct ConfigOption
     };
 
 
-    typedef Variant < VariantBaseType >  ValueType;
+    typedef Variant < VariantBaseType < void > >  ValueType;
 
     ConfigOption(std::string, const StringType &, const StringType, string_allowed_type allowed, bool list_me = true);
     ConfigOption(std::string, const StringType &, const StringType = "", bool list_me = true);

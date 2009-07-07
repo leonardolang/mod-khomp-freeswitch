@@ -56,6 +56,9 @@
 
 struct Format
 {
+    static const unsigned int strings_base_length = 64;
+    static const unsigned int generic_base_length = 64;
+
     struct InvalidFormat
     {
         InvalidFormat(std::string msg) : _msg(msg) {}
@@ -63,8 +66,12 @@ struct Format
         std::string _msg;
     };
 
-    Format(const char * format_string, bool raise_exception = false);
+    explicit Format(const char  * format_string, bool raise_exception = false);
+//    explicit Format(std::string & format_string, bool raise_exception = false);
+    explicit Format(std::string   format_string, bool raise_exception = false);
     
+    void initialize(const char *);
+
     std::string str(void);
 
     ////////////////////////////////////////////////////////////
@@ -125,7 +132,7 @@ struct Format
         {
             Argument & top = next_argument();
 
-            char temp[64];
+            char temp[generic_base_length];
 
             if (!generic_verify(value, top.type()))
             {
@@ -135,7 +142,9 @@ struct Format
                 msg += typeid(value).name();
                 msg += "' in format '";
                 msg += top.fmts();
-                msg += "'";
+                msg += "' (";
+                msg += _format;
+                msg += ")";
 
                 mark_invalid(msg);
                 return *this;
@@ -175,7 +184,7 @@ struct Format
             {
                 case T_POINTER:
                 {
-                    char temp[32];
+                    char temp[generic_base_length];
                     snprintf(temp, sizeof(temp), top.fmts().c_str(), value);
                     _result += temp;
                     break;
@@ -188,9 +197,7 @@ struct Format
                         (typeid(const unsigned char) == typeid(V)) ||
                         (typeid(unsigned char)       == typeid(V)))
                     {
-                        int len = strlen((const char*)value)+1;
-
-                        std::cerr << "len: " << len << std::endl;
+                        int len = strlen((const char*)value)+strings_base_length+1;
 
                         char * temp = new char[len];
 
@@ -205,7 +212,9 @@ struct Format
 
                         msg += "type mismatch: got type '";
                         msg += typeid(value).name();
-                        msg += "' in string format";
+                        msg += "' in string format (";
+                        msg += _format;
+                        msg += ")";
 
                         mark_invalid(msg);
                     }
@@ -218,7 +227,9 @@ struct Format
 
                     msg += "type mismatch: got pointer/string type in format '";
                     msg += top.fmts();
-                    msg += "'";
+                    msg += "' (";
+                    msg += _format;
+                    msg += ")";
 
                     mark_invalid(msg);
                     break;
@@ -242,7 +253,14 @@ struct Format
         return *this;
     }
 
-    Format & operator%( std::string & value )
+/*
+    Format & operator%( std::string   value )
+    {
+        return operator%(value);
+    }
+*/
+
+    Format & operator%( const std::string value )
     {
         if (!validity_check())
             return *this;
@@ -253,7 +271,7 @@ struct Format
 
             if (top.type() == T_STRING)
             {
-                int len = value.length()+1;
+                int len = value.length()+strings_base_length+1;
 
                 char * temp = new char[len];
 
@@ -268,7 +286,9 @@ struct Format
 
                 msg += "type mismatch: got string type in format '";
                 msg += top.fmts();
-                msg += "'";
+                msg += "' (";
+                msg += _format;
+                msg += ")";
 
                 mark_invalid(msg);
             }
@@ -298,32 +318,52 @@ struct Format
         switch (type)
         {
             case T_SIGNED_SHORT_SHORT:
-                return (typeid(V) == typeid(char));
+                return (typeid(V) == typeid(char) || typeid(V) == typeid(const char));
+
             case T_SIGNED_SHORT:
-                return (typeid(V) == typeid(short int)) || (typeid(V) == typeid(short));
+                return (typeid(V) == typeid(short int)) || (typeid(V) == typeid(short) ||
+                    typeid(V) == typeid(const short int)) || (typeid(V) == typeid(const short));
+
+            /* EXCEPTION: consider unsigned int an valid input. */
             case T_SIGNED_INT:
-                return typeid(V) == typeid(int);
+                return (typeid(V) == typeid(int) || typeid(V) == typeid(const int) ||
+                    typeid(V) == typeid(unsigned int) || typeid(V) == typeid(const unsigned int) ||
+                    typeid(V) == typeid(long int) || typeid(V) == typeid(const long int) ||
+                    typeid(V) == typeid(unsigned long int) || typeid(V) == typeid(const unsigned long int));
+
             case T_SIGNED_LONG:
-                return (typeid(V) == typeid(long int)) || (typeid(V) == typeid(long));
+                return (typeid(V) == typeid(long int)) || (typeid(V) == typeid(long) ||
+                    typeid(V) == typeid(const long int)) || (typeid(V) == typeid(const long));
+
             case T_SIGNED_LONG_LONG:
-                return (typeid(V) == typeid(long long int)) || (typeid(V) == typeid(long long));
+                return (typeid(V) == typeid(long long int)) || (typeid(V) == typeid(long long) ||
+                    typeid(V) == typeid(const long long int)) || (typeid(V) == typeid(const long long));
 
             case T_UNSIGNED_SHORT_SHORT:
-                return (typeid(V) == typeid(unsigned char));
+                return (typeid(V) == typeid(unsigned char) || typeid(V) == typeid(unsigned char));
+
             case T_UNSIGNED_SHORT:
-                return (typeid(V) == typeid(unsigned short int)) || (typeid(V) == typeid(unsigned short));
+                return (typeid(V) == typeid(unsigned short int)) || (typeid(V) == typeid(unsigned short) ||
+                    typeid(V) == typeid(const unsigned short int)) || (typeid(V) == typeid(const unsigned short));
+
             case T_UNSIGNED_INT:
-                return typeid(V) == typeid(unsigned int);
+                return typeid(V) == typeid(unsigned int) || typeid(V) == typeid(const unsigned int);
+
             case T_UNSIGNED_LONG:
-                return (typeid(V) == typeid(unsigned long int)) || (typeid(V) == typeid(unsigned long));
+                return (typeid(V) == typeid(unsigned long int)) || (typeid(V) == typeid(unsigned long) ||
+                    typeid(V) == typeid(const unsigned long int)) || (typeid(V) == typeid(const unsigned long));
+
             case T_UNSIGNED_LONG_LONG:
-                return (typeid(V) == typeid(unsigned long long int)) || (typeid(V) == typeid(unsigned long long));
+                return (typeid(V) == typeid(unsigned long long int)) || (typeid(V) == typeid(unsigned long long) ||
+                    typeid(V) == typeid(const unsigned long long int)) || (typeid(V) == typeid(const unsigned long long));
 
             case T_FLOAT:
-                return (typeid(V) == typeid(float)) || (typeid(V) == typeid(double));
+                return (typeid(V) == typeid(float)) || (typeid(V) == typeid(double) ||
+                    typeid(V) == typeid(const float)) || (typeid(V) == typeid(const double));
 
             case T_CHAR:
-                return (typeid(V) == typeid(char)) || (typeid(V) == typeid(unsigned char));
+                return (typeid(V) == typeid(char)) || (typeid(V) == typeid(unsigned char) ||
+                    typeid(V) == typeid(const char)) || (typeid(V) == typeid(const unsigned char));
 
             case T_POINTER:
             case T_STRING:
@@ -335,6 +375,8 @@ struct Format
             case T_LITERAL:
                 return false;
         }
+
+        return false;
     };
 
     void mark_invalid(std::string &);
@@ -350,10 +392,10 @@ struct Format
     void push_argument(std::string & data, Type type);
 
  private:
-    const char * _format;
+    std::string   _format;
 
-    bool         _valid;
-    bool         _raise;
+    bool          _valid;
+    bool          _raise;
 
     std::string   _result;
     ArgumentQueue _args;

@@ -307,7 +307,6 @@ struct monitor
     static mode_type     _mode;
 
     static bool          _lazyreg;
-
     static state_type    _state;
 
  private:

@@ -42,8 +42,27 @@
 #include "format.hpp"
 //#include <iostream>
 
-Format::Format(const char * format_string, bool raise_exception)
+Format::Format(const char  * format_string, bool raise_exception)
 : _format(format_string), _valid(true), _raise(raise_exception)
+{
+    initialize(format_string);
+}
+
+/*
+Format::Format(std::string & format_string, bool raise_exception)
+: _format(NULL), _valid(true), _raise(raise_exception)
+{
+    initialize(format_string.c_str());
+}
+*/
+
+Format::Format(std::string   format_string, bool raise_exception)
+: _format(format_string), _valid(true), _raise(raise_exception)
+{
+    initialize(format_string.c_str());
+}
+
+void Format::initialize(const char * format_string)
 {
     std::string txt;
 
@@ -261,7 +280,7 @@ Format::Argument & Format::next_argument(void)
         {
 //            std::cerr << "top type == LITERAL, looping..." << std::endl;
             _result += top.fmts();
-            _args.pop();
+            pop_argument();
         }
         else
         {
@@ -278,7 +297,7 @@ void Format::pop_argument(void)
 
 void Format::push_argument(std::string & data, Format::Type type)
 {
-//    std::cerr << "pushing type: " << type << std::endl;
+//    std::cerr << "pushing type (" << type << ") with format (" << data << ")" << std::endl;
 
     _args.push(Argument(data, type));
     data.clear();
@@ -291,13 +310,15 @@ std::string Format::str()
 
     try
     {
-        Argument & top = next_argument();
+        next_argument();
 
         std::string msg;
 
         msg += "too few arguments passed for format '";
         msg += _format;
-        msg += "'";
+        msg += "' (";
+        msg += _format;
+        msg += ")";
 
         mark_invalid(msg);
 

@@ -45,17 +45,18 @@
 
 #include <k3l.h>
 
+// k3lApiMajorVersion
+#ifndef CM_PING
+# include <k3lVersion.h> 
+# include <KTools.h>
+#endif
+
 #include <types.hpp>
 #include <k3lapi.hpp>
 #include <format.hpp>
 
 #ifndef _VERBOSE_HPP_
 #define _VERBOSE_HPP_
-
-#ifndef k3lApiMajorVersion
-# include <k3lVersion.h> 
-# include <KTools.h>
-#endif
 
 struct Verbose
 {
@@ -242,16 +243,29 @@ struct Verbose
         K_EV_CLIENT_RECONNECT                = EV_CLIENT_RECONNECT,
         K_EV_VOIP_SEIZURE                    = EV_VOIP_SEIZURE,
         K_EV_SEIZURE                         = EV_SEIZURE,
+#if !K3L_AT_LEAST(2,0,0)
         K_EV_PONG                            = EV_PONG,
+#endif
     }
     kevent;
 
     /* dynamic (object) stuff */
 
-    Verbose(K3LAPI & api) : _api(api) {};
+	typedef enum
+	{
+		R2_COUNTRY_ARG = 1,
+		R2_COUNTRY_BRA = 2,
+		R2_COUNTRY_CHI = 3,
+		R2_COUNTRY_MEX = 4,
+		R2_COUNTRY_URY = 5,
+		R2_COUNTRY_VEN = 6
+	}
+	r2_country_type;
 
-    std::string event(int32, K3L_EVENT*);
-    std::string channelStatus(int32, int32, int32);
+	Verbose(K3LAPI & api): _api(api) {};
+
+	std::string event(int32, K3L_EVENT*, r2_country_type r2_country = R2_COUNTRY_BRA);
+	std::string channelStatus(int32, int32, int32);
 
     /* end of dynamic (object) stuff */
 
@@ -262,15 +276,16 @@ struct Verbose
     struct internal_not_found {};
 
  public:
+
     /* static (class) stuff */
 
     static std::string echoLocation(KEchoLocation);
     static std::string echoCancellerConfig(KEchoCancellerConfig);
 
-    static std::string event(KSignaling, int32, K3L_EVENT*);
+	static std::string event(KSignaling, int32, K3L_EVENT*, r2_country_type r2_country);
 
-    static std::string command(int32, K3L_COMMAND*);
-    static std::string command(int32, int32, int32, const char *);
+	static std::string command(int32, K3L_COMMAND*, r2_country_type r2_country);
+	static std::string command(int32, int32, int32, const char *, r2_country_type r2_country);
 
     static std::string deviceName(KDeviceType, int32);
 
@@ -282,10 +297,10 @@ struct Verbose
     static std::string systemObject(KSystemObject);
     static std::string mixerTone(KMixerTone);
 
-    static std::string seizeFail(KSeizeFail);
-    static std::string callFail(KSignaling, int32);
-    static std::string channelFail(KSignaling, int32);
-    static std::string internalFail(KInternalFail);
+	static std::string seizeFail(KSeizeFail);
+	static std::string callFail(KSignaling, r2_country_type, int32);
+	static std::string channelFail(KSignaling, int32);
+	static std::string internalFail(KInternalFail);
 
     static std::string linkErrorCounter(KLinkErrorCounter);
 
@@ -294,8 +309,8 @@ struct Verbose
     static std::string callStatus(KCallStatus);
     static std::string status(KLibraryStatus);
 
-    static std::string signGroupB(KSignGroupB);
-    static std::string signGroupII(KSignGroupII);
+	static std::string signGroupB(KSignGroupB, r2_country_type contry = R2_COUNTRY_BRA);
+	static std::string signGroupII(KSignGroupII, r2_country_type contry = R2_COUNTRY_BRA);
 
     static std::string h100configIndex(KH100ConfigIndex);
 
@@ -321,8 +336,9 @@ struct Verbose
     static std::string gsmMobileCause(KGsmMobileCause);
     static std::string gsmSmsCause(KGsmSmsCause);
     
-    static std::string q931ProgressIndication(KQ931ProgressIndication);
+	static std::string q931ProgressIndication(KQ931ProgressIndication);
 #endif
+
     /* end of static (class) stuff */
 
  private:
@@ -333,22 +349,51 @@ struct Verbose
     static std::string internal_isdnCause(KQ931Cause);
 #endif
 
-    static std::string internal_signGroupB(KSignGroupB);
-    static std::string internal_signGroupII(KSignGroupII);
+	static std::string internal_signGroupB(KSignGroupB, r2_country_type contry);
+	static std::string internal_signGroupII(KSignGroupII, r2_country_type contry);
 
 #if K3L_AT_LEAST(1,6,0)
     static std::string internal_gsmCallCause(KGsmCallCause);
     static std::string internal_gsmMobileCause(KGsmMobileCause);
     static std::string internal_gsmSmsCause(KGsmSmsCause);
     
-    static std::string internal_q931ProgressIndication(KQ931ProgressIndication);
+	static std::string internal_q931ProgressIndication(KQ931ProgressIndication);
 #endif
 
  private:
-    static void generate(std::string &, std::string &, kobject::item, std::string &);
+    enum Type
+    {
+        DEVICE,
+        CHANNEL,
+        PLAYER,
+        MIXER,
+        LINK,
+        NONE
+    };
 
-    static std::string show(std::string &, std::string, kobject::item, std::string &);
-    static std::string show(std::string &, std::string, kobject::item);
+    struct Target
+    {
+        Target(Type _type)
+        : type(_type), device(-1), object(-1)
+        {};
+
+        Target(Type _type, int32 _device)
+        : type(_type), device(_device), object(-1)
+        {};
+
+        Target(Type _type, int32 _device, int32 _object)
+        : type(_type), device(_device), object(_object)
+        {};
+
+        Type  type;
+        int32 device;
+        int32 object;
+    };
+
+    static void generate(std::string &, std::string &, Target, std::string &);
+
+    static std::string show(std::string &, std::string, Target, std::string &);
+    static std::string show(std::string &, std::string, Target);
 };
 
 #endif /* _VERBOSE_HPP_ */
