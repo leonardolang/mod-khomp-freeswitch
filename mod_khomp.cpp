@@ -167,7 +167,7 @@ switch_status_t channel_on_init(switch_core_session_t *session)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL INIT\n");
     
-    KhompPvt * tech_pvt = static_cast< KhompPvt* >(switch_core_session_get_private(session));
+    CBaseKhompPvt * tech_pvt = static_cast< CBaseKhompPvt* >(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
     switch_channel_t *channel = switch_core_session_get_channel(session);
@@ -191,12 +191,12 @@ switch_status_t channel_on_init(switch_core_session_t *session)
 switch_status_t channel_on_routing(switch_core_session_t *session)
 {
     switch_channel_t *channel = NULL;
-    KhompPvt *tech_pvt = NULL;
+    CBaseKhompPvt *tech_pvt = NULL;
 
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
 
-    tech_pvt = static_cast<KhompPvt *>(switch_core_session_get_private(session));
+    tech_pvt = static_cast<CBaseKhompPvt *>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "%s CHANNEL ROUTING\n", switch_channel_get_name(channel));
@@ -208,12 +208,12 @@ switch_status_t channel_on_execute(switch_core_session_t *session)
 {
 
     switch_channel_t *channel = NULL;
-    KhompPvt *tech_pvt = NULL;
+    CBaseKhompPvt *tech_pvt = NULL;
 
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
 
-    tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
+    tech_pvt = static_cast<CBaseKhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "%s CHANNEL EXECUTE\n", switch_channel_get_name(channel));
@@ -225,12 +225,12 @@ switch_status_t channel_on_execute(switch_core_session_t *session)
 switch_status_t channel_on_hangup(switch_core_session_t *session)
 {
     switch_channel_t *channel = NULL;
-    KhompPvt *tech_pvt = NULL;
+    CBaseKhompPvt *tech_pvt = NULL;
 
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
 
-    tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
+    tech_pvt = static_cast<CBaseKhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "%s CHANNEL HANGUP\n", switch_channel_get_name(channel));
@@ -284,12 +284,12 @@ switch_status_t channel_kill_channel(switch_core_session_t *session, int sig)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL KILL, kill = %d\n", sig);
     switch_channel_t *channel = NULL;
-    KhompPvt *tech_pvt = NULL;
+    CBaseKhompPvt *tech_pvt = NULL;
 
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
 
-    tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
+    tech_pvt = static_cast<CBaseKhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
     switch (sig) {
@@ -328,7 +328,7 @@ switch_status_t channel_send_dtmf(switch_core_session_t *session, const switch_d
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL SEND-DTMF\n");
     
-    KhompPvt *tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
+    CBaseKhompPvt *tech_pvt = static_cast<CBaseKhompPvt*>(switch_core_session_get_private(session));
     switch_assert(tech_pvt != NULL);
 
     if(!tech_pvt->send_dtmf(dtmf->digit))
@@ -340,7 +340,7 @@ switch_status_t channel_send_dtmf(switch_core_session_t *session, const switch_d
 switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_t **frame, switch_io_flag_t flags, int stream_id)
 {
     switch_channel_t *channel = NULL;
-    KhompPvt *tech_pvt = NULL;
+    CBaseKhompPvt *tech_pvt = NULL;
     //switch_time_t started = switch_time_now();
     //unsigned int elapsed;
     switch_byte_t *data;
@@ -348,7 +348,7 @@ switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
 
-    tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
+    tech_pvt = static_cast<CBaseKhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 //    tech_pvt->_read_frame.flags = SFF_NONE;
     *frame = NULL;
@@ -418,13 +418,13 @@ switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_
 switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame_t *frame, switch_io_flag_t flags, int stream_id)
 {
     switch_channel_t *channel = NULL;
-    KhompPvt *tech_pvt = NULL;
+    CBaseKhompPvt *tech_pvt = NULL;
     //switch_frame_t *pframe;
 
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
 
-    tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
+    tech_pvt = static_cast<CBaseKhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
 /*
@@ -462,13 +462,13 @@ switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame
 
 switch_status_t channel_answer_channel(switch_core_session_t *session)
 {
-    KhompPvt *tech_pvt;
+    CBaseKhompPvt *tech_pvt;
     switch_channel_t *channel = NULL;
 
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
 
-    tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
+    tech_pvt = static_cast<CBaseKhompPvt*>(switch_core_session_get_private(session));
     assert(tech_pvt != NULL);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL ANSWER\n");
@@ -490,14 +490,14 @@ switch_status_t channel_answer_channel(switch_core_session_t *session)
 switch_status_t channel_receive_message(switch_core_session_t *session, switch_core_session_message_t *msg)
 {
     switch_channel_t *channel;
-    KhompPvt *tech_pvt;
+    CBaseKhompPvt *tech_pvt;
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Received message %d from [%s].\n", msg->message_id, msg->from);
 
     channel = switch_core_session_get_channel(session);
     assert(channel != NULL);
 
-    tech_pvt = (KhompPvt *) switch_core_session_get_private(session);
+    tech_pvt = (CBaseKhompPvt *) switch_core_session_get_private(session);
     assert(tech_pvt != NULL);
 
     switch (msg->message_id) {
@@ -535,7 +535,7 @@ switch_call_cause_t channel_outgoing_channel
         return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
     }
 
-    KhompPvt *tech_pvt;
+    CBaseKhompPvt *tech_pvt;
     switch_call_cause_t cause = SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
     switch_channel_t *channel;
     switch_caller_profile_t *caller_profile;
@@ -565,7 +565,7 @@ switch_call_cause_t channel_outgoing_channel
         return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
     }
     
-    tech_pvt = KhompPvt::find_channel(name, *new_session, &cause);
+    tech_pvt = CBaseKhompPvt::find_channel(name, *new_session, &cause);
 
     if(tech_pvt == NULL || cause != SWITCH_CAUSE_SUCCESS)
     {
@@ -617,7 +617,7 @@ switch_call_cause_t channel_outgoing_channel
 
 switch_status_t channel_receive_event(switch_core_session_t *session, switch_event_t *event)
 {
-    struct KhompPvt *tech_pvt = static_cast<KhompPvt*>(switch_core_session_get_private(session));
+    struct CBaseKhompPvt *tech_pvt = static_cast<CBaseKhompPvt*>(switch_core_session_get_private(session));
     char *body = switch_event_get_body(event);
     switch_assert(tech_pvt != NULL);
 
@@ -644,7 +644,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
        for sending info to the boards
     */
 
-    if(!KhompPvt::initialize())
+    if(!CBaseKhompPvt::initialize())
         return SWITCH_STATUS_TERM;
     
     *module_interface = switch_loadable_module_create_module_interface(pool, "mod_khomp");
@@ -657,7 +657,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
     /* Add all the specific API functions */
     SWITCH_ADD_API(Globals::api_interface, "khomp", "Khomp Menu", khomp, KHOMP_SYNTAX);
 
-    KhompPvt::initialize_handlers();
+    CBaseKhompPvt::initialize_handlers();
 
     /* indicate that the module should continue to be loaded */
     return SWITCH_STATUS_SUCCESS;
@@ -694,7 +694,7 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_khomp_shutdown)
 
     Globals::k3lapi.stop();
 
-    KhompPvt::terminate();
+    CBaseKhompPvt::terminate();
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "the K3L API has been stopped!\n");
     
@@ -996,7 +996,7 @@ void printSystemSummary(switch_stream_handle_t* stream) {
 KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KChannel, K3L_EVENT * event)
 {
 	switch_core_session_t *session = NULL;
-	KhompPvt *tech_pvt = NULL;
+	CBaseKhompPvt *tech_pvt = NULL;
 	switch_channel_t *channel = NULL;
 	char name[128];
 	
@@ -1007,7 +1007,7 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
 	
 	switch_core_session_add_stream(session, NULL);
 	
-	tech_pvt = KhompPvt::get(KDeviceId, KChannel);
+	tech_pvt = CBaseKhompPvt::get(KDeviceId, KChannel);
 	assert(tech_pvt != NULL); // TODO: assert is bad, better is to log non-fatal error.
 
 	channel = switch_core_session_get_channel(session);
@@ -1125,7 +1125,7 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 // TODO: before uncommenting: we need to check channel direction here. after that, we MAY ONLY
 //       send a CM_DISCONNECT, but should not clean any state associated with the call
 #if 0
-            switch_core_session_t * session = KhompPvt::get(e->DeviceId, obj)->session();
+            switch_core_session_t * session = CBaseKhompPvt::get(e->DeviceId, obj)->session();
 
             if(session == NULL)
                 break;
@@ -1140,7 +1140,7 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
         case EV_CONNECT:
             try
             {
-	            switch_core_session_t * session = KhompPvt::get(e->DeviceId, obj)->session();
+	            switch_core_session_t * session = CBaseKhompPvt::get(e->DeviceId, obj)->session();
                 switch_channel_t * channel = switch_core_session_get_channel(session);
 
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Call will be answered on board %u, channel %u. [EV_CONNECT]\n", e->DeviceId, obj);
@@ -1163,7 +1163,7 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 		{
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Channel %u on board %u is now free. [EV_CHANNEL_FREE]\n", obj, e->DeviceId);
 
-            KhompPvt *pvt = KhompPvt::get(e->DeviceId, obj);
+            CBaseKhompPvt *pvt = CBaseKhompPvt::get(e->DeviceId, obj);
 
             if(!pvt) 
             {
@@ -1224,7 +1224,7 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
         {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Board %u detected DTMF (%c) on channel %u. [EV_DTMF_DETECTED]\n", e->DeviceId, e->AddInfo, obj);
 
-            KhompPvt *pvt = KhompPvt::get(e->DeviceId, obj);
+            CBaseKhompPvt *pvt = CBaseKhompPvt::get(e->DeviceId, obj);
 
             if(!pvt) 
             {
@@ -1317,7 +1317,7 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 
 extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, byte * read_buffer, int32 read_size)
 {
-    KhompPvt * pvt = KhompPvt::get(deviceid, objectid);
+    CBaseKhompPvt * pvt = CBaseKhompPvt::get(deviceid, objectid);
 
     if (!pvt)
         return;
@@ -1381,7 +1381,7 @@ extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, b
 
         case SFF_CNG:
         {
-            write_packet.buff = (const byte *) KhompPvt::_cng_buffer;
+            write_packet.buff = (const byte *) CBaseKhompPvt::_cng_buffer;
             write_packet.size = (size_t)       Globals::cng_buffer_size;
 
 			try

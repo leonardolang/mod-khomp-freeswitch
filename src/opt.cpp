@@ -54,7 +54,7 @@ void Opt::obtain(void)
     /* config already full loaded at this point, so we can use our own log system... */
     for (ConfigOptions::messages_type::iterator i = msgs.begin(); i != msgs.end(); i++)
     {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, (*i).c_str());
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "%s", (*i).c_str());
     }
 }
 

@@ -14,11 +14,11 @@
 
 #include "khomp_pvt.h"
 
-KhompPvt::VectorType  KhompPvt::_pvts;
-switch_mutex_t *      KhompPvt::_pvts_mutex;
-char                  KhompPvt::_cng_buffer[128];
+CBaseKhompPvt::VectorType  CBaseKhompPvt::_pvts;
+switch_mutex_t *           CBaseKhompPvt::_pvts_mutex;
+char                       CBaseKhompPvt::_cng_buffer[128];
 
-KhompPvt::KhompPvt(K3LAPI::target & target)
+CBaseKhompPvt::CBaseKhompPvt(K3LAPI::target & target)
 : _target(target), _session(NULL),
   _reader_frames(&_read_codec),
   _writer_frames(&_write_codec)
@@ -26,13 +26,13 @@ KhompPvt::KhompPvt(K3LAPI::target & target)
 
 }
 
-KhompPvt::~KhompPvt()
+CBaseKhompPvt::~CBaseKhompPvt()
 {
     _session = NULL;
 };
 
 
-switch_status_t KhompPvt::init(switch_core_session_t *new_session)
+switch_status_t CBaseKhompPvt::init(switch_core_session_t *new_session)
 {
     session(new_session);
 
@@ -69,7 +69,7 @@ switch_status_t KhompPvt::init(switch_core_session_t *new_session)
     return SWITCH_STATUS_SUCCESS;
 }
 
-switch_status_t KhompPvt::clear()
+switch_status_t CBaseKhompPvt::clear()
 {
     flags = 0;
 
@@ -90,7 +90,7 @@ switch_status_t KhompPvt::clear()
 }
 
 
-KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause)
+CBaseKhompPvt * CBaseKhompPvt::find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause)
 {
     char *argv[3] = { 0 };
     int argc = 0;
@@ -107,7 +107,7 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
 
     *cause = SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
 
-    KhompPvt * pvt = NULL;
+    CBaseKhompPvt * pvt = NULL;
     
     /* Let's setup our own vars on tech_pvt */
     if ((argc = switch_separate_string(allocation_string, '/', argv, (sizeof(argv) / sizeof(argv[0])))) < 3)
@@ -215,7 +215,7 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
             if(status.CallStatus == kcsFree)
             {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Channel (%d-%d) is free, let's check if the session is available ...\n", board, channel);
-                pvt = KhompPvt::get(board, channel);
+                pvt = CBaseKhompPvt::get(board, channel);
                 if(pvt != NULL && pvt->session() == NULL)
                 {
                     pvt->session(new_session);
@@ -242,7 +242,7 @@ KhompPvt * KhompPvt::find_channel(char* allocation_string, switch_core_session_t
 
 /* Helper functions - based on code from chan_khomp */
 
-bool KhompPvt::start_stream(void)
+bool CBaseKhompPvt::start_stream(void)
 {
     if (switch_test_flag(this, TFLAG_STREAM))
         return true;
@@ -263,7 +263,7 @@ bool KhompPvt::start_stream(void)
 	return true;
 }
 
-bool KhompPvt::stop_stream(void)
+bool CBaseKhompPvt::stop_stream(void)
 {
     if (!switch_test_flag(this, TFLAG_STREAM))
         return true;
@@ -284,7 +284,7 @@ bool KhompPvt::stop_stream(void)
 	return true;
 }
 
-bool KhompPvt::start_listen(bool conn_rx)
+bool CBaseKhompPvt::start_listen(bool conn_rx)
 {
     if (switch_test_flag(this, TFLAG_LISTEN))
         return true;
@@ -312,7 +312,7 @@ bool KhompPvt::start_listen(bool conn_rx)
 	return true;
 }
 
-bool KhompPvt::stop_listen(void)
+bool CBaseKhompPvt::stop_listen(void)
 {
     if(!switch_test_flag(this, TFLAG_LISTEN))
         return true;
@@ -332,7 +332,7 @@ bool KhompPvt::stop_listen(void)
 	return true;
 }
 
-bool KhompPvt::send_dtmf(char digit)
+bool CBaseKhompPvt::send_dtmf(char digit)
 {
     try
     {

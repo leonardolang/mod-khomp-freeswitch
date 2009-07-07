@@ -5,25 +5,24 @@
 #include "mod_khomp.h"
 #include "frame.h"
 
+
+extern "C" int32 Kstdcall khomp_event_callback (int32, K3L_EVENT *);
+extern "C" void Kstdcall khomp_audio_listener (int32, int32, byte *, int32);
+
 /*!
  \brief This struct holds a static linked list representing all the Khomp 
  channels found in the host. It's also a place holder for session objects 
  and some other opaque members used by the module.
  */
-
-extern "C" int32 Kstdcall khomp_event_callback (int32, K3L_EVENT *);
-extern "C" void Kstdcall khomp_audio_listener (int32, int32, byte *, int32);
-
-
-struct KhompPvt
+struct CBaseKhompPvt
 {
-    typedef std::vector < KhompPvt * >      InnerVectorType;  /*!< Collection of pointers of KhompPvts */
+    typedef std::vector < CBaseKhompPvt * >      InnerVectorType;  /*!< Collection of pointers of KhompPvts */
     typedef std::vector < InnerVectorType > VectorType;  /*!< Collection of InnerVectorType */
 
     struct InitFailure {};
 
-     KhompPvt(K3LAPI::target & target);
-    ~KhompPvt();
+     CBaseKhompPvt(K3LAPI::target & target);
+    ~CBaseKhompPvt();
 
     K3LAPI::target & target()
     {
@@ -73,7 +72,7 @@ struct KhompPvt
     FrameBoardsManager _writer_frames;
 
 
-    static KhompPvt * get(int32 device, int32 object)
+    static CBaseKhompPvt * get(int32 device, int32 object)
     {
         if (!Globals::k3lapi.valid_channel(device, object))
             throw K3LAPI::invalid_channel(device, object);
@@ -81,7 +80,7 @@ struct KhompPvt
         return _pvts[device][object];
     }
 
-    static KhompPvt * get(K3LAPI::target & target)
+    static CBaseKhompPvt * get(K3LAPI::target & target)
     {
         return _pvts[target.device][target.object];
     }
@@ -93,7 +92,7 @@ struct KhompPvt
       \param[out] Cause returned. Returns NULL if suceeded if not, the proper cause.
       \return KhompPvt to be used on the call.
       */
-    static KhompPvt * find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause);
+    static CBaseKhompPvt * find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause);
     
     static bool initialize_k3l()
     {
@@ -136,7 +135,8 @@ struct KhompPvt
             {
                 K3LAPI::target tgt(Globals::k3lapi, K3LAPI::target::CHANNEL, dev, obj);
 
-                KhompPvt * pvt = new KhompPvt(tgt);
+                /* TODO; We have to initialize a proper Pvt here */
+                CBaseKhompPvt * pvt = new CBaseKhompPvt(tgt);
                 _pvts.back().push_back(pvt);
 
 				/* TODO: remove this from here */
@@ -185,7 +185,7 @@ struct KhompPvt
 
             for (InnerVectorType::iterator it_obj = obj_vec.begin(); it_obj != obj_vec.end(); it_obj++)
             {
-                KhompPvt * pvt = *it_obj;
+                CBaseKhompPvt * pvt = *it_obj;
                 delete pvt;
             }
         }
@@ -193,7 +193,7 @@ struct KhompPvt
     
     /* static stuff */
     static switch_mutex_t *_pvts_mutex;
-    static VectorType      _pvts; /*!< Static structure that contains all the pvts. Will be initialized by KhompPvt::initialize */
+    static VectorType      _pvts; /*!< Static structure that contains all the pvts. Will be initialized by CBaseKhompPvt::initialize */
 
  public:
     static char            _cng_buffer[Globals::cng_buffer_size];
