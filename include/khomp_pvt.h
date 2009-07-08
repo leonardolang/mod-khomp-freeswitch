@@ -135,6 +135,8 @@ struct CBaseKhompPvt
         return _pvts[target.device][target.object];
     }
 
+    /* static stuff */
+    
     /*!
       \brief Lookup channels and boards when dialed.
       \param allocation_string The dialstring as put on Dialplan. [Khomp/[a|A|0-board_high]/[a|A|0-channel_high]/dest].
@@ -143,82 +145,13 @@ struct CBaseKhompPvt
       \return KhompPvt to be used on the call.
       */
     static CBaseKhompPvt * find_channel(char* allocation_string, switch_core_session_t * new_session, switch_call_cause_t * cause);
-    
-    static bool initialize_k3l()
-    {
-        /* Start the API and connect to KServer */
-        try
-        {
-            Globals::k3lapi.start();
-        }
-        catch (K3LAPI::start_failed & e)
-        {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "K3L not started. Reason:%s.\n", e.msg.c_str());
-            return false;
-        }
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "K3L started.\n");
-        return true;
-    }
-    
-    static bool initialize_handlers()
-    {
-        if (Globals::k3lapi.device_count() == 0)
-            return false;
-
-        k3lRegisterEventHandler( khomp_event_callback );
-        k3lRegisterAudioListener( NULL, khomp_audio_listener );
-        
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "K3l event and audio handlers registered.\n");
-
-        return true;
-
-    }
-    
+    static bool initialize_k3l(void); 
+    static bool initialize_handlers(void);
     static void initialize_channels(void);
-
-    static void initialize_cng_buffer(void)
-    {
-        bool turn = true;
-
-        for (unsigned int i = 0; i < Globals::cng_buffer_size; i++)
-        {
-            _cng_buffer[i] = (turn ? 0xD5 : 0xD4);
-            turn = !turn;
-        }
-    }
-
-    static bool initialize(void)
-    {
-
-        if(!initialize_k3l())
-            return false;
-
-        switch_mutex_init(&_pvts_mutex, SWITCH_MUTEX_NESTED, Globals::module_pool);
-
-        initialize_cng_buffer();
-        initialize_channels();
-
-
-        return true;
-    }
-
-    static void terminate()
-    {
-        switch_mutex_lock(_pvts_mutex);
-        
-        for (VectorType::iterator it_dev = _pvts.begin(); it_dev != _pvts.end(); it_dev++)
-        {
-            InnerVectorType & obj_vec = *it_dev;
-
-            for (InnerVectorType::iterator it_obj = obj_vec.begin(); it_obj != obj_vec.end(); it_obj++)
-            {
-                CBaseKhompPvt * pvt = *it_obj;
-                delete pvt;
-            }
-        }
-    }
+    static void initialize_cng_buffer(void);
+    static bool initialize(void);
+    static void terminate(void);
     
-    /* static stuff */
     static switch_mutex_t *_pvts_mutex;
     static VectorType      _pvts; /*!< Static structure that contains all the pvts. Will be initialized by CBaseKhompPvt::initialize */
 

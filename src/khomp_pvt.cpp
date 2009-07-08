@@ -33,6 +33,36 @@ CBaseKhompPvt::~CBaseKhompPvt()
     _session = NULL;
 };
 
+bool CBaseKhompPvt::initialize_k3l(void)
+{
+    /* Start the API and connect to KServer */
+    try
+    {
+        Globals::k3lapi.start();
+    }
+    catch (K3LAPI::start_failed & e)
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "K3L not started. Reason:%s.\n", e.msg.c_str());
+        return false;
+    }
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "K3L started.\n");
+    return true;
+}
+
+bool CBaseKhompPvt::initialize_handlers(void)
+{
+    if (Globals::k3lapi.device_count() == 0)
+        return false;
+
+    k3lRegisterEventHandler( khomp_event_callback );
+    k3lRegisterAudioListener( NULL, khomp_audio_listener );
+
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "K3l event and audio handlers registered.\n");
+
+    return true;
+
+}
+
 void CBaseKhompPvt::initialize_channels(void)
 {
     
@@ -54,6 +84,47 @@ void CBaseKhompPvt::initialize_channels(void)
                 Globals::k3lapi.command(dev, obj, CM_DISCONNECT, NULL); 
             }
             catch(...) {}
+        }
+    }
+}
+
+void CBaseKhompPvt::initialize_cng_buffer(void)
+{
+    bool turn = true;
+
+    for (unsigned int i = 0; i < Globals::cng_buffer_size; i++)
+    {
+        _cng_buffer[i] = (turn ? 0xD5 : 0xD4);
+        turn = !turn;
+    }
+}
+
+bool CBaseKhompPvt::initialize(void)
+{
+
+    if(!initialize_k3l())
+        return false;
+
+    switch_mutex_init(&_pvts_mutex, SWITCH_MUTEX_NESTED, Globals::module_pool);
+
+    initialize_cng_buffer();
+    initialize_channels();
+
+
+    return true;
+}
+void CBaseKhompPvt::terminate(void)
+{
+    switch_mutex_lock(_pvts_mutex);
+
+    for (VectorType::iterator it_dev = _pvts.begin(); it_dev != _pvts.end(); it_dev++)
+    {
+        InnerVectorType & obj_vec = *it_dev;
+
+        for (InnerVectorType::iterator it_obj = obj_vec.begin(); it_obj != obj_vec.end(); it_obj++)
+        {
+            CBaseKhompPvt * pvt = *it_obj;
+            delete pvt;
         }
     }
 }
