@@ -4,7 +4,6 @@
 #include "globals.h"
 #include "mod_khomp.h"
 #include "frame.h"
-//#include "khomp_pvt_kxe1.h"
 
 extern "C" int32 Kstdcall khomp_event_callback (int32, K3L_EVENT *);
 extern "C" void Kstdcall khomp_audio_listener (int32, int32, byte *, int32);
@@ -175,30 +174,7 @@ struct CBaseKhompPvt
 
     }
     
-    static void initialize_channels(void)
-    {
-        
-        for (unsigned dev = 0; dev < Globals::k3lapi.device_count(); dev++)
-        {
-            _pvts.push_back(InnerVectorType());
-
-            for (unsigned obj = 0; obj < Globals::k3lapi.channel_count(dev); obj++)
-            {
-                K3LAPI::target tgt(Globals::k3lapi, K3LAPI::target::CHANNEL, dev, obj);
-
-                /* TODO; We have to initialize a proper Pvt here */
-                CBaseKhompPvt * pvt = new CBaseKhompPvt(tgt);
-                _pvts.back().push_back(pvt);
-
-				/* TODO: remove this from here */
-                try 
-                {
-                    Globals::k3lapi.command(dev, obj, CM_DISCONNECT, NULL); 
-                }
-                catch(...) {}
-            }
-        }
-    }        
+    static void initialize_channels(void);
 
     static void initialize_cng_buffer(void)
     {

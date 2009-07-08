@@ -13,6 +13,8 @@
 */
 
 #include "khomp_pvt.h"
+#include "khomp_pvt_kxe1.h"
+
 
 CBaseKhompPvt::VectorType  CBaseKhompPvt::_pvts;
 switch_mutex_t *           CBaseKhompPvt::_pvts_mutex;
@@ -31,6 +33,30 @@ CBaseKhompPvt::~CBaseKhompPvt()
     _session = NULL;
 };
 
+void CBaseKhompPvt::initialize_channels(void)
+{
+    
+    for (unsigned dev = 0; dev < Globals::k3lapi.device_count(); dev++)
+    {
+        _pvts.push_back(InnerVectorType());
+
+        for (unsigned obj = 0; obj < Globals::k3lapi.channel_count(dev); obj++)
+        {
+            K3LAPI::target tgt(Globals::k3lapi, K3LAPI::target::CHANNEL, dev, obj);
+
+            /* TODO; We have to initialize a proper Pvt here */
+            CBaseKhompPvt * pvt = new CKhompPvtE1(tgt);
+            _pvts.back().push_back(pvt);
+
+			/* TODO: remove this from here */
+            try 
+            {
+                Globals::k3lapi.command(dev, obj, CM_DISCONNECT, NULL); 
+            }
+            catch(...) {}
+        }
+    }
+}
 
 switch_status_t CBaseKhompPvt::init(switch_core_session_t *new_session)
 {
