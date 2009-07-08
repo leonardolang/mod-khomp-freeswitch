@@ -4,7 +4,7 @@
 #include "globals.h"
 #include "mod_khomp.h"
 #include "frame.h"
-
+//#include "khomp_pvt_kxe1.h"
 
 extern "C" int32 Kstdcall khomp_event_callback (int32, K3L_EVENT *);
 extern "C" void Kstdcall khomp_audio_listener (int32, int32, byte *, int32);
@@ -198,7 +198,7 @@ struct CBaseKhompPvt
                 catch(...) {}
             }
         }
-    }
+    }        
 
     static void initialize_cng_buffer(void)
     {

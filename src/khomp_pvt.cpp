@@ -373,6 +373,48 @@ void CBaseKhompPvt::on_ev_new_call(K3L_EVENT * e)
     }
 }
 
+void CBaseKhompPvt::on_ev_seizure_start(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_connect(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_disconnect(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_call_success(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_channel_free(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_no_answer(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_call_hold_start(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_call_hold_stop(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_call_answer_info(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_ss_transfer_fail(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_ring_detected(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_prolarity_reversal(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_collect_call(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_cas_mfc_recv(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_cas_line_stt_changed(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_dtmf_detected(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_pulse_detected(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_flash(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_billing_pulse(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_audio_status(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_cadence_recognized(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_dtmf_send_finnish(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_end_of_stream(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_user_information(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_isdn_progess_indicator(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_isdn_subaddress(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_dialed_digit(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_recv_from_modem(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_new_sms(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_sms_info(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_sms_data(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_sms_send_result(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_call_fail(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_reference_fail(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_channel_fail(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_internal_fail(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_client_reconnect(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_link_status(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_physical_link_down(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_physical_link_up(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_untreated(K3L_EVENT *e){}
+
 extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 {                
     /* TODO: How do we make sure channels inside FreeSWITCH only change to valid states on K3L? */
