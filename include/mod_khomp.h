@@ -80,15 +80,22 @@ typedef enum
 }
 TFLAGS;
 
-/* State handlers for FreeSWITCH */
+/*!
+ \defgroup fs_states FreeSWITCH State Handlers
+            We get called back from FreeSWITCH core everytime we make a
+            transition to any of these states. Refer to FreeSWITCH docs for a
+            detailed explanation of each state.
+ */
+/*@{*/
 switch_status_t channel_on_init(switch_core_session_t *session);
 switch_status_t channel_on_routing(switch_core_session_t *session);
 switch_status_t channel_on_execute(switch_core_session_t *session);
 switch_status_t channel_on_hangup(switch_core_session_t *session);
-switch_status_t channel_on_exchange_media(
-        switch_core_session_t *session);
+switch_status_t channel_on_exchange_media(switch_core_session_t *session);
 switch_status_t channel_on_soft_execute(switch_core_session_t *session);
 switch_status_t channel_on_destroy(switch_core_session_t *session);
+/*@}*/
+
 switch_status_t channel_answer_channel(switch_core_session_t *session);
 
 /* Create a new channel on incoming call */

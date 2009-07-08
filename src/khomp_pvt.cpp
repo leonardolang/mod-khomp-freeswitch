@@ -347,6 +347,32 @@ bool CBaseKhompPvt::send_dtmf(char digit)
     return true;
 }
 
+void CBaseKhompPvt::on_ev_new_call(K3L_EVENT * e)
+{
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+                      "New call on %u to %s from %s. [EV_NEW_CALL]\n",
+                      _target.object,
+                      Globals::k3lapi.get_param(e, "dest_addr").c_str(),
+                      Globals::k3lapi.get_param(e, "orig_addr").c_str());
+    
+    if (khomp_channel_from_event(_target.device, _target.object, e) != ksSuccess )
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG,
+                          SWITCH_LOG_CRIT,
+                          "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_NEW_CALL]\n",
+                          _target.device, _target.object);
+    }
+    try 
+    {
+        Globals::k3lapi.command(_target.device, _target.object, CM_RINGBACK, NULL);
+        Globals::k3lapi.command(_target.device, _target.object, CM_CONNECT, NULL); 
+    }
+    catch (K3LAPI::failed_command & err)
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not set board channel status! [EV_NEW_CALL]\n");
+    }
+}
+
 extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 {                
     /* TODO: How do we make sure channels inside FreeSWITCH only change to valid states on K3L? */
@@ -355,23 +381,18 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
     
     switch(e->Code)
     {
-        case EV_NEW_CALL:   
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "New call on %u to %s from %s. [EV_NEW_CALL]\n", obj, Globals::k3lapi.get_param(e, "dest_addr").c_str(), Globals::k3lapi.get_param(e, "orig_addr").c_str());
-            if (khomp_channel_from_event(e->DeviceId, obj, e) != ksSuccess )
+        case EV_NEW_CALL:
+        {
+            try
+            {
+                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_new_call(e);
+            }
+            catch (K3LAPI::invalid_channel)
             {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_NEW_CALL]\n", e->DeviceId, obj);
-                return ksFail;
-            }
-            try 
-            {
-                Globals::k3lapi.command(e->DeviceId, obj, CM_RINGBACK, NULL);
-                Globals::k3lapi.command(e->DeviceId, obj, CM_CONNECT, NULL); 
-            }
-            catch (K3LAPI::failed_command & err)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not set board channel status! [EV_NEW_CALL]\n");
             }
             break;
+        }
 
         case EV_DISCONNECT:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Called party disconnected: %u. [EV_DISCONNECT]\n", obj);

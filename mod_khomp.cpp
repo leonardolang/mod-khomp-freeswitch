@@ -119,7 +119,9 @@ switch_status_t channel_receive_message(switch_core_session_t *session,
 switch_status_t channel_receive_event(switch_core_session_t *session, 
         switch_event_t *event);
 
-
+/*!
+ \ingroup fs_states
+ */
 switch_io_routines_t khomp_io_routines = {
     /*.outgoing_channel */ channel_outgoing_channel,
     /*.read_frame */ channel_read_frame,
