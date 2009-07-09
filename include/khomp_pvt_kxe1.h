@@ -87,3 +87,4 @@ struct CKhompPvtE1: public CBaseKhompPvt {
 };
 
 #endif /* _KHOMP_PVT_H_*/
+

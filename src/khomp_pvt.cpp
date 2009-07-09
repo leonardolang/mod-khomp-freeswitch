@@ -688,200 +688,98 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
                       e->DeviceId,
                       obj,
                       e->Code);
-    
-    switch(e->Code)
+    try
     {
-        case EV_NEW_CALL:
+
+        switch(e->Code)
         {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_new_call(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_NEW_CALL]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+        case EV_NEW_CALL:
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_new_call(e);
             break;
-        }
 
         case EV_DISCONNECT:
-        {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_disconnect(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_DISCONNECT]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_disconnect(e);
             break;
-        }
 
         case EV_CONNECT:
-        {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_connect(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_CONNECT]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_connect(e);
             break;
-        }
 
         case EV_CALL_SUCCESS:
-        {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_call_success(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_CALL_SUCCESS]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_call_success(e);
             break;
-        }         
 
         case EV_CHANNEL_FREE:
-        {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_channel_free(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_CHANNEL_FREE]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_channel_free(e);
             break;
-        }  
-
 
         case EV_NO_ANSWER:
-        {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_no_answer(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_NO_ANSWER]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_no_answer(e);
             break;
-        }
 
         case EV_CALL_ANSWER_INFO:
-        {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_call_answer_info(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_CALL_ANSWER_INFO]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_call_answer_info(e);
             break;
-        }
 
         case EV_DTMF_DETECTED:
-        {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_dtmf_detected(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_DTMF_DETECTED]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_dtmf_detected(e);
             break;
-        }
 
         case EV_DTMF_SEND_FINISH:
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Channel %u on board %u has sucessfully generated DTMF. [EV_DTMF_SEND_FINNISH]\n", obj, e->DeviceId);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, 
+                    "Channel %u on board %u has sucessfully generated DTMF. "
+                    "[EV_DTMF_SEND_FINNISH]\n", obj, e->DeviceId);
             break;
+
         case EV_CALL_FAIL:
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Channel %u on board %u reported call fail. [EV_CALL_FAIL]\n", obj, e->DeviceId);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, 
+                    "Channel %u on board %u reported call fail. "
+                    "[EV_CALL_FAIL]\n", obj, e->DeviceId);
             break;
+
         case EV_CHANNEL_FAIL:
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Channel %u on board %u reported failure. [EV_CHANNEL_FAIL]\n", obj, e->DeviceId);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+                    "Channel %u on board %u reported failure. "
+                    "[EV_CHANNEL_FAIL]\n", obj, e->DeviceId);
             break;
+
         case EV_LINK_STATUS:
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Link %u on board %u changed. [EV_LINK_STATUS]\n", e->DeviceId, obj);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, 
+                    "Link %u on board %u changed. "
+                    "[EV_LINK_STATUS]\n", e->DeviceId, obj);
             break;
+
         case EV_PHYSICAL_LINK_DOWN:
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Link %u on board %u is DOWN. [EV_PHYSICAL_LINK_DOWN]\n", e->DeviceId, obj);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+                    "Link %u on board %u is DOWN. [EV_PHYSICAL_LINK_DOWN]\n", 
+                    e->DeviceId, obj);
             break;
+
         case EV_PHYSICAL_LINK_UP:
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Link %u on board %u is UP. [EV_PHYSICAL_LINK_UP]\n", e->DeviceId, obj);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, 
+                    "Link %u on board %u is UP. [EV_PHYSICAL_LINK_UP]\n", 
+                    e->DeviceId, obj);
             break;
 
         case EV_INTERNAL_FAIL:
-        {
-            //TODO: Does it make any sense for we to ::get like this?
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_internal_fail(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [EV_INTERNAL_FAIL]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_internal_fail(e);
             break;
-        }
 
         default:
-        {
-            try
-            {
-                CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_untreated(e);
-            }
-            catch (K3LAPI::invalid_channel)
-            {
-                switch_log_printf(SWITCH_CHANNEL_LOG,
-                                  SWITCH_LOG_CRIT,
-                                  "Could not get channel session! Khomp/%u/%u is an invalid channel. [UNTREATED EVENT]\n",
-                                  e->DeviceId,
-                                  obj);
-            }
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_untreated(e);
             break;
         }
+    }
+    catch (K3LAPI::invalid_channel & invalid)
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG,
+        SWITCH_LOG_CRIT,
+        "khomp/%hu/%03hu is an invalid channel on event '%s'.\n",
+        e->DeviceId,
+        obj,
+        Verbose::eventName(e->Code).c_str());
     }
 
     return ksSuccess;
 }
+
