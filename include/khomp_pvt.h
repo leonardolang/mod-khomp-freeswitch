@@ -5,6 +5,8 @@
 #include "mod_khomp.h"
 #include "frame.h"
 
+#define KHOMP_LOG __FILE__, __SWITCH_FUNC__, __LINE__
+
 extern "C" int32 Kstdcall khomp_event_callback (int32, K3L_EVENT *);
 extern "C" void Kstdcall khomp_audio_listener (int32, int32, byte *, int32);
 
@@ -88,6 +90,32 @@ struct CBaseKhompPvt
     {
         return _session;
     }
+
+
+    /* Error handling for send command */
+    bool command(const char *file, const char *func, int line, int code, 
+            const char *params = NULL)
+    {
+        try
+        {
+            Globals::k3lapi.command(_target, code, params);
+        }
+        catch(K3LAPI::failed_command & e)
+        {
+            //switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+            switch_log_printf(SWITCH_CHANNEL_ID_LOG, file, func, line, 
+                    NULL, SWITCH_LOG_WARNING, 
+                    "(dev=%hu,object=%03hu): Command '%s' has failed " 
+                    "with error '%s'\n", e.dev, e.obj, 
+                    Verbose::commandName(e.code).c_str(), 
+                    Verbose::status((KLibraryStatus)e.rc).c_str());
+
+            return false;
+        }
+        
+        return true;
+    }
+
 
     /*!
      \brief Will init part of our private structure and setup all the read/write

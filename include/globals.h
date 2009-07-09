@@ -4,6 +4,7 @@
 #include "k3lapi.hpp"
 
 #include <config_options.hpp>
+#include <verbose.hpp>
 
 #include <vector>
 

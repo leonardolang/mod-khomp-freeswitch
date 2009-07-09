@@ -239,17 +239,10 @@ switch_status_t channel_on_hangup(switch_core_session_t *session)
     
     /* Make the channel available again */
     tech_pvt->session(NULL);
-    
-    try 
-    {
-        Globals::k3lapi.command(tech_pvt->target(), CM_DISCONNECT);
-    }
-    catch(K3LAPI::failed_command & e)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "WE COULD NOT HANGUP THE CHANNEL! rc:%d\n", e.rc);
+   
+    if(!tech_pvt->command(KHOMP_LOG, CM_DISCONNECT))
         return SWITCH_STATUS_TERM;
-    }
-    
+
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "%s Originator Hangup.\n", switch_channel_get_name(channel));
 
 	// TODO: this one could have a structure for taking care of the locking.
@@ -573,10 +566,11 @@ switch_call_cause_t channel_outgoing_channel
     switch_core_session_add_stream(*new_session, NULL);
     channel = switch_core_session_get_channel(*new_session);
     
-    snprintf(name, sizeof(name), "Khomp/%d/%d/%s", tech_pvt->target().device, 
-            tech_pvt->target().object, argv[2]);
-
-    switch_channel_set_name(channel, name);
+    switch_channel_set_name(channel, STG(FMT("Khomp/%hu/%hu/%s") 
+            % tech_pvt->target().device 
+            % tech_pvt->target().object 
+            % argv[2]).c_str());
+    
     
     caller_profile = switch_caller_profile_clone(*new_session, outbound_profile);
     switch_channel_set_caller_profile(channel, caller_profile);
@@ -586,20 +580,17 @@ switch_call_cause_t channel_outgoing_channel
     switch_set_flag_locked(tech_pvt, TFLAG_OUTBOUND);
     switch_channel_set_state(channel, CS_INIT);
 
-    try 
+    /* Lets make the call! */
+    std::string params = STG(FMT("dest_addr=\"%s\" orig_addr=\"%s\"") 
+            % argv[2] 
+            % outbound_profile->caller_id_number);
+
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, 
+            "We are calling with params: %s.\n", params.c_str());
+
+
+    if(!tech_pvt->command(KHOMP_LOG, CM_MAKE_CALL, params.c_str()))
     {
-        /* Lets make the call! */
-        char params[ 255 ];
-        snprintf(params, sizeof(params), "dest_addr=\"%s\" orig_addr=\"%s\"", 
-                argv[2], outbound_profile->caller_id_number);
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, 
-                "We are calling with params: %s.\n", params);
-        Globals::k3lapi.command(tech_pvt->target(), CM_MAKE_CALL, params); 
-    }
-    catch(K3LAPI::failed_command & e)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
-               "Could not place call! Cause: code%x and rc%d.\n", e.code, e.rc);
         switch_core_session_destroy(new_session);
         return SWITCH_CAUSE_DESTINATION_OUT_OF_ORDER;
     }
@@ -990,7 +981,6 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
 	switch_core_session_t *session = NULL;
 	CBaseKhompPvt *tech_pvt = NULL;
 	switch_channel_t *channel = NULL;
-	char name[128];
 	
 	if (!(session = switch_core_session_request(Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, NULL))) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
@@ -1057,9 +1047,12 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
     /* END */
 	
     /* */
-	snprintf(name, sizeof(name), "Khomp/%u/%u/%s", KDeviceId, KChannel, tech_pvt->_caller_profile->destination_number);
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Connect inbound channel %s\n", name);
-	switch_channel_set_name(channel, name);
+    std::string name = STG(FMT("Khomp/%hu/%hu/%s") 
+	        % KDeviceId
+            % KChannel
+            % tech_pvt->_caller_profile->destination_number);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Connect inbound channel %s\n", name.c_str());
+	switch_channel_set_name(channel, name.c_str());
 	switch_channel_set_caller_profile(channel, tech_pvt->_caller_profile);
     /* END */
 
@@ -1137,15 +1130,10 @@ extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, b
             write_packet.buff = (const byte *) fr->data;
             write_packet.size = (size_t)       fr->datalen;
 
-			try
-			{
-	            Globals::k3lapi.command(pvt->target(), CM_ADD_STREAM_BUFFER,
-    	            (const char *)&write_packet);
-			}
-			catch (K3LAPI::failed_command & e)
-			{
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error adding audio to stream buffer...\n");
-			}
+           
+            pvt->command(KHOMP_LOG, CM_ADD_STREAM_BUFFER,
+                    (const char *)&write_packet);
+            
             break;
         }
 
@@ -1154,15 +1142,9 @@ extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, b
             write_packet.buff = (const byte *) CBaseKhompPvt::_cng_buffer;
             write_packet.size = (size_t)       Globals::cng_buffer_size;
 
-			try
-			{
-	            Globals::k3lapi.command(pvt->target(), CM_ADD_STREAM_BUFFER,
-    	            (const char *)&write_packet);
-			}
-			catch (K3LAPI::failed_command & e)
-			{
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error adding CNG to stream buffer...\n");
-			}
+            pvt->command(KHOMP_LOG, CM_ADD_STREAM_BUFFER,
+                    (const char *)&write_packet);
+            
             break;
         }
 

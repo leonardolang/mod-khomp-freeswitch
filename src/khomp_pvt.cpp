@@ -79,11 +79,7 @@ void CBaseKhompPvt::initialize_channels(void)
             _pvts.back().push_back(pvt);
 
 			/* TODO: remove this from here */
-            try 
-            {
-                Globals::k3lapi.command(dev, obj, CM_DISCONNECT, NULL); 
-            }
-            catch(...) {}
+            pvt->command(KHOMP_LOG, CM_DISCONNECT);
         }
     }
 }
@@ -390,17 +386,19 @@ bool CBaseKhompPvt::start_listen(bool conn_rx)
 
     if (conn_rx)
     {
-        Globals::k3lapi.mixerRecord(_target, 0, kmsNoDelayChannel, target().object);
-        Globals::k3lapi.mixerRecord(_target, 1, kmsGenerator, kmtSilence);
+        try
+        {
+            Globals::k3lapi.mixerRecord(_target, 0, kmsNoDelayChannel, target().object);
+            Globals::k3lapi.mixerRecord(_target, 1, kmsGenerator, kmtSilence);
+        }
+        catch(K3LAPI::failed_command & e)
+        {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending mixer record command!\n");
+        }
 	}
 
-    try
+    if(!command(KHOMP_LOG, CM_LISTEN, (const char *) &buffer_size))
     {
-        Globals::k3lapi.command(_target, CM_LISTEN, (const char *) &buffer_size);
-    }
-    catch(...)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending LISTEN command!\n");
         return false;
     }
 
@@ -413,14 +411,9 @@ bool CBaseKhompPvt::stop_listen(void)
 {
     if(!switch_test_flag(this, TFLAG_LISTEN))
         return true;
-    
-    try
+   
+    if(!command(KHOMP_LOG, CM_STOP_LISTEN))
     {
-        Globals::k3lapi.command(_target, CM_STOP_LISTEN);
-    }
-    catch(...)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending STOP_LISTEN command!\n");
         return false;
     }
 
@@ -431,17 +424,8 @@ bool CBaseKhompPvt::stop_listen(void)
 
 bool CBaseKhompPvt::send_dtmf(char digit)
 {
-    try
-    {
-        Globals::k3lapi.command(_target, CM_SEND_DTMF, &digit);
-    }
-    catch(...)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending SEND_DTMF command!\n");
-        return false;
-    }
-
-    return true;
+    return command(KHOMP_LOG, CM_SEND_DTMF, &digit);
+        
 }
 
 void CBaseKhompPvt::on_ev_new_call(K3L_EVENT * e)
@@ -459,15 +443,9 @@ void CBaseKhompPvt::on_ev_new_call(K3L_EVENT * e)
                           "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_NEW_CALL]\n",
                           _target.device, _target.object);
     }
-    try 
-    {
-        Globals::k3lapi.command(_target.device, _target.object, CM_RINGBACK, NULL);
-        Globals::k3lapi.command(_target.device, _target.object, CM_CONNECT, NULL); 
-    }
-    catch (K3LAPI::failed_command & err)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not set board channel status! [EV_NEW_CALL]\n");
-    }
+
+    command(KHOMP_LOG, CM_RINGBACK);
+    command(KHOMP_LOG, CM_CONNECT);
 }
 
 void CBaseKhompPvt::on_ev_disconnect(K3L_EVENT *e)
@@ -495,28 +473,16 @@ void CBaseKhompPvt::on_ev_disconnect(K3L_EVENT *e)
 
 void CBaseKhompPvt::on_ev_connect(K3L_EVENT *e)
 {
-    try
-    {
-        switch_core_session_t * session = CBaseKhompPvt::get(_target.device, _target.object)->session();
-        switch_channel_t * channel = switch_core_session_get_channel(session);
+    switch_core_session_t * session = CBaseKhompPvt::get(_target.device, _target.object)->session();
+    //switch_channel_t * channel = switch_core_session_get_channel(session);
 
-        switch_log_printf(SWITCH_CHANNEL_LOG,
-                          SWITCH_LOG_INFO,
-                          "Call will be answered on Khomp/%u/%u. [EV_CONNECT]\n",
-                          _target.device,
-                          _target.object);
+    switch_log_printf(SWITCH_CHANNEL_LOG,
+            SWITCH_LOG_INFO,
+            "Call will be answered on Khomp/%u/%u. [EV_CONNECT]\n",
+            _target.device,
+            _target.object);
 
-        channel_answer_channel(session);
-
-    }
-    catch (K3LAPI::failed_command & err)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG,
-                          SWITCH_LOG_CRIT,
-                          "Something bad happened while getting channel session. Khomp/%u/%u. [EV_CONNECT]\n",
-                          _target.device,
-                          _target.object);
-    }
+    channel_answer_channel(session);
 }
 
 void CBaseKhompPvt::on_ev_call_success(K3L_EVENT *e)

@@ -152,6 +152,11 @@ std::string Verbose::deviceType(KDeviceType dt)
         case kdtGSM:     return S("KGSM");
         case kdtGSMSpx:  return S("KGSM");
 #endif
+
+#if K3L_AT_LEAST(2,1,0)
+        case kdtGSMUSB:    return S("KGSMUSB");
+        case kdtGSMUSBSpx: return S("KGSMUSB");
+#endif
     }
 
     return STG(FMT("[deviceType='%d']") % (int)dt);
@@ -342,6 +347,24 @@ std::string Verbose::deviceModel(KDeviceType dt, int32 model)
                 }
 
                 throw internal_not_found();
+
+#if K3L_AT_LEAST(2,1,0)
+            case kdtGSMUSB:
+                switch ((KGSMDeviceModel)model)
+                {
+                    case kdmGSMUSB:    return S("20");
+                }
+
+                throw internal_not_found();
+
+            case kdtGSMUSBSpx:
+                switch ((KGSMSpxDeviceModel)model)
+                {
+                    case kdmGSMUSBSpx: return S("SPX");
+                }
+
+                throw internal_not_found();
+#endif
 
 #endif
         }

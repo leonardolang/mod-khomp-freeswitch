@@ -82,7 +82,6 @@ void Format::initialize(const char * format_string)
         if (*ptr2 == '%') 
         {
             txt += *ptr;
-            txt += *ptr2;
 
             ptr += 2;
             continue;
