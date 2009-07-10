@@ -22,15 +22,8 @@ protected:
 public:
 
     static bool         _debug;
-    //static std::string  _ip;
-    //static unsigned int _port;
     static std::string  _dialplan;
-    static std::string  _codec_string;
-    //static char *_codec_order[]; //[SWITCH_MAX_CODECS]
-    //static int _codec_order_last;
-    static std::string  _codec_rates_string;
-    //static char *_codec_rates[]; //[SWITCH_MAX_CODECS]
-    //static int _codec_rates_last;
+    static std::string  _context;
 
 };
 

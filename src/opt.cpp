@@ -16,15 +16,9 @@
 #include "globals.h"
 
 bool        Opt::_debug;
-//std::string Opt::_ip;
-//unsigned int Opt::_port;
 std::string Opt::_dialplan;
-std::string Opt::_codec_string;
-//char * Opt::_codec_order[SWITCH_MAX_CODECS];
-//int Opt::_codec_order_last;
-std::string Opt::_codec_rates_string;
-//char * Opt::_codec_rates[SWITCH_MAX_CODECS];
-//int Opt::_codec_rates_last;
+std::string Opt::_context;
+
 
 //SWITCH_DECLARE_GLOBAL_STRING_FUNC(set_global_dialplan, Opt::_dialplan);
 //SWITCH_DECLARE_GLOBAL_STRING_FUNC(set_global_codec_string, Opt::_codec_string);
@@ -34,11 +28,9 @@ std::string Opt::_codec_rates_string;
 void Opt::initialize(void) 
 { 
     Globals::options.add(ConfigOption("debug", _debug, false));
-//    Globals::options.add(ConfigOption("port", _port, 4569u, 255u, 65535u));
-//    Globals::options.add(ConfigOption("ip", _ip, "localhost"));
-    Globals::options.add(ConfigOption("dialplan", _dialplan, "default"));
-    Globals::options.add(ConfigOption("codec-prefs", _codec_string, "PCMA"));
-    Globals::options.add(ConfigOption("codec-rates", _codec_rates_string, "8"));
+    Globals::options.add(ConfigOption("dialplan", _dialplan, "XML"));
+    Globals::options.add(ConfigOption("context", _context, "default"));
+    
 }
 
 void Opt::obtain(void)
@@ -60,7 +52,7 @@ void Opt::obtain(void)
 
 void Opt::load_configuration(const char *file_name, const char **section, bool show_errors)
 {
-    switch_xml_t cfg, xml, settings, param;
+    switch_xml_t cfg, xml, settings, param, span;
 
     switch_mutex_init(&Globals::mutex, SWITCH_MUTEX_NESTED, Globals::module_pool);
     if (!(xml = switch_xml_open_cfg(file_name, &cfg, NULL))) {
@@ -68,9 +60,39 @@ void Opt::load_configuration(const char *file_name, const char **section, bool s
         return;
     }
 
+    /* Load all the global settings pertinent to all boards */
     if ((settings = switch_xml_child(cfg, "settings")))
     {
         for (param = switch_xml_child(settings, "param"); param; param = param->next)
+        {
+            char *var = (char *) switch_xml_attr_soft(param, "name");
+            char *val = (char *) switch_xml_attr_soft(param, "value");
+            
+            try
+            {
+                Globals::options.process(var, val);
+            }
+            catch (ConfigProcessFailure e)
+            {
+                switch_log_printf(SWITCH_CHANNEL_LOG,
+                                  SWITCH_LOG_WARNING,
+                                  "config processing error: %s. [%s=%s]\n",
+                                  e.msg.c_str(),
+                                  var,
+                                  val);
+
+            }
+        }
+    }
+
+    /* Load each span */
+    for (span = switch_xml_child(cfg, "span"); span; span = span->next)
+    {
+        char *span_id = (char *) switch_xml_attr_soft(span, "id");
+
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "New span detected: %s.\n", span_id);
+        
+        for (param = switch_xml_child(span, "param"); param; param = param->next)
         {
             char *var = (char *) switch_xml_attr_soft(param, "name");
             char *val = (char *) switch_xml_attr_soft(param, "value");
@@ -81,35 +103,16 @@ void Opt::load_configuration(const char *file_name, const char **section, bool s
             }
             catch (ConfigProcessFailure e)
             {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "config processing error: %s.\n", e.msg.c_str());
-
+                switch_log_printf(SWITCH_CHANNEL_LOG,
+                                  SWITCH_LOG_WARNING,
+                                  "config processing error: %s. [%s=%s]\n",
+                                  e.msg.c_str(),
+                                  var,
+                                  val);
             }
-            /*
-            if (!strcmp(var, "_debug")) {
-                _debug = atoi(val);
-            } else if (!strcmp(var, "port")) {
-                _port = atoi(val);
-            } else if (!strcmp(var, "ip")) {
-                set_global_ip(val);
-            //} else if (!strcmp(var, "codec-master")) {
-                //if (!strcasecmp(val, "us")) {
-                //    switch_set_flag(&globals, GFLAG_MY_CODEC_PREFS);
-                //}
-            } else if (!strcmp(var, "dialplan")) {
-                set_global_dialplan(val);
-            } else if (!strcmp(var, "codec-prefs")) {
-                    set_global_codec_string(val);
-                    _codec_order_last = switch_separate_string(_codec_string, ',', _codec_order, SWITCH_MAX_CODECS);
-                    
-            } else if (!strcmp(var, "codec-rates")) {
-                set_global_codec_rates_string(val);
-                _codec_rates_last = switch_separate_string(_codec_rates_string, ',', _codec_rates, SWITCH_MAX_CODECS);
-            }
-            */
-
         }
     }
-
+    
     switch_xml_free(xml);
 
 }
