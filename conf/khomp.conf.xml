@@ -1,0 +1,35 @@
+<configuration name="khomp.conf" description="Khomp Configuration">
+
+  <!-- Config for all boards -->
+  <settings>
+    <!-- Debug level of the endpoint module -->
+    <param name="debug" value="false"/>
+    <!-- Default dialplan for inbound/outbound calls -->
+    <param name="dialplan" value="XML"/>
+    <!-- Default context for inbound/outbound calls -->
+    <param name="context" value="default"/>
+  </settings>
+
+ <!-- New span definition to be used on dialplan -->
+ <!-- TODO: Span should be used only for outbound or inbound as well? -->
+  <span id="0">
+    <param name="dialplan" value="XML"/>
+    <param name="context" value="default"/>
+    <!-- Dial String is used for outbound for selecting board/channel -->
+    <!-- TODO: How do we say board 1, channel 20 AND board 2, channel 1? -->
+    <param name="dialstring" value="0/1"/>
+  </span>
+
+  <span id="span1">
+    <param name="dialplan" value="test"/>
+    <param name="context" value="default"/>
+    <param name="dialstring" value="0/0"/>
+  </span>
+
+  <span id="2">
+    <param name="dialplan" value="curl"/>
+    <param name="context" value="default"/>
+    <param name="dialstring" value="0/[0-9]"/>
+  </span>
+
+</configuration>
