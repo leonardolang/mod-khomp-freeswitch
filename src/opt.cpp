@@ -99,11 +99,11 @@ void Opt::load_configuration(const char *file_name, const char **section, bool s
             }
             else if (!strcmp("context", var))
             {
-                   tmp_span->_context = val;
+                tmp_span->_context = val;
             }
             else if (!strcmp("dialstring", var))
             {
-                   tmp_span->_dialstring = val;
+                tmp_span->_dialstring = val;
             }
             else
             {
@@ -114,7 +114,9 @@ void Opt::load_configuration(const char *file_name, const char **section, bool s
                                   span_id);
             }
                     
-            /* TODO: We can't seem to be able to use this here
+            /* HELP: We can't seem to be able to use this here
+                because ConfigOptions does not seem to support
+                tree configuration model.
             try
             {
                 Globals::options.process(var, val);
@@ -128,7 +130,7 @@ void Opt::load_configuration(const char *file_name, const char **section, bool s
                                   var,
                                   val);
             }
-             */
+             */            
         }
         _spans.insert(span_pair_type(span_id, *tmp_span));
     }
