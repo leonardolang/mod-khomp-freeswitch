@@ -15,15 +15,11 @@
 #include "opt.h"
 #include "globals.h"
 
-bool        Opt::_debug;
-std::string Opt::_dialplan;
-std::string Opt::_context;
+bool                            Opt::_debug;
+std::string                     Opt::_dialplan;
+std::string                     Opt::_context;
+std::map < std::string, CSpan > Opt::_spans;
 
-
-//SWITCH_DECLARE_GLOBAL_STRING_FUNC(set_global_dialplan, Opt::_dialplan);
-//SWITCH_DECLARE_GLOBAL_STRING_FUNC(set_global_codec_string, Opt::_codec_string);
-//SWITCH_DECLARE_GLOBAL_STRING_FUNC(set_global_codec_rates_string, Opt::_codec_rates_string);
-//SWITCH_DECLARE_GLOBAL_STRING_FUNC(set_global_ip, Opt::_ip);
 
 void Opt::initialize(void) 
 { 
@@ -89,14 +85,36 @@ void Opt::load_configuration(const char *file_name, const char **section, bool s
     for (span = switch_xml_child(cfg, "span"); span; span = span->next)
     {
         char *span_id = (char *) switch_xml_attr_soft(span, "id");
-
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "New span detected: %s.\n", span_id);
+        CSpan * tmp_span = new CSpan();
         
         for (param = switch_xml_child(span, "param"); param; param = param->next)
         {
             char *var = (char *) switch_xml_attr_soft(param, "name");
             char *val = (char *) switch_xml_attr_soft(param, "value");
 
+            if (!strcmp("dialplan", var))
+            {
+                tmp_span->_dialplan = val;
+            }
+            else if (!strcmp("context", var))
+            {
+                   tmp_span->_context = val;
+            }
+            else if (!strcmp("dialstring", var))
+            {
+                   tmp_span->_dialstring = val;
+            }
+            else
+            {
+                switch_log_printf(SWITCH_CHANNEL_LOG,
+                                  SWITCH_LOG_WARNING,
+                                  "Option %s in span %s not valid.\n",
+                                  var,
+                                  span_id);
+            }
+                    
+            /* TODO: We can't seem to be able to use this here
             try
             {
                 Globals::options.process(var, val);
@@ -110,11 +128,26 @@ void Opt::load_configuration(const char *file_name, const char **section, bool s
                                   var,
                                   val);
             }
+             */
         }
+        _spans.insert(span_pair_type(span_id, *tmp_span));
     }
     
     switch_xml_free(xml);
 
+}
+
+void Opt::printConfiguration(switch_stream_handle_t* stream)
+{
+    for( std::map<std::string, CSpan>::iterator ii=_spans.begin(); ii!=_spans.end(); ++ii )
+    {
+        stream->write_function(stream,
+                               "Span: %s.\nDialplan: %s.\nContext: %s.\nDialstring: %s.\n\n",
+                               (*ii).first.c_str(),
+                               (*ii).second._dialplan.c_str(),
+                               (*ii).second._context.c_str(),
+                               (*ii).second._dialstring.c_str());
+    }
 }
 
 void Opt::clean_configuration(void)

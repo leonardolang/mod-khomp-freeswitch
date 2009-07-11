@@ -38,7 +38,7 @@
  */
 
 
-#define KHOMP_SYNTAX "khomp show [info|links|channels]"
+#define KHOMP_SYNTAX "khomp show [info|links|channels|conf]"
 
 #include "mod_khomp.h"
 
@@ -719,6 +719,10 @@ SWITCH_STANDARD_API(khomp)
         if (argv[1] && !strncasecmp(argv[1], "links", 5)) {
             /* TODO: Let show specific boards/links */
             printLinks(stream, NULL, NULL);
+        }
+        /* Output span configuration */
+        if (argv[1] && !strncasecmp(argv[1], "conf", 4)) {
+            Opt::printConfiguration(stream);
         }
         // Show all channels from all boards and all links
         if (argv[1] && !strncasecmp(argv[1], "channels", 8)) {
