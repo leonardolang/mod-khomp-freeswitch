@@ -125,6 +125,23 @@ void CBaseKhompPvt::terminate(void)
     }
 }
 
+void CBaseKhompPvt::khomp_add_event_board_data(switch_event_t *event)
+{
+
+    //if (!event) {
+        //TODO: RAISE!
+    //}
+
+    if (_session)
+    {
+        switch_channel_t *channel = switch_core_session_get_channel(_session);
+        switch_channel_event_set_data(channel, event);
+    }
+
+    switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Khomp-DeviceId", "%u", _target.device);
+    switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Khomp-Object", "%u", _target.object);
+}
+
 switch_status_t CBaseKhompPvt::init(switch_core_session_t *new_session)
 {
     session(new_session);
@@ -564,6 +581,15 @@ void CBaseKhompPvt::on_ev_call_answer_info(K3L_EVENT *e)
                       startInfo,
                       _target.device,
                       _target.object);
+
+    /* Fire a custom event about this */
+    switch_event_t * event;
+    if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, KHOMP_EVENT_MAINT) == SWITCH_STATUS_SUCCESS)
+    {
+        khomp_add_event_board_data(event);
+        switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "EV_CALL_ANSWER_INFO", startInfo);
+        switch_event_fire(&event);
+    }
 }
 
 void CBaseKhompPvt::on_ev_dtmf_detected(K3L_EVENT *e)
@@ -665,7 +691,20 @@ void CBaseKhompPvt::on_ev_call_fail(K3L_EVENT *e){}
 void CBaseKhompPvt::on_ev_reference_fail(K3L_EVENT *e){}
 void CBaseKhompPvt::on_ev_channel_fail(K3L_EVENT *e){}
 void CBaseKhompPvt::on_ev_client_reconnect(K3L_EVENT *e){}
-void CBaseKhompPvt::on_ev_link_status(K3L_EVENT *e){}
+void CBaseKhompPvt::on_ev_link_status(K3L_EVENT *e)
+{
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, 
+                      "Link %u on board %u changed. "
+                      "[EV_LINK_STATUS]\n", _target.device, _target.object);
+    /* Fire a custom event about this */
+    switch_event_t * event;
+    if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, KHOMP_EVENT_MAINT) == SWITCH_STATUS_SUCCESS)
+    {
+        khomp_add_event_board_data(event);
+        switch_event_add_header(event, SWITCH_STACK_BOTTOM, "EV_LINK_STATUS", "%d", e->AddInfo);
+        switch_event_fire(&event);
+    }
+}
 void CBaseKhompPvt::on_ev_physical_link_down(K3L_EVENT *e){}
 void CBaseKhompPvt::on_ev_physical_link_up(K3L_EVENT *e){}
 
@@ -744,9 +783,7 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
             break;
 
         case EV_LINK_STATUS:
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, 
-                    "Link %u on board %u changed. "
-                    "[EV_LINK_STATUS]\n", e->DeviceId, obj);
+            CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_link_status(e);
             break;
 
         case EV_PHYSICAL_LINK_DOWN:

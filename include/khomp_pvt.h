@@ -6,6 +6,7 @@
 #include "frame.h"
 
 #define KHOMP_LOG __FILE__, __SWITCH_FUNC__, __LINE__
+#define KHOMP_EVENT_MAINT "khomp::maintenance"
 
 extern "C" int32 Kstdcall khomp_event_callback (int32, K3L_EVENT *);
 extern "C" void Kstdcall khomp_audio_listener (int32, int32, byte *, int32);
@@ -133,6 +134,8 @@ struct CBaseKhompPvt
     bool stop_listen(void);
 
     bool send_dtmf(char digit);
+
+    void khomp_add_event_board_data(switch_event_t *event);
     
 
     K3LAPI::target          _target;    /*!< The device/channel pair to bind this pvt to */
@@ -179,6 +182,8 @@ struct CBaseKhompPvt
     static void initialize_cng_buffer(void);
     static bool initialize(void);
     static void terminate(void);
+
+
     
     static switch_mutex_t *_pvts_mutex;
     static VectorType      _pvts; /*!< Static structure that contains all the pvts. Will be initialized by CBaseKhompPvt::initialize */
