@@ -38,7 +38,10 @@
  */
 
 
-#define KHOMP_SYNTAX "khomp show [info|links|channels|conf]"
+#define KHOMP_SYNTAX "USAGE:\n"\
+                     "\tkhomp help\n"\
+                     "\tkhomp show [info|links|channels|conf]\n\n"
+
 
 #include "mod_khomp.h"
 
@@ -133,7 +136,7 @@ switch_io_routines_t khomp_io_routines = {
 };
 
 /* Macros to define specific API functions */
-SWITCH_STANDARD_API(khomp);
+SWITCH_STANDARD_API(apiKhomp);
 
 /*!
  \brief Print a system summary for all the boards. [khomp show info]
@@ -147,8 +150,7 @@ void printLinks(switch_stream_handle_t* stream, unsigned int device,
 /*!
  \brief Print board channel status. [khomp show channels]
  */
-void printChannels(switch_stream_handle_t* stream, unsigned int device, 
-        unsigned int link);
+void apiPrintChannels(switch_stream_handle_t* stream); 
 
 /*!
    \brief State methods they get called when the state changes to the specific state 
@@ -638,7 +640,13 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_khomp_load)
     Globals::khomp_endpoint_interface->state_handler = &khomp_state_handlers;
 
     /* Add all the specific API functions */
-    SWITCH_ADD_API(Globals::api_interface, "khomp", "Khomp Menu", khomp, KHOMP_SYNTAX);
+    SWITCH_ADD_API(Globals::api_interface, "khomp", "Khomp Menu", apiKhomp, KHOMP_SYNTAX);
+    switch_console_set_complete("add khomp help");
+    switch_console_set_complete("add khomp show");
+    switch_console_set_complete("add khomp show info");
+    switch_console_set_complete("add khomp show links");
+    switch_console_set_complete("add khomp show channels");
+    switch_console_set_complete("add khomp show conf");
 
     CBaseKhompPvt::initialize_handlers();
 
@@ -688,24 +696,28 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_khomp_shutdown)
    \brief khomp API definition
    TODO: Add as xml modifier
 */
-SWITCH_STANDARD_API(khomp)
+SWITCH_STANDARD_API(apiKhomp)
 {
     char *argv[10] = { 0 };
     int argc = 0;
     void *val;
     char *myarg = NULL;
     switch_status_t status = SWITCH_STATUS_SUCCESS;
-
+    
     /* We should not ever get a session here */
-    if (session) return status;
+    if (session) return SWITCH_STATUS_FALSE;
 
-    if (switch_strlen_zero(cmd) || !(myarg = strdup(cmd))) {
-        stream->write_function(stream, "USAGE: %s\n", KHOMP_SYNTAX);
-        return SWITCH_STATUS_FALSE;
+    if (switch_strlen_zero(cmd)) 
+    {
+        stream->write_function(stream, "%s", KHOMP_SYNTAX);
+        return status;
     }
 
+    if (!(myarg = strdup(cmd))) return SWITCH_STATUS_MEMERR;
+
+
     if ((argc = switch_separate_string(myarg, ' ', argv, (sizeof(argv) / sizeof(argv[0])))) < 1) {
-        stream->write_function(stream, "USAGE: %s\n", KHOMP_SYNTAX);
+        stream->write_function(stream, "%s", KHOMP_SYNTAX);
         goto done;
     }
 
@@ -727,11 +739,12 @@ SWITCH_STANDARD_API(khomp)
         // Show all channels from all boards and all links
         if (argv[1] && !strncasecmp(argv[1], "channels", 8)) {
             /* TODO: Let show specific channels */
-            printChannels(stream, NULL, NULL);
+            apiPrintChannels(stream);
+            //printChannels(stream, NULL, NULL);
         }
 
     } else {
-        stream->write_function(stream, "USAGE: %s\n", KHOMP_SYNTAX);
+        stream->write_function(stream, "%s", KHOMP_SYNTAX);
     }
 
 done:
@@ -740,45 +753,69 @@ done:
 
 }
 
-void printChannels(switch_stream_handle_t* stream, unsigned int device, unsigned int link) {
-    if (!device) {
-        // Print all channels from all boards and links
-        stream->write_function(stream, "|--------- Khomp ----------|\n");
-        stream->write_function(stream, "| Board | Channel | Status |\n");
-        for (int board=0 ; board < Globals::k3lapi.device_count() ; board++) {
-            for (int channel=0 ; channel < Globals::k3lapi.channel_count(board) ; channel++) {
-                try {
-                    K3L_CHANNEL_CONFIG channelConfig;
-                    channelConfig = Globals::k3lapi.channel_config( board, channel );
-                }
-                catch (...){
-                    stream->write_function(stream, "OOOPSS. Something went wrong, cleanup this mess!\n");
-                    return;
-                }
-                K3L_CHANNEL_STATUS status;
-                if (k3lGetDeviceStatus( board, channel + ksoChannel, &status, sizeof(status) ) != ksSuccess) {
-                    stream->write_function(stream, "Damn, again something bad happened.\n");
-                    return;
-                }
-                switch(status.CallStatus) {
-                    case kcsFree: 
-                        stream->write_function(stream, "| %6u| %8u| Free |\n", board, channel);
-                        break;
-                    case kcsOutgoing: 
-                        stream->write_function(stream, "| %6u| %8u| Outgoing |\n", board, channel);
-                        break;
-                    case kcsIncoming: 
-                        stream->write_function(stream, "| %6u| %8u| Incoming |\n", board, channel);
-                        break;
-                    default:
-                        stream->write_function(stream, "| %6u| %8u| UNKNOWN : %x |\n", board, channel, status.AddInfo);
-                }
-                        
-            }
+
+void printChannels(switch_stream_handle_t* stream, unsigned short device)
+{
+    for (unsigned short channel = 0 ; 
+            channel < Globals::k3lapi.channel_count(device) ; channel++) 
+    {
+        K3L_CHANNEL_CONFIG config;
+        try {
+            config = Globals::k3lapi.channel_config(device, channel);
         }
-        stream->write_function(stream, "----------------------------\n");
+        catch (K3LAPI::invalid_channel & e)
+        {
+            stream->write_function(stream, "(dev=%02hu,channel=%03hu) "
+                    "Could not get channel config.\n", device, channel);
+            return;
+        }
+
+        K3L_CHANNEL_STATUS status;
+        if (k3lGetDeviceStatus(device, channel + ksoChannel, &status, 
+                sizeof(status)) != ksSuccess) 
+        {
+            stream->write_function(stream, "(dev=%02hu,channel=%03hu) "
+                    "Could not get channel status.\n", device, channel);
+                return;
+        }
+
+        stream->write_function(stream, 
+            "| %d,%02d |   unused   | %11s | %-36s |\n",
+            device, channel, 
+            Verbose::callStatus(status.CallStatus).c_str(), 
+            Verbose::channelStatus(config.Signaling, status.AddInfo).c_str());
     }
+    
 }
+
+
+void apiPrintChannels(switch_stream_handle_t* stream)
+{
+
+    stream->write_function(stream, "\n"
+" ------------------------------------------------------------------------\n");
+    stream->write_function(stream, 
+"|--------------------- Khomp Channels and Connections -------------------|\n");
+    stream->write_function(stream, 
+"|------------------------------------------------------------------------|\n");
+    stream->write_function(stream, 
+"|  hw  | freeswitch |  khomp call |             khomp channel            |\n");
+    stream->write_function(stream, 
+"|  id  |   status   |    status   |                status                |\n");
+    stream->write_function(stream, 
+" ------------------------------------------------------------------------\n");
+    
+    for (unsigned short dev = 0 ; dev < Globals::k3lapi.device_count() ; dev++) 
+    {
+        printChannels(stream, dev); 
+    }
+
+
+    stream->write_function(stream, 
+" ------------------------------------------------------------------------\n");
+
+}
+
 
 void printLinks(switch_stream_handle_t* stream, unsigned int device, unsigned int link)
 {
