@@ -78,7 +78,7 @@ void CBaseKhompPvt::initialize_channels(void)
             CBaseKhompPvt * pvt = new CKhompPvtE1(tgt);
             _pvts.back().push_back(pvt);
 
-			/* TODO: remove this from here */
+            /* TODO: remove this from here */
             pvt->command(KHOMP_LOG, CM_DISCONNECT);
         }
     }
@@ -149,16 +149,16 @@ switch_status_t CBaseKhompPvt::init(switch_core_session_t *new_session)
     if (switch_core_codec_init(&_read_codec, "PCMA", NULL, 8000, Globals::switch_packet_duration, 1,
             SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
                 Globals::module_pool) != SWITCH_STATUS_SUCCESS)
-	{
-		return SWITCH_STATUS_FALSE;
-	}
+    {
+        return SWITCH_STATUS_FALSE;
+    }
 
     if (switch_core_codec_init(&_write_codec, "PCMA", NULL, 8000, Globals::switch_packet_duration, 1,
             SWITCH_CODEC_FLAG_ENCODE | SWITCH_CODEC_FLAG_DECODE, NULL,
                 Globals::module_pool) != SWITCH_STATUS_SUCCESS)
-	{
-		return SWITCH_STATUS_FALSE;
-	}
+    {
+        return SWITCH_STATUS_FALSE;
+    }
     
     switch_mutex_init(&flag_mutex, SWITCH_MUTEX_NESTED,
                 switch_core_session_get_pool(_session));
@@ -303,7 +303,9 @@ CBaseKhompPvt * CBaseKhompPvt::find_channel(char* allocation_string, switch_core
                 (reverse_first_channel_available == true ? channel >= channel_low : channel <= channel_high);
                 (reverse_first_channel_available == true ? channel-- : channel++)) 
         {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Checking if (%d-%d) is free\n", board, channel);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, 
+                    "%s Checking if channel is free\n", 
+                    CHAN_VERBOSE(board, channel));
             try 
             {
                 K3L_CHANNEL_CONFIG channelConfig;
@@ -311,20 +313,28 @@ CBaseKhompPvt * CBaseKhompPvt::find_channel(char* allocation_string, switch_core
             }
             catch (...)
             {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Exception while retrieving channel config for board %d, channel%d!\n", board, channel);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+                        "%s Exception while retrieving channel config!\n", 
+                        CHAN_VERBOSE(board, channel));
                 switch_mutex_unlock(_pvts_mutex);
                 return NULL;
             }
             K3L_CHANNEL_STATUS status;
             if (k3lGetDeviceStatus( board, channel + ksoChannel, &status, sizeof(status) ) != ksSuccess)
             {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "k3lGetDeviceStatus failed to retrieve channel config for board %d, channel%d!\n", board, channel);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+                        "%s k3lGetDeviceStatus failed to retrieve "
+                        "channel config!\n", 
+                        CHAN_VERBOSE(board, channel));
                 switch_mutex_unlock(_pvts_mutex);
                 return NULL;
             }
             if(status.CallStatus == kcsFree)
             {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Channel (%d-%d) is free, let's check if the session is available ...\n", board, channel);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, 
+                        "%s is free,"
+                        " let's check if the session is available ...\n", 
+                    CHAN_VERBOSE(board, channel));
                 pvt = CBaseKhompPvt::get(board, channel);
                 if(pvt != NULL && pvt->session() == NULL)
                 {
@@ -365,12 +375,12 @@ bool CBaseKhompPvt::start_stream(void)
     catch(...)
     {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending START_STREAM_BUFFER command!\n");
-		return false;
+        return false;
     }
 
     switch_set_flag_locked(this, TFLAG_STREAM);
     
-	return true;
+    return true;
 }
 
 bool CBaseKhompPvt::stop_stream(void)
@@ -381,7 +391,7 @@ bool CBaseKhompPvt::stop_stream(void)
     try
     {
         Globals::k3lapi.mixer(_target, 0, kmsGenerator, kmtSilence);
-	    Globals::k3lapi.command(_target, CM_STOP_STREAM_BUFFER);
+        Globals::k3lapi.command(_target, CM_STOP_STREAM_BUFFER);
     }
     catch(...)
     {
@@ -391,7 +401,7 @@ bool CBaseKhompPvt::stop_stream(void)
 
     switch_clear_flag_locked(this, TFLAG_STREAM);
     
-	return true;
+    return true;
 }
 
 bool CBaseKhompPvt::start_listen(bool conn_rx)
@@ -399,7 +409,7 @@ bool CBaseKhompPvt::start_listen(bool conn_rx)
     if (switch_test_flag(this, TFLAG_LISTEN))
         return true;
     
-	const size_t buffer_size = Globals::boards_packet_duration;
+    const size_t buffer_size = Globals::boards_packet_duration;
 
     if (conn_rx)
     {
@@ -412,7 +422,7 @@ bool CBaseKhompPvt::start_listen(bool conn_rx)
         {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "ERROR sending mixer record command!\n");
         }
-	}
+    }
 
     if(!command(KHOMP_LOG, CM_LISTEN, (const char *) &buffer_size))
     {
@@ -421,7 +431,7 @@ bool CBaseKhompPvt::start_listen(bool conn_rx)
 
     switch_set_flag_locked(this, TFLAG_LISTEN);
     
-	return true;
+    return true;
 }
 
 bool CBaseKhompPvt::stop_listen(void)
@@ -434,9 +444,9 @@ bool CBaseKhompPvt::stop_listen(void)
         return false;
     }
 
-	switch_clear_flag_locked(this, TFLAG_LISTEN);
+    switch_clear_flag_locked(this, TFLAG_LISTEN);
 
-	return true;
+    return true;
 }
 
 bool CBaseKhompPvt::send_dtmf(char digit)
@@ -448,17 +458,17 @@ bool CBaseKhompPvt::send_dtmf(char digit)
 void CBaseKhompPvt::on_ev_new_call(K3L_EVENT * e)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
-                      "New call on %u to %s from %s. [EV_NEW_CALL]\n",
-                      _target.object,
+                      "%s New call to %s from %s.\n",
+                      CHAN_VERBOSE(_target.device, _target.object),
                       Globals::k3lapi.get_param(e, "dest_addr").c_str(),
                       Globals::k3lapi.get_param(e, "orig_addr").c_str());
     
     if (khomp_channel_from_event(_target.device, _target.object, e) != ksSuccess )
     {
         switch_log_printf(SWITCH_CHANNEL_LOG,
-                          SWITCH_LOG_CRIT,
-                          "Something bad happened while getting channel session. Device:%u/Channel:%u. [EV_NEW_CALL]\n",
-                          _target.device, _target.object);
+                SWITCH_LOG_CRIT,
+                "%s Something bad happened while getting channel session.\n",
+                CHAN_VERBOSE(_target.device, _target.object));
     }
 
     command(KHOMP_LOG, CM_RINGBACK);
@@ -469,9 +479,8 @@ void CBaseKhompPvt::on_ev_disconnect(K3L_EVENT *e)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG,
                       SWITCH_LOG_NOTICE,
-                      "Called party disconnected: Khomp/%u/%u. [EV_DISCONNECT]\n",
-                      _target.device,
-                      _target.object);
+                      "%s Called party disconnected.\n",
+                      CHAN_VERBOSE(_target.device, _target.object));
 
     // TODO: before uncommenting: we need to check channel direction here. after that, we MAY ONLY
     //       send a CM_DISCONNECT, but should not clean any state associated with the call
@@ -495,9 +504,8 @@ void CBaseKhompPvt::on_ev_connect(K3L_EVENT *e)
 
     switch_log_printf(SWITCH_CHANNEL_LOG,
             SWITCH_LOG_INFO,
-            "Call will be answered on Khomp/%u/%u. [EV_CONNECT]\n",
-            _target.device,
-            _target.object);
+            "%s Call will be answered.\n",
+            CHAN_VERBOSE(_target.device, _target.object));
 
     channel_answer_channel(session);
 }
@@ -509,9 +517,8 @@ void CBaseKhompPvt::on_ev_call_success(K3L_EVENT *e)
      */
     switch_log_printf(SWITCH_CHANNEL_LOG,
                       SWITCH_LOG_INFO,
-                      "Khomp/%u/%u is ringing. [EV_CALL_SUCESS]\n",
-                      _target.device,
-                      _target.object);
+                      "%s is ringing.\n",
+                      CHAN_VERBOSE(_target.device, _target.object));
 }
 
 void CBaseKhompPvt::on_ev_channel_free(K3L_EVENT *e)
@@ -527,15 +534,13 @@ void CBaseKhompPvt::on_ev_channel_free(K3L_EVENT *e)
     if (channel_on_hangup(_session) != SWITCH_STATUS_SUCCESS)
         switch_log_printf(SWITCH_CHANNEL_LOG,
                           SWITCH_LOG_CRIT,
-                          "Could not hangup channel: Khomp/%u/%u.\n",
-                          _target.device,
-                          _target.object);
+                          "%s Could not hangup channel.\n",
+                          CHAN_VERBOSE(_target.device, _target.object));
 
     switch_log_printf(SWITCH_CHANNEL_LOG,
                       SWITCH_LOG_INFO,
-                      "Khomp/%u/%u is now free. [EV_CHANNEL_FREE]\n",
-                      _target.device,
-                      _target.object);
+                      "%s Now is free.\n",
+                      CHAN_VERBOSE(_target.device, _target.object));
 }
 
 void CBaseKhompPvt::on_ev_no_answer(K3L_EVENT *e)
@@ -543,9 +548,8 @@ void CBaseKhompPvt::on_ev_no_answer(K3L_EVENT *e)
     /* TODO: Destroy sessions and channels */
     switch_log_printf(SWITCH_CHANNEL_LOG,
                       SWITCH_LOG_INFO,
-                      "No one answered the call on Khomp/%u/%u. [EV_NO_ANSWER]\n",
-                      _target.object,
-                      _target.device);
+                      "%s No one answered the call.\n",
+                      CHAN_VERBOSE(_target.device, _target.object));
 }
 
 void CBaseKhompPvt::on_ev_call_answer_info(K3L_EVENT *e)
@@ -553,41 +557,20 @@ void CBaseKhompPvt::on_ev_call_answer_info(K3L_EVENT *e)
     /* TODO: Set channel variable if we get this event */
     /* TODO: Fire an event so ESL can get it? */
     /* Call Analyser has to be enabled on k3lconfig */
-    const char * startInfo = "";
-    switch (e->AddInfo)
-    {
-        case (kcsiHumanAnswer):
-            startInfo = "kcsiHumanAnswer";
-            break;
-        case (kcsiAnsweringMachine):
-            startInfo = "kcsiAnsweringMachine";
-            break;
-        case (kcsiCellPhoneMessageBox):
-            startInfo = "kcsiCellPhoneMessageBox";
-            break;
-        case (kcsiUnknown):
-            startInfo = "kcsiUnknown";
-            break;
-        case (kcsiCarrierMessage):
-            startInfo = "kcsiCarrierMessage";
-            break;
-        default:
-            startInfo = "Error or unknown code!";
-
-    }
     switch_log_printf(SWITCH_CHANNEL_LOG,
                       SWITCH_LOG_DEBUG,
-                      "Detected: \"%s\" on Khomp/%u/%u. [EV_CALL_ANSWER_INFO]\n",
-                      startInfo,
-                      _target.device,
-                      _target.object);
+                      "%s Detected: \"%s\".\n",
+                      CHAN_VERBOSE(_target.device, _target.object),
+                      Verbose::callStartInfo((KCallStartInfo)e->AddInfo).c_str());
 
     /* Fire a custom event about this */
     switch_event_t * event;
     if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, KHOMP_EVENT_MAINT) == SWITCH_STATUS_SUCCESS)
     {
         khomp_add_event_board_data(event);
-        switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "EV_CALL_ANSWER_INFO", startInfo);
+        switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, 
+                "EV_CALL_ANSWER_INFO", 
+                Verbose::callStartInfo((KCallStartInfo)e->AddInfo).c_str());
         switch_event_fire(&event);
     }
 }
@@ -596,10 +579,9 @@ void CBaseKhompPvt::on_ev_dtmf_detected(K3L_EVENT *e)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG,
                       SWITCH_LOG_INFO,
-                      "Detected DTMF (%c) on Khomp/%u/%u. [EV_DTMF_DETECTED]\n",
-                      e->AddInfo,
-                      _target.device,
-                      _target.object);
+                      "%s Detected DTMF (%c).\n",
+                      CHAN_VERBOSE(_target.device, _target.object),
+                      e->AddInfo);
 
     if(!_session) 
     {
@@ -620,46 +602,16 @@ void CBaseKhompPvt::on_ev_dtmf_detected(K3L_EVENT *e)
     {
         switch_log_printf(SWITCH_CHANNEL_LOG,
                           SWITCH_LOG_ERROR,
-                          "Received a DTMF for (Khomp/%u/%u) but the channel is invalid !\n",
-                          _target.device,
-                          _target.object);
+                          "%s Received a DTMF but the channel is invalid !\n",
+                          CHAN_VERBOSE(_target.device, _target.object));
     }
 }
 
 void CBaseKhompPvt::on_ev_internal_fail(K3L_EVENT *e)
 {
-    // TODO: use Verbose for this.
-    const char * msg = "";
-    switch(e->AddInfo)
-    {
-        case kifInterruptCtrl:
-            msg = "kifInterruptCtrl";
-            break;
-        case kifCommunicationFail:
-            msg = "kifCommunicationFail";
-            break;
-        case kifProtocolFail:
-            msg = "kifProtocolFail";
-            break;
-        case kifInternalBuffer:
-            msg = "kifInternalBuffer";
-            break;
-        case kifMonitorBuffer:
-            msg = "kifMonitorBuffer";
-            break;
-        case kifInitialization:
-            msg = "kifInitialization";
-            break;
-        case kifInterfaceFail:
-            msg = "kifInterfaceFail";
-            break;
-        case kifClientCommFail:
-            msg = "kifClientCommFail";
-            break;
-        default:
-            msg = "UnknownError";
-    }
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "This is a fatal error and we will not recover. Reason: %s. [EV_INTERNAL_FAIL]\n", msg);
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
+            "This is a fatal error and we will not recover. Reason: %s.\n", 
+            Verbose::internalFail((KInternalFail)e->AddInfo).c_str());
 }
 
 void CBaseKhompPvt::on_ev_seizure_start(K3L_EVENT *e){}
@@ -694,8 +646,8 @@ void CBaseKhompPvt::on_ev_client_reconnect(K3L_EVENT *e){}
 void CBaseKhompPvt::on_ev_link_status(K3L_EVENT *e)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, 
-                      "Link %u on board %u changed. "
-                      "[EV_LINK_STATUS]\n", _target.device, _target.object);
+                      "Link %02hu on board %02hu changed.\n", 
+                      e->AddInfo, e->DeviceId);
     /* Fire a custom event about this */
     switch_event_t * event;
     if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, KHOMP_EVENT_MAINT) == SWITCH_STATUS_SUCCESS)
@@ -712,9 +664,8 @@ void CBaseKhompPvt::on_ev_untreated(K3L_EVENT *e)
 {
     switch_log_printf(SWITCH_CHANNEL_LOG,
                       SWITCH_LOG_DEBUG,
-                      "New Event has just arrived on Khomp/%u/%u with untreated code: %x\n",
-                      _target.device,
-                      _target.object,
+                      "%s New Event has just arrived with untreated code: %x\n",
+                      CHAN_VERBOSE(_target.device, _target.object),
                       e->Code);
 }
 
@@ -723,9 +674,9 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 
     switch_log_printf(SWITCH_CHANNEL_LOG,
                       SWITCH_LOG_DEBUG,
-                      "New Khomp Event: on %u/%u: %x\n",
-                      e->DeviceId,
-                      obj,
+                      "%s New Khomp Event \'%s\'= %x\n",
+                      CHAN_VERBOSE(e->DeviceId, obj),
+                      Verbose::eventName(e->Code).c_str(),
                       e->Code);
     try
     {
@@ -766,20 +717,20 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 
         case EV_DTMF_SEND_FINISH:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, 
-                    "Channel %u on board %u has sucessfully generated DTMF. "
-                    "[EV_DTMF_SEND_FINNISH]\n", obj, e->DeviceId);
+                    "%s has sucessfully generated DTMF.\n", 
+                    CHAN_VERBOSE(e->DeviceId, obj));
             break;
 
         case EV_CALL_FAIL:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, 
-                    "Channel %u on board %u reported call fail. "
-                    "[EV_CALL_FAIL]\n", obj, e->DeviceId);
+                    "%s reported call fail.\n", 
+                    CHAN_VERBOSE(e->DeviceId, obj));
             break;
 
         case EV_CHANNEL_FAIL:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
-                    "Channel %u on board %u reported failure. "
-                    "[EV_CHANNEL_FAIL]\n", obj, e->DeviceId);
+                    "%s reported failure.\n", 
+                    CHAN_VERBOSE(e->DeviceId, obj));
             break;
 
         case EV_LINK_STATUS:
@@ -788,18 +739,21 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
 
         case EV_PHYSICAL_LINK_DOWN:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
-                    "Link %u on board %u is DOWN. [EV_PHYSICAL_LINK_DOWN]\n", 
-                    e->DeviceId, obj);
+                    "Link %02hu on board %02hu is DOWN.\n", 
+                    e->AddInfo, e->DeviceId);
             break;
 
         case EV_PHYSICAL_LINK_UP:
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, 
-                    "Link %u on board %u is UP. [EV_PHYSICAL_LINK_UP]\n", 
-                    e->DeviceId, obj);
+                    "Link %02hu on board %02hu is UP\n", 
+                    e->AddInfo, e->DeviceId);
             break;
 
         case EV_INTERNAL_FAIL:
             CBaseKhompPvt::get(e->DeviceId, obj)->on_ev_internal_fail(e);
+            break;
+
+        case EV_AUDIO_STATUS: 
             break;
 
         default:
@@ -811,9 +765,8 @@ extern "C" int32 Kstdcall khomp_event_callback(int32 obj, K3L_EVENT * e)
     {
         switch_log_printf(SWITCH_CHANNEL_LOG,
         SWITCH_LOG_CRIT,
-        "khomp/%hu/%03hu is an invalid channel on event '%s'.\n",
-        e->DeviceId,
-        obj,
+        "%s is an invalid channel on event '%s'.\n",
+        CHAN_VERBOSE(e->DeviceId, obj),
         Verbose::eventName(e->Code).c_str());
     }
 

@@ -24,16 +24,16 @@
 
 struct FrameStorage
 {
-	static const unsigned int frame_count = 6;
-	static const unsigned int audio_count = 4;
+    static const unsigned int frame_count = 6;
+    static const unsigned int audio_count = 4;
 
              FrameStorage(switch_codec_t * codec, int packet_size);
     virtual ~FrameStorage();
 
-	inline switch_frame_t * next_frame(void)
-	{
+    inline switch_frame_t * next_frame(void)
+    {
         return &(_frames[next_index()]);
-	}
+    }
 
     inline unsigned int next_index()
     {
@@ -80,8 +80,8 @@ struct FrameManager: protected FrameStorage
 //    ~FrameManager();
 
     // may throw Ringbuffer::BufferEmpty
-	switch_frame_t * pick(void)
-	{
+    switch_frame_t * pick(void)
+    {
         try
         {
             /* try to consume from buffer.. */
@@ -101,11 +101,11 @@ struct FrameManager: protected FrameStorage
         {
             return NULL;
         }
-	}
+    }
 
     // may throw Ringbuffer::BufferFull
-	bool give(const char * buf, unsigned int size)
-	{
+    bool give(const char * buf, unsigned int size)
+    {
         return _audio.provider_partial(buf, size);
     }
 

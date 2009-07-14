@@ -8,6 +8,9 @@
 
 #include <vector>
 
+#define CHAN_VERBOSE(dev,obj) STG(FMT("(dev=%02hu,channel=%03hu)") % (unsigned short)dev % (unsigned short)obj).c_str()
+
+
 extern "C"
 {
     #include <switch.h>
@@ -18,11 +21,11 @@ extern "C"
 
 struct Globals
 {
-	static const unsigned int switch_packet_duration  =                          30; // in ms
-	static const unsigned int boards_packet_duration  =                          16; // in ms
+    static const unsigned int switch_packet_duration  =                          30; // in ms
+    static const unsigned int boards_packet_duration  =                          16; // in ms
 
-	static const unsigned int switch_packet_size      = switch_packet_duration *  8; // in bytes
-	static const unsigned int boards_packet_size      = boards_packet_duration *  8; // in bytes
+    static const unsigned int switch_packet_size      = switch_packet_duration *  8; // in bytes
+    static const unsigned int boards_packet_size      = boards_packet_duration *  8; // in bytes
 
     static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
 

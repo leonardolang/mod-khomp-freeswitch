@@ -89,7 +89,7 @@ switch_state_handler_table_t khomp_state_handlers = {
     /*.on_hangup */ channel_on_hangup,
     /*.on_exchange_media */ channel_on_exchange_media,
     /*.on_soft_execute */ channel_on_soft_execute,
-	/*.on_consume_media */ NULL,
+    /*.on_consume_media */ NULL,
     /*.on_hibernate */ NULL,
     /*.on_reset */ NULL,
     /*.on_park*/ NULL,
@@ -145,7 +145,7 @@ void printSystemSummary(switch_stream_handle_t* stream);
 /*!
  \brief Print link status. [khomp show links]
  */
-void printLinks(switch_stream_handle_t* stream, unsigned int device, 
+void apiPrintLinks(switch_stream_handle_t* stream, unsigned int device, 
         unsigned int link);
 /*!
  \brief Print board channel status. [khomp show channels]
@@ -247,7 +247,7 @@ switch_status_t channel_on_hangup(switch_core_session_t *session)
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "%s Originator Hangup.\n", switch_channel_get_name(channel));
 
-	// TODO: this one could have a structure for taking care of the locking.
+    // TODO: this one could have a structure for taking care of the locking.
     switch_mutex_lock(Globals::mutex);
     Globals::calls--;
     if (Globals::calls < 0) {
@@ -264,7 +264,7 @@ switch_status_t channel_on_destroy(switch_core_session_t *session)
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "CHANNEL DESTROY\n");
     
-	return SWITCH_STATUS_SUCCESS;
+    return SWITCH_STATUS_SUCCESS;
 }
 
 switch_status_t channel_kill_channel(switch_core_session_t *session, int sig)
@@ -340,7 +340,7 @@ switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_
 //    tech_pvt->_read_frame.flags = SFF_NONE;
     *frame = NULL;
 
-//	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+//    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
 //        "We are here to read things! (%u,%02u).\n",
 //        tech_pvt->target().device, tech_pvt->target().object);
 
@@ -360,7 +360,7 @@ switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_
 
             if (!*frame)
             {
-//          		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+//                  switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
 //                    "Reader buffer empty, waiting... (%u,%02u).\n",
 //                    tech_pvt->target().device, tech_pvt->target().object);
 
@@ -369,7 +369,7 @@ switch_status_t channel_read_frame(switch_core_session_t *session, switch_frame_
             }
 //            else
 //            {
-//            	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+//                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
 //                 "We are returning a new frame! (%u,%02u).\n",
 //                    tech_pvt->target().device, tech_pvt->target().object);
 //            }
@@ -415,7 +415,7 @@ switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame
     assert(tech_pvt != NULL);
 
 /*
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
         "We are here to write things! (%u,%02u).\n",
         tech_pvt->target().device, tech_pvt->target().object);
 */
@@ -436,7 +436,7 @@ switch_status_t channel_write_frame(switch_core_session_t *session, switch_frame
         if (!tech_pvt->_writer_frames.give((const char *)frame->data, (size_t)frame->datalen))
         {
             /*
-       		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+               switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
                 "Writer buffer full! (%u,%02u) (len=%u).\n",
                 tech_pvt->target().device, tech_pvt->target().object, frame->datalen);
              */
@@ -730,7 +730,7 @@ SWITCH_STANDARD_API(apiKhomp)
         /* Show all the links and their status */
         if (argv[1] && !strncasecmp(argv[1], "links", 5)) {
             /* TODO: Let show specific boards/links */
-            printLinks(stream, NULL, NULL);
+            apiPrintLinks(stream, NULL, NULL);
         }
         /* Output span configuration */
         if (argv[1] && !strncasecmp(argv[1], "conf", 4)) {
@@ -765,8 +765,9 @@ void printChannels(switch_stream_handle_t* stream, unsigned short device)
         }
         catch (K3LAPI::invalid_channel & e)
         {
-            stream->write_function(stream, "(dev=%02hu,channel=%03hu) "
-                    "Could not get channel config.\n", device, channel);
+            stream->write_function(stream, "%s "
+                    "Could not get channel config.\n", 
+                    CHAN_VERBOSE(device, channel));
             return;
         }
 
@@ -774,8 +775,9 @@ void printChannels(switch_stream_handle_t* stream, unsigned short device)
         if (k3lGetDeviceStatus(device, channel + ksoChannel, &status, 
                 sizeof(status)) != ksSuccess) 
         {
-            stream->write_function(stream, "(dev=%02hu,channel=%03hu) "
-                    "Could not get channel status.\n", device, channel);
+            stream->write_function(stream, "%s "
+                    "Could not get channel status.\n", 
+                    CHAN_VERBOSE(device, channel));
                 return;
         }
 
@@ -817,98 +819,175 @@ void apiPrintChannels(switch_stream_handle_t* stream)
 }
 
 
-void printLinks(switch_stream_handle_t* stream, unsigned int device, unsigned int link)
+unsigned int get_channel_count(int device)
 {
+    return Globals::k3lapi.channel_count(device);
+}
 
-    stream->write_function(stream, "___________________________________________\n");
-    stream->write_function(stream, "|--------------Khomp Links----------------|\n");
-    stream->write_function(stream, "|----Board----|----Link----|----Status----|\n");
+unsigned int get_link_count(int device)
+{
+    return Globals::k3lapi.link_count(device);
+}
 
-    // We want to see all links from all devices
-    if (!device) {
-        for(int device=0 ; device < Globals::k3lapi.device_count() ; device++)
+
+
+unsigned int get_real_link_count(int device, bool fxs_too = false)
+{
+    int count = 0;
+
+    switch (Globals::k3lapi.device_type(device))
+    {
+#if K3L_AT_LEAST(1,6,0)
+        case kdtFXS:
+            count = (fxs_too ? (get_channel_count(device) == 64 ? 2 : 1) : 0);
+            break;
+
+        case kdtFXSSpx:
+            count = (fxs_too ? (get_channel_count(device) == 60 ? 2 : 1) : 0);
+            break;
+#endif
+        /* E1 boards */
+        case kdtE1:
+        case kdtE1Spx:
+        case kdtE1IP:
+            count = get_link_count(device);
+            break;
+
+        case kdtPR:
+        case kdtE1GW:
+            count = 1;
+            break;
+
+#if K3L_AT_LEAST(1,6,0)
+        case kdtFXO:
+        case kdtFXOVoIP:
+        case kdtGSM:
+        case kdtGSMSpx:
+#else
+        case kdtFX:
+        case kdtFXVoIP:
+#endif
+        case kdtConf:
+        case kdtGWIP:
+            count = 0;
+            break;
+    }
+
+    return count;
+}
+
+void get_link_status (int dev, int link, std::string & buf)
+{
+    try
+    {
+        K3L_LINK_CONFIG & config = Globals::k3lapi.link_config(dev, link);
+        K3L_LINK_STATUS   status;
+
+        KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus(dev, 
+                link + ksoLink, &status, sizeof(status));
+
+        buf = ((ret == ksSuccess) ? 
+            Verbose::linkStatus(config.Signaling, status.E1)
+            : std::string("<unknown>"));
+    } 
+    catch(K3LAPI::invalid_channel & e)
+    {
+        buf = std::string("<unknown>");
+    }
+}
+
+
+ 
+void printLinks(switch_stream_handle_t* stream, unsigned int device)
+{
+    
+    stream->write_function(stream, 
+"|------------------------------------------------------------------------|\n");
+
+    switch (get_real_link_count(device, true))
+    {
+        case 1:
         {
-            K3L_LINK_CONFIG & config = Globals::k3lapi.link_config(device, link);
-            K3L_LINK_STATUS   status;
+            std::string str_link0;
 
-            for(int link=0 ; link < Globals::k3lapi.link_count(device) ; link++)
+            get_link_status (device, 0, str_link0);
+
+            try
             {
-                const char * E1Status = "";
-                if (k3lGetDeviceStatus (device, link + ksoLink, &status, sizeof(status)) == ksSuccess)
-                {
-                    switch (config.Signaling)
-                    {
-                        case ksigInactive:
-                            E1Status = "[ksigInactive]";
-                            break;
+                K3L_LINK_CONFIG & conf0 = Globals::k3lapi.link_config(device,0);
 
-                        case ksigAnalog:
-                            E1Status = "[ksigAnalog]";
-                            break;
-
-                        case ksigSIP:
-                            E1Status = "[ksigSIP]";
-                            break;
-
-                        case ksigOpenCAS:
-                        case ksigOpenR2:
-                        case ksigR2Digital:
-                        case ksigUserR2Digital:
-                        case ksigOpenCCS:
-                        case ksigPRI_EndPoint:
-                        case ksigPRI_Network:
-                        case ksigPRI_Passive:
-                        case ksigLineSide:
-                        case ksigCAS_EL7:
-                        case ksigAnalogTerminal:
-                            switch (status.E1) {
-
-                                case (kesOk):
-                                    E1Status = "kesOk";
-                                    break;
-                                case (kesSignalLost):
-                                    E1Status = "kesSignalLost";
-                                    break;
-                                case (kesNetworkAlarm):
-                                    E1Status = "kesNetworkAlarm";
-                                    break;
-                                case (kesFrameSyncLost):
-                                    E1Status = "kesFrameSyncLost";
-                                    break;
-                                case (kesMultiframeSyncLost):
-                                    E1Status = "kesMultiframeSyncLost";
-                                    break;
-                                case (kesRemoteAlarm):
-                                    E1Status = "kesRemoteAlarm";
-                                    break;
-                                case (kesHighErrorRate):
-                                    E1Status = "kesHighErrorRate";
-                                    break;
-                                case (kesUnknownAlarm):
-                                    E1Status = "kesUnknownAlarm";
-                                    break;
-                                case (kesE1Error):
-                                    E1Status = "kesE1Error";
-                                    break;
-                                case (kesNotInitialized):
-                                    E1Status = "kesNotInitialized";
-                                    break;
-                                default:
-                                    E1Status = "UnknownE1Status";
-                            }
-                            break;
-                        default:
-                            E1Status = "NotImplementedBoard";
-                    }
-                }
-                stream->write_function(stream, "|%13d|%12d|%s|\n"
-                                        , device
-                                        , link
-                                        , E1Status);
+                if (conf0.ReceivingClock & 0x01)
+                    str_link0 += " (sync)";
             }
+            catch(K3LAPI::invalid_channel & e) 
+            {}
+
+                stream->write_function(stream, 
+                        "| Link '0' on board '%d': %-47s |\n", 
+                        device, str_link0.c_str());
+            break;
+        }
+
+        case 2:
+        {
+            std::string str_link0, str_link1;
+
+            get_link_status (device, 0, str_link0);
+            get_link_status (device, 1, str_link1);
+
+            try
+            {
+
+                K3L_LINK_CONFIG & conf0 = Globals::k3lapi.link_config(device,0);
+                K3L_LINK_CONFIG & conf1 = Globals::k3lapi.link_config(device,1);
+
+                if (conf0.ReceivingClock & 0x01)
+                    str_link0 += " (sync)";
+
+                if (conf1.ReceivingClock & 0x01)
+                    str_link1 += " (sync)";
+            }
+            catch(K3LAPI::invalid_channel & e) 
+            {}
+
+                stream->write_function(stream, 
+                        "|------ Link '0' on board '%d' ------|"
+                        "|------ Link '1' on board '%d' ------|\n",
+                        device, device);
+
+                stream->write_function(stream, 
+                        "| %-33s || %-33s |\n",
+                        str_link0.c_str(), str_link1.c_str());
+
+            break;
+        }
+        default:
+        {
+                stream->write_function(stream, 
+                    "| Board '%d': %-59s |\n",
+                    device, "No links available.");
+            break;
         }
     }
-    stream->write_function(stream, "-------------------------------------------\n");
+}
+
+void apiPrintLinks(switch_stream_handle_t* stream, unsigned int device, 
+        unsigned int link)
+{
+
+    stream->write_function(stream, "\n"
+" ------------------------------------------------------------------------\n");
+    stream->write_function(stream, 
+"|--------------------------- Khomp Links List ---------------------------|\n");
+
+    
+    for(device = 0; device < Globals::k3lapi.device_count() ; device++)
+    {
+        printLinks(stream, device);
+    }
+
+    stream->write_function(stream, 
+" ------------------------------------------------------------------------\n");
 }
 
 
@@ -1019,28 +1098,28 @@ void printSystemSummary(switch_stream_handle_t* stream) {
 /* Create a new channel on incoming call */
 KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KChannel, K3L_EVENT * event)
 {
-	switch_core_session_t *session = NULL;
-	CBaseKhompPvt *tech_pvt = NULL;
-	switch_channel_t *channel = NULL;
-	
-	if (!(session = switch_core_session_request(Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, NULL))) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
-		return ksFail;
-	}
-	
-	switch_core_session_add_stream(session, NULL);
-	
-	tech_pvt = CBaseKhompPvt::get(KDeviceId, KChannel);
-	assert(tech_pvt != NULL); // TODO: assert is bad, better is to log non-fatal error.
+    switch_core_session_t *session = NULL;
+    CBaseKhompPvt *tech_pvt = NULL;
+    switch_channel_t *channel = NULL;
+    
+    if (!(session = switch_core_session_request(Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, NULL))) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
+        return ksFail;
+    }
+    
+    switch_core_session_add_stream(session, NULL);
+    
+    tech_pvt = CBaseKhompPvt::get(KDeviceId, KChannel);
+    assert(tech_pvt != NULL); // TODO: assert is bad, better is to log non-fatal error.
 
-	channel = switch_core_session_get_channel(session);
+    channel = switch_core_session_get_channel(session);
 
-	//if (tech_init(tech_pvt, session) != SWITCH_STATUS_SUCCESS) {
-	if (tech_pvt->init(session) != SWITCH_STATUS_SUCCESS) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
-		switch_core_session_destroy(&session);
-		return ksFail;
-	}
+    //if (tech_init(tech_pvt, session) != SWITCH_STATUS_SUCCESS) {
+    if (tech_pvt->init(session) != SWITCH_STATUS_SUCCESS) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
+        switch_core_session_destroy(&session);
+        return ksFail;
+    }
 
     /* Get all data from event */
     std::string cidNum; 
@@ -1054,63 +1133,63 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
     catch ( K3LAPI::get_param_failed & err )
     {
         /* TODO: Can we set NULL variables? What should we do if this fails? */
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Could not get param %s on channel %u, board %u.\n", err.name.c_str(), KChannel, KDeviceId);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Could not get param %s on channel %u, board %u.\n", err.name.c_str(), KChannel, KDeviceId);
     }
 
-	/*if (switch_strlen_zero(sigmsg->channel->caller_data.cid_num.digits)) {
-		if (!switch_strlen_zero(sigmsg->channel->caller_data.ani.digits)) {
-			switch_set_string(sigmsg->channel->caller_data.cid_num.digits, sigmsg->channel->caller_data.ani.digits);
-		} else {
-			switch_set_string(sigmsg->channel->caller_data.cid_num.digits, sigmsg->channel->chan_number);
-		}
-	}
+    /*if (switch_strlen_zero(sigmsg->channel->caller_data.cid_num.digits)) {
+        if (!switch_strlen_zero(sigmsg->channel->caller_data.ani.digits)) {
+            switch_set_string(sigmsg->channel->caller_data.cid_num.digits, sigmsg->channel->caller_data.ani.digits);
+        } else {
+            switch_set_string(sigmsg->channel->caller_data.cid_num.digits, sigmsg->channel->chan_number);
+        }
+    }
     */
 
     /* Set the caller profile - Look at documentation */
-	tech_pvt->_caller_profile = switch_caller_profile_new(switch_core_session_get_pool(session),
-														 "Khomp",
-														 "XML", // TODO: Dialplan module to use?
+    tech_pvt->_caller_profile = switch_caller_profile_new(switch_core_session_get_pool(session),
+                                                         "Khomp",
+                                                         "XML", // TODO: Dialplan module to use?
                                                          NULL,
                                                          NULL,
-														 NULL,
+                                                         NULL,
                                                          cidNum.c_str(),
                                                          NULL,
                                                          NULL,
-														 (char *) modname,
-														 "default", // TODO: Context to look for on the dialplan?
-														 destination_number.c_str());
+                                                         (char *) modname,
+                                                         "default", // TODO: Context to look for on the dialplan?
+                                                         destination_number.c_str());
 
-	assert(tech_pvt->_caller_profile != NULL);
+    assert(tech_pvt->_caller_profile != NULL);
     /* END */
 
     /* WHAT??? - Look at documentation */
     //switch_set_flag(tech_pvt->caller_profile, SWITCH_CPF_NONE);
     /* END */
-	
+    
     /* */
     std::string name = STG(FMT("Khomp/%hu/%hu/%s") 
-	        % KDeviceId
+            % KDeviceId
             % KChannel
             % tech_pvt->_caller_profile->destination_number);
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Connect inbound channel %s\n", name.c_str());
-	switch_channel_set_name(channel, name.c_str());
-	switch_channel_set_caller_profile(channel, tech_pvt->_caller_profile);
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Connect inbound channel %s\n", name.c_str());
+    switch_channel_set_name(channel, name.c_str());
+    switch_channel_set_caller_profile(channel, tech_pvt->_caller_profile);
     /* END */
 
-	switch_channel_set_state(channel, CS_INIT);
+    switch_channel_set_state(channel, CS_INIT);
 
-	if (switch_core_session_thread_launch(session) != SWITCH_STATUS_SUCCESS) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Error spawning thread\n");
-		switch_core_session_destroy(&session);
-		return ksFail;
-	}
+    if (switch_core_session_thread_launch(session) != SWITCH_STATUS_SUCCESS) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Error spawning thread\n");
+        switch_core_session_destroy(&session);
+        return ksFail;
+    }
 
     /* WHAT?
-	if (zap_channel_add_token(sigmsg->channel, switch_core_session_get_uuid(session), 0) != ZAP_SUCCESS) {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Error adding token\n");
-		switch_core_session_destroy(&session);
-		return ZAP_FAIL;
-	}
+    if (zap_channel_add_token(sigmsg->channel, switch_core_session_get_uuid(session), 0) != ZAP_SUCCESS) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Error adding token\n");
+        switch_core_session_destroy(&session);
+        return ZAP_FAIL;
+    }
     */
 
     /* Set the session to the channel */
@@ -1129,9 +1208,9 @@ extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, b
     /* add listener audio to the read buffer */
     if (!pvt->_reader_frames.give((const char *)read_buffer, read_size))
     {
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
-            "Reader buffer full! (%u,%02u).\n",
-            pvt->target().device, pvt->target().object);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+            "%s Reader buffer full!\n",
+            CHAN_VERBOSE(pvt->target().device, pvt->target().object));
     }
 
     /* push audio from the write buffer */
@@ -1140,16 +1219,16 @@ extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, b
     if (!fr)
     {
         /*
-		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
             "Writer buffer empty! (%u,%02u).\n",
             pvt->target().device, pvt->target().object);
         */
         return;
     }
 
-	if (!switch_test_flag(pvt, TFLAG_STREAM))
-	{
-	    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
+    if (!switch_test_flag(pvt, TFLAG_STREAM))
+    {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
             "Stream not enabled, skipping write...\n",
             pvt->target().device, pvt->target().object);
         return;

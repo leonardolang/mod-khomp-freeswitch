@@ -106,8 +106,9 @@ struct CBaseKhompPvt
             //switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, 
             switch_log_printf(SWITCH_CHANNEL_ID_LOG, file, func, line, 
                     NULL, SWITCH_LOG_WARNING, 
-                    "(dev=%hu,object=%03hu): Command '%s' has failed " 
-                    "with error '%s'\n", e.dev, e.obj, 
+                    "%s Command '%s' has failed " 
+                    "with error '%s'\n", 
+                    CHAN_VERBOSE(e.dev, e.obj), 
                     Verbose::commandName(e.code).c_str(), 
                     Verbose::status((KLibraryStatus)e.rc).c_str());
 
