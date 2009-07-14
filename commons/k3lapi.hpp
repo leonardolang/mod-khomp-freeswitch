@@ -54,8 +54,10 @@
 #endif
 #endif
 
-#ifndef INCLUDED_K3LAPI_HPP
-#define INCLUDED_K3LAPI_HPP
+#include <types.hpp>
+
+#ifndef _K3LAPI_HPP_
+#define _K3LAPI_HPP_
 
 struct K3LAPI
 {
@@ -359,4 +361,4 @@ struct K3LAPI
               KDeviceType *     _device_type;
 };
 
-#endif /* INCLUDED_K3LAPI_HPP */
+#endif /* _K3LAPI_HPP_ */

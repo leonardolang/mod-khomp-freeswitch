@@ -249,8 +249,6 @@ struct Verbose
     }
     kevent;
 
-    /* dynamic (object) stuff */
-
 	typedef enum
 	{
 		R2_COUNTRY_ARG = 1,
@@ -262,10 +260,21 @@ struct Verbose
 	}
 	r2_country_type;
 
+	typedef enum
+	{
+		HUMAN,
+		EXACT
+	}
+	Presentation;
+
+    /* dynamic (object) stuff */
+
 	Verbose(K3LAPI & api): _api(api) {};
 
-	std::string event(int32, K3L_EVENT*, r2_country_type r2_country = R2_COUNTRY_BRA);
-	std::string channelStatus(int32, int32, int32);
+	std::string event(int32, K3L_EVENT*, r2_country_type r2_country = R2_COUNTRY_BRA,
+        Presentation fmt = HUMAN);
+
+	std::string channelStatus(int32, int32, int32, Presentation fmt = HUMAN);
 
     /* end of dynamic (object) stuff */
 
@@ -279,85 +288,97 @@ struct Verbose
 
     /* static (class) stuff */
 
-    static std::string echoLocation(KEchoLocation);
-    static std::string echoCancellerConfig(KEchoCancellerConfig);
+    static std::string echoLocation(KEchoLocation, Presentation fmt = HUMAN);
+    static std::string echoCancellerConfig(KEchoCancellerConfig, Presentation fmt = HUMAN);
 
-	static std::string event(KSignaling, int32, K3L_EVENT*, r2_country_type r2_country);
+	static std::string event(KSignaling, int32, K3L_EVENT*, r2_country_type,
+        Presentation fmt = HUMAN);
 
-	static std::string command(int32, K3L_COMMAND*, r2_country_type r2_country);
-	static std::string command(int32, int32, int32, const char *, r2_country_type r2_country);
+	static std::string command(int32, K3L_COMMAND*, r2_country_type,
+         Presentation fmt = HUMAN);
 
-    static std::string deviceName(KDeviceType, int32);
+	static std::string command(int32, int32, int32, const char *, r2_country_type,
+         Presentation fmt = HUMAN);
 
-    static std::string deviceType(KDeviceType);
-    static std::string deviceModel(KDeviceType, int32);
+    static std::string deviceName(KDeviceType, int32, Presentation fmt = HUMAN);
 
-    static std::string channelFeatures(int32);
-    static std::string signaling(KSignaling);
-    static std::string systemObject(KSystemObject);
-    static std::string mixerTone(KMixerTone);
+    static std::string deviceType(KDeviceType, Presentation fmt = HUMAN);
+    static std::string deviceModel(KDeviceType, int32, Presentation fmt = HUMAN);
 
-	static std::string seizeFail(KSeizeFail);
-	static std::string callFail(KSignaling, r2_country_type, int32);
-	static std::string channelFail(KSignaling, int32);
-	static std::string internalFail(KInternalFail);
+    static std::string channelFeatures(int32, Presentation fmt = HUMAN);
+    static std::string signaling(KSignaling, Presentation fmt = HUMAN);
+    static std::string systemObject(KSystemObject, Presentation fmt = HUMAN);
+    static std::string mixerTone(KMixerTone, Presentation fmt = HUMAN);
+    static std::string mixerSource(KMixerSource, Presentation fmt = HUMAN);
 
-    static std::string linkErrorCounter(KLinkErrorCounter);
+	static std::string seizeFail(KSeizeFail, Presentation fmt = HUMAN);
+	static std::string callFail(KSignaling, r2_country_type, int32, Presentation fmt = HUMAN);
+	static std::string channelFail(KSignaling, int32, Presentation fmt = HUMAN);
+	static std::string internalFail(KInternalFail, Presentation fmt = HUMAN);
 
-    static std::string linkStatus(KSignaling, int32);
-    static std::string channelStatus(KSignaling, int32);
-    static std::string callStatus(KCallStatus);
-    static std::string status(KLibraryStatus);
+    static std::string linkErrorCounter(KLinkErrorCounter, Presentation fmt = HUMAN);
 
-	static std::string signGroupB(KSignGroupB, r2_country_type contry = R2_COUNTRY_BRA);
-	static std::string signGroupII(KSignGroupII, r2_country_type contry = R2_COUNTRY_BRA);
+    static std::string linkStatus(KSignaling, int32, Presentation fmt = HUMAN);
+    static std::string channelStatus(KSignaling, int32, Presentation fmt = HUMAN);
+    static std::string callStatus(KCallStatus, Presentation fmt = HUMAN);
+    static std::string status(KLibraryStatus, Presentation fmt = HUMAN);
 
-    static std::string h100configIndex(KH100ConfigIndex);
+	static std::string signGroupB(KSignGroupB, r2_country_type contry = R2_COUNTRY_BRA,
+        Presentation fmt = HUMAN);
+
+	static std::string signGroupII(KSignGroupII, r2_country_type contry = R2_COUNTRY_BRA,
+        Presentation fmt = HUMAN);
+
+    static std::string h100configIndex(KH100ConfigIndex, Presentation fmt = HUMAN);
 
     static std::string eventName(int32);
     static std::string commandName(int32);
 
 #if K3L_AT_LEAST(1,5,0)
-    static std::string sipFailures(KSIP_Failures);
+    static std::string sipFailures(KSIP_Failures, Presentation fmt = HUMAN);
 #endif
 
 #if K3L_AT_LEAST(1,5,1)
-    static std::string isdnCause(KQ931Cause);
+    static std::string isdnCause(KQ931Cause, Presentation fmt = HUMAN);
 #endif
 
 #if K3L_AT_LEAST(1,5,2)
-    static std::string isdnDebug(int32);
+    static std::string isdnDebug(int32, Presentation fmt = HUMAN);
 #endif
 
 #if K3L_AT_LEAST(1,6,0)
-    static std::string callStartInfo(KCallStartInfo);
+    static std::string callStartInfo(KCallStartInfo, Presentation fmt = HUMAN);
 
-    static std::string gsmCallCause(KGsmCallCause);
-    static std::string gsmMobileCause(KGsmMobileCause);
-    static std::string gsmSmsCause(KGsmSmsCause);
+    static std::string gsmCallCause(KGsmCallCause, Presentation fmt = HUMAN);
+    static std::string gsmMobileCause(KGsmMobileCause, Presentation fmt = HUMAN);
+    static std::string gsmSmsCause(KGsmSmsCause, Presentation fmt = HUMAN);
     
-	static std::string q931ProgressIndication(KQ931ProgressIndication);
+	static std::string q931ProgressIndication(KQ931ProgressIndication,
+        Presentation fmt = HUMAN);
 #endif
 
     /* end of static (class) stuff */
 
  private:
+    static std::string internal_deviceType(KDeviceType);
+    static std::string internal_deviceModel(KDeviceType, int32);
+
 #if K3L_AT_LEAST(1,5,0)
-    static std::string internal_sipFailures(KSIP_Failures);
+    static std::string internal_sipFailures(KSIP_Failures, Presentation fmt = HUMAN);
 #endif
 #if K3L_AT_LEAST(1,5,1)
-    static std::string internal_isdnCause(KQ931Cause);
+    static std::string internal_isdnCause(KQ931Cause, Presentation fmt = HUMAN);
 #endif
 
-	static std::string internal_signGroupB(KSignGroupB, r2_country_type contry);
-	static std::string internal_signGroupII(KSignGroupII, r2_country_type contry);
+	static std::string internal_signGroupB(KSignGroupB, r2_country_type contry, Presentation fmt = HUMAN);
+	static std::string internal_signGroupII(KSignGroupII, r2_country_type contry, Presentation fmt = HUMAN);
 
 #if K3L_AT_LEAST(1,6,0)
-    static std::string internal_gsmCallCause(KGsmCallCause);
-    static std::string internal_gsmMobileCause(KGsmMobileCause);
-    static std::string internal_gsmSmsCause(KGsmSmsCause);
+    static std::string internal_gsmCallCause(KGsmCallCause, Presentation fmt = HUMAN);
+    static std::string internal_gsmMobileCause(KGsmMobileCause, Presentation fmt = HUMAN);
+    static std::string internal_gsmSmsCause(KGsmSmsCause, Presentation fmt = HUMAN);
     
-	static std::string internal_q931ProgressIndication(KQ931ProgressIndication);
+	static std::string internal_q931ProgressIndication(KQ931ProgressIndication, Presentation fmt = HUMAN);
 #endif
 
  private:
@@ -394,6 +415,18 @@ struct Verbose
 
     static std::string show(std::string &, std::string, Target, std::string &);
     static std::string show(std::string &, std::string, Target);
+
+	template < typename ReturnType >
+	static ReturnType presentation(Presentation fmt, ReturnType str_exact, ReturnType str_human)
+	{
+		switch (fmt)
+		{
+			case HUMAN: return str_human;
+			case EXACT: return str_exact;
+		};
+
+		return str_exact;
+	}
 };
 
 #endif /* _VERBOSE_HPP_ */

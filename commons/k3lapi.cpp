@@ -81,13 +81,13 @@ void K3LAPI::stop(void)
     
 void K3LAPI::mixer(int32 dev, int32 obj, byte track, KMixerSource src, int32 index)
 {
-       KMixerCommand mix;
+    KMixerCommand mix;
 
     mix.Track = track;
-       mix.Source = src;
+    mix.Source = src;
     mix.SourceIndex = index;
 
-       command(dev, obj, CM_MIXER, (const char *) &mix);
+    command(dev, obj, CM_MIXER, (const char *) &mix);
 }
 
 void K3LAPI::mixerRecord(int32 dev, int32 obj, byte track, KMixerSource src, int32 index)
@@ -145,13 +145,13 @@ void K3LAPI::mixerRecord(int32 dev, int32 obj, byte track, KMixerSource src, int
 
 void K3LAPI::mixerCTbus(int32 dev, int32 obj, byte track, KMixerSource src, int32 index)
 {
-       KMixerCommand mix;
+    KMixerCommand mix;
 
     mix.Track = track;
-       mix.Source = src;
+    mix.Source = src;
     mix.SourceIndex = index;
 
-       command(dev, obj, CM_MIXER_CTBUS, (const char *) &mix);
+    command(dev, obj, CM_MIXER_CTBUS, (const char *) &mix);
 }
 
 void K3LAPI::command(int32 dev, int32 obj, int32 code, std::string & str)
@@ -163,12 +163,12 @@ void K3LAPI::command (int32 dev, int32 obj, int32 code, const char * parms)
 {
     K3L_COMMAND cmd;
 
-       cmd.Cmd = code;
+    cmd.Cmd = code;
     cmd.Object = obj;
-       cmd.Params = (byte *)parms;
+    cmd.Params = (byte *)parms;
 
     int32 rc = k3lSendCommand(dev, &cmd);
-        
+
     if (rc != ksSuccess)
         throw failed_command(code, dev, obj, rc);
 }
@@ -270,9 +270,16 @@ int32 K3LAPI::get_dsp(int32 dev, K3LAPI::DspType type)
     {
         case kdtFXO:
         case kdtFXOVoIP:
+#if K3L_AT_LEAST(1,6,0)
         case kdtGSM:
         case kdtGSMSpx:
+#endif
+#if K3L_AT_LEAST(2,1,0)
+		case kdtGSMUSB:
+		case kdtGSMUSBSpx:
+#endif
             return 0;
+
         default:
             return (type == DSP_AUDIO ? 1 : 0);
     }

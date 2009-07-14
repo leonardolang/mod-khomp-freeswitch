@@ -41,18 +41,19 @@
 
 #include <monitor.hpp>
 
-monitor::user_printer  monitor::_printer = NULL;
-monitor::mode_type     monitor::_mode    = monitor::ONLINE;
-monitor::state_type    monitor::_state;
-bool                   monitor::_lazyreg;
+Monitor::UserPrinterType Monitor::_printer = NULL;
+Monitor::ModeType        Monitor::_mode    = Monitor::ONLINE;
 
-const char *monitor::finish_string =
+Monitor::StateType       Monitor::_state;
+bool                     Monitor::_lazyreg;
+
+const char *Monitor::finish_string =
     "Fim do buffer de comunicação";            // 0x00
 
-const char *monitor::overflow_string =
+const char *Monitor::overflow_string =
     "Estouro do buffer de comunicação";        // 0x01
 
-const char *monitor::est_reg_strings[] =
+const char *Monitor::est_reg_strings[] =
 {
     "Fim da troca de sinalização MFC",            // EST_REG-00 // 0x20
     "Iniciando troca MFC canal entrada",          // EST_REG-01 // 0x21
@@ -73,7 +74,7 @@ const char *monitor::est_reg_strings[] =
     "Aguardando retirada do sinal p/ finalizar",  // EST_REG-16 // 0x30
 };
 
-const char *monitor::est_lin_strings[] =
+const char *Monitor::est_lin_strings[] =
 {
     "Juntor de saída livre",                                  // EST_LIN-00 // 0x60
     "Juntor de saída bloqueado",                              // EST_LIN-01 // 0x61
@@ -94,13 +95,13 @@ const char *monitor::est_lin_strings[] =
     "Em conversação",                                         // EST_LIN-16 // 0x70
 };
 
-const char *monitor::ig_init_strings[] =
+const char *Monitor::ig_init_strings[] =
 {
     "Inicia IGE (prepara p/juntor de entrada)", // 0xB0
     "Inicia IGS (prepara p/juntor de saída)",   // 0xB1
 };
 
-const char *monitor::sin_reg_a_strings[] =
+const char *Monitor::sin_reg_a_strings[] =
 {
     "A-00 Retirada do Sinal",                         // A-00
     "A-01 Pedido p/ enviar próximo algarismo",        // A-01
@@ -120,7 +121,7 @@ const char *monitor::sin_reg_a_strings[] =
     "A-15 Reservado"                                  // A-15
 };
 
-const char *monitor::sin_reg_b_strings[] =
+const char *Monitor::sin_reg_b_strings[] =
 {
     "B-00 Retirada do Sinal",                        // B-00
     "B-01 Assinante livre com tarifação",            // B-01
@@ -140,7 +141,7 @@ const char *monitor::sin_reg_b_strings[] =
     "B-15 Reservado",                                // B-15
 };
     
-const char *monitor::sin_reg_1_strings[] =
+const char *Monitor::sin_reg_1_strings[] =
 {
     "I-00 Retirada do Sinal",                    // I-00
     "I-01 Algarismo: '1'",                       // I-01
@@ -160,7 +161,7 @@ const char *monitor::sin_reg_1_strings[] =
     "I-15 Fim de número"                         // I-15
 };
     
-const char *monitor::sin_reg_2_strings[] =
+const char *Monitor::sin_reg_2_strings[] =
 {
     "II-00 Retirada do Sinal",                    // II-00
     "II-01 Assinante comum",                      // II-01
@@ -182,31 +183,30 @@ const char *monitor::sin_reg_2_strings[] =
 
 /* mensagens de erro de estados/etc inválidos */
 
-const char *monitor::error_unhandled_string =
+const char *Monitor::error_unhandled_string =
     "Erro: evento desconhecido";
 
-const char *monitor::error_direction_string =
+const char *Monitor::error_direction_string =
     "Erro: direção de canal de sinalização não configurada";
 
-const char *monitor::error_no_group_string =
+const char *Monitor::error_no_group_string =
     "Erro: grupo de MFCs não definido";
 
-stt_code monitor::start(monitor::user_printer printer, monitor::mode_type mode, bool lazyreg)
+stt_code Monitor::start(Monitor::UserPrinterType printer, Monitor::ModeType mode, bool lazyreg)
 {
     _printer = printer;
     _mode    = mode;
     _lazyreg = lazyreg;
-	_lazyreg = lazyreg;
 
     /* we do not initialize the map here ( operator[] does that for us, later ) */
 
     if (_mode == ONLINE && !_lazyreg)
-        return k3lRegisterMonitor(NULL, NULL, monitor::internal_mon_handler);
+        return k3lRegisterMonitor(NULL, NULL, Monitor::internalHandler);
     else
         return ksSuccess;
 };
 
-stt_code monitor::stop()
+stt_code Monitor::stop()
 {
     if (_mode == ONLINE || _lazyreg)
         return k3lRegisterMonitor(NULL, NULL, NULL);
@@ -223,7 +223,7 @@ stt_code monitor::stop()
 
 /* ------------- */
 
-stt_code monitor::trace( unsigned int device, unsigned int object, unsigned int obj_count, bool enable )
+stt_code Monitor::trace( unsigned int device, unsigned int object, unsigned int obj_count, bool enable )
 {
     /* we cant trace when offline! */
     if (_mode == OFFLINE)
@@ -251,7 +251,7 @@ stt_code monitor::trace( unsigned int device, unsigned int object, unsigned int 
 
     if (enable && _lazyreg)
     {
-        KLibraryStatus stt = (KLibraryStatus)k3lRegisterMonitor(NULL, NULL, monitor::internal_mon_handler);
+        KLibraryStatus stt = (KLibraryStatus)k3lRegisterMonitor(NULL, NULL, Monitor::internalHandler);
 
         if (stt != ksSuccess)
             return stt;
@@ -259,8 +259,8 @@ stt_code monitor::trace( unsigned int device, unsigned int object, unsigned int 
         _lazyreg = false;
     }
         
-    command cmd;
-    config  cfg;
+    Command cmd;
+    Config  cfg;
  
     cfg.bits.line_signal     = enable;
     cfg.bits.line_state      = enable;
@@ -277,7 +277,7 @@ stt_code monitor::trace( unsigned int device, unsigned int object, unsigned int 
     return k3lSendRawCommand( (int)device, dsp, ( byte * ) &cmd, sizeof( cmd ) );
 }
 
-bool monitor::process( const char * buffer, unsigned int dev )
+bool Monitor::process( const char * buffer, unsigned int dev )
 {
     for (unsigned int i = 0;;)
     {
@@ -293,15 +293,15 @@ bool monitor::process( const char * buffer, unsigned int dev )
                 switch (full)
                 {
                     case EV_COMM_BUF_END:
-                        // call_printer(finish_string, full, KIND_NONE, dev, 0);
-                        return ksSuccess;
+                        // callPrinter(finish_string, full, KIND_NONE, dev, 0);
+                        return true;
                 
                     case EV_COMM_BUF_ERR:
-                        call_printer(overflow_string, full, KIND_NONE, dev, chan);
+                        callPrinter(overflow_string, full, KIND_NONE, dev, chan);
                         break;
                         
                     default:
-                        call_printer(error_unhandled_string, full, KIND_NONE, dev, chan);
+                        callPrinter(error_unhandled_string, full, KIND_NONE, dev, chan);
                         break;
                 }
                 break;
@@ -309,23 +309,23 @@ bool monitor::process( const char * buffer, unsigned int dev )
             
             case EV_IG_BASE_1:
             case EV_IG_BASE_2:
-                call_printer(est_reg_strings[IG_BASE(full)], full, KIND_NONE, dev, chan);
+                callPrinter(est_reg_strings[IG_BASE(full)], full, KIND_NONE, dev, chan);
                 break;
 
             case EV_JS_BASE_1:
             case EV_JS_BASE_2:
-                call_printer(est_lin_strings[JS_BASE(full)], full, KIND_NONE, dev, chan);
+                callPrinter(est_lin_strings[JS_BASE(full)], full, KIND_NONE, dev, chan);
                 break;
 
             case EV_SIN_REG_RX_BASE:
             {
-                channel_state & state = _state[ index_type(dev, chan) ];
+                ChannelState & state = _state[ IndexType(dev, chan) ];
                 
-                mfc_group grp = mfcNoGroup;
+                MfcGroupType grp = mfcNoGroup;
                 
                 switch (state.juntor)
                 {
-                    case channel_state::JUN_IGE:
+                    case ChannelState::JUN_IGE:
                     {
                         grp = ((state.mfcA3 || state.mfcA5) ? mfcGroupII : mfcGroupI);
                         
@@ -335,7 +335,7 @@ bool monitor::process( const char * buffer, unsigned int dev )
                         break;
                     }
                             
-                    case channel_state::JUN_IGS:
+                    case ChannelState::JUN_IGS:
                     {
                         grp = ((state.mfcA3 || state.mfcA5) ? mfcGroupB : mfcGroupA);
                         
@@ -352,24 +352,24 @@ bool monitor::process( const char * buffer, unsigned int dev )
                         break;
                     }
                     
-                    case channel_state::JUN_NONE:
-                        call_printer(error_direction_string, full, KIND_NONE, dev, chan);
+                    case ChannelState::JUN_NONE:
+                        callPrinter(error_direction_string, full, KIND_NONE, dev, chan);
                         break;
                 }
 
-                call_printer(group_string(grp, SIN_REG_RX(full)), full, KIND_RX, dev, chan);
+                callPrinter(groupString(grp, SIN_REG_RX(full)), full, KIND_RX, dev, chan);
                 break;
             }
             
             case EV_SIN_REG_TX_BASE:
             {
-                channel_state & state = _state[ index_type(dev, chan) ];
+                ChannelState & state = _state[ IndexType(dev, chan) ];
 
-                mfc_group grp = mfcNoGroup;
+                MfcGroupType grp = mfcNoGroup;
 
                 switch (state.juntor)
                 {
-                    case channel_state::JUN_IGE:
+                    case ChannelState::JUN_IGE:
                     {
                         grp = ((state.mfcA3 || state.mfcA5) ? mfcGroupB : mfcGroupA);
                         
@@ -385,7 +385,7 @@ bool monitor::process( const char * buffer, unsigned int dev )
                         break;
                     }
                             
-                    case channel_state::JUN_IGS:
+                    case ChannelState::JUN_IGS:
                     {
                         grp = ((state.mfcA3 || state.mfcA5) ? mfcGroupII : mfcGroupI);
                         
@@ -395,25 +395,25 @@ bool monitor::process( const char * buffer, unsigned int dev )
                         break;
                     }
                     
-                    case channel_state::JUN_NONE:
-                        call_printer(error_direction_string, full, KIND_NONE, dev, chan);
+                    case ChannelState::JUN_NONE:
+                        callPrinter(error_direction_string, full, KIND_NONE, dev, chan);
                         break;
                 }
 
-                call_printer(group_string(grp, SIN_REG_TX(full)), full, KIND_TX, dev, chan);
+                callPrinter(groupString(grp, SIN_REG_TX(full)), full, KIND_TX, dev, chan);
                 break;
             }
 
             case EV_INIT_BASE:
             {
-                channel_state &state = _state[ index_type(dev, chan) ];
+                ChannelState & state = _state[ IndexType(dev, chan) ];
 
                 const char *msg = error_unhandled_string;
                                 
                 switch (full)
                 {
                     case EV_INIT_IGE:
-                        state.juntor = channel_state::JUN_IGE;
+                        state.juntor = ChannelState::JUN_IGE;
                         state.mfcA3  = false;
                         state.mfcA5  = false;
 
@@ -421,7 +421,7 @@ bool monitor::process( const char * buffer, unsigned int dev )
                         break;
                         
                     case EV_INIT_IGS:
-                        state.juntor = channel_state::JUN_IGS;
+                        state.juntor = ChannelState::JUN_IGS;
                         state.mfcA3  = false;
                         state.mfcA5  = false;
 
@@ -432,46 +432,46 @@ bool monitor::process( const char * buffer, unsigned int dev )
                         break;
                 };
                 
-                call_printer(msg, full, KIND_NONE, dev, chan);
+                callPrinter(msg, full, KIND_NONE, dev, chan);
                 break;
             }
 
             case EV_SIN_LIN_RX_BASE:
             {
-                struct r2_fios fios(full);
+                FiosR2 fios(full);
                 
                 std::string msg =
                     STG(FMT("Recebidos fios R2, a=%d,b=%d,c=%d,d=%d")
                         % fios.a % fios.b % fios.c % fios.d);
 
-                call_printer(msg.c_str(), full, KIND_RX, dev, chan);
+                callPrinter(msg.c_str(), full, KIND_RX, dev, chan);
                 break;
             }
 
             case EV_SIN_LIN_TX_BASE:
             {
-                struct r2_fios fios = (struct r2_fios)full;
+                FiosR2 fios(full);
                 
                 std::string msg =
                     STG(FMT("Enviados fios R2, a=%d,b=%d,c=%d,d=%d")
                         % fios.a % fios.b % fios.c % fios.d);
                 
-                call_printer(msg.c_str(), full, KIND_TX, dev, chan);
+                callPrinter(msg.c_str(), full, KIND_TX, dev, chan);
                 break;
             }
 
             default:
-                call_printer(error_unhandled_string, full, KIND_NONE, dev, chan);
+                callPrinter(error_unhandled_string, full, KIND_NONE, dev, chan);
                 break;
         }
     }
 
-    return ksFail;
+    return false;
 }
 
 /* ------------- */
 
-void monitor::call_printer( const char * msg, unsigned char byte, kind_msg kind, unsigned int dev, unsigned int obj )
+void Monitor::callPrinter( const char * msg, unsigned char byte, MsgDirectionType kind, unsigned int dev, unsigned int obj )
 {
     const char * str_kind = "";
     
@@ -492,7 +492,7 @@ void monitor::call_printer( const char * msg, unsigned char byte, kind_msg kind,
     }
 }
 
-const char * monitor::group_string( mfc_group mfc, unsigned int index )
+const char * Monitor::groupString( MfcGroupType mfc, unsigned int index )
 {
     switch (mfc)
     {
@@ -511,7 +511,8 @@ const char * monitor::group_string( mfc_group mfc, unsigned int index )
     return error_no_group_string;
 }
 
-stt_code monitor::internal_mon_handler( byte *buf, byte dev )
+stt_code Monitor::internalHandler( byte *buf, byte dev )
 {
-    return (monitor::process( (const char *)buf, (unsigned int)dev ) ? ksSuccess : ksFail);
+    return (Monitor::process( (const char *)buf, (unsigned int)dev ) ? ksSuccess : ksFail);
 }
+

@@ -196,9 +196,9 @@
 
     /* -x- */
     
-struct monitor
+struct Monitor
 {
-    struct command 
+    struct Command 
     { 
         unsigned char code; 
         unsigned char first_obj; 
@@ -206,7 +206,7 @@ struct monitor
         unsigned char config; 
     }; 
  
-    struct config_bits
+    struct ConfigBits
     { 
         unsigned char line_signal:1; 
         unsigned char line_state:1; 
@@ -215,13 +215,13 @@ struct monitor
         unsigned char reserved:4; 
     }; 
  
-    union config
+    union Config
     { 
-        config_bits        bits;
+        ConfigBits       bits;
         unsigned char    byte;
     };
 
-    typedef enum { OFFLINE, ONLINE } mode_type;
+    typedef enum { OFFLINE, ONLINE } ModeType;
 
  protected:        
     typedef enum
@@ -232,7 +232,7 @@ struct monitor
         mfcGroupA    = 0x3,
         mfcGroupB    = 0x4,
     }
-    mfc_group;
+    MfcGroupType;
 
     typedef enum
     {
@@ -240,36 +240,38 @@ struct monitor
         KIND_RX   = 0x2,
         KIND_NONE = 0x3,
     }
-    kind_msg;
+    MsgDirectionType;
 
-    struct r2_fios
+    struct FiosR2
     {
-        r2_fios(unsigned char &bits)
+        FiosR2(unsigned char & bits)
         : a(bits & 0x8), b(bits & 0x4), c(bits & 0x2), d(bits & 0x1) {};
         
         bool a, b, c, d;
     };
                             
-    struct channel_state
+    struct ChannelState
     {
-        typedef enum { JUN_NONE, JUN_IGE, JUN_IGS } juntor_direction;
+        typedef enum { JUN_NONE, JUN_IGE, JUN_IGS } JuntorDirectionType;
 
-        channel_state(): juntor(JUN_NONE), mfcA3(false), mfcA5(false) {};
+        ChannelState(): juntor(JUN_NONE), mfcA3(false), mfcA5(false) {};
         
-        juntor_direction   juntor;
-        bool               mfcA3, mfcA5;
+        JuntorDirectionType  juntor;
+
+        bool mfcA3;
+        bool mfcA5;
     };
 
-    typedef std::pair< unsigned int, unsigned int >     index_type;
-    typedef std::map< index_type, channel_state >       state_type;
+    typedef std::pair < unsigned int, unsigned int >   IndexType;
+    typedef std::map < IndexType, ChannelState >       StateType;
 
  public:
  
     /* user printer function */    
-    typedef void (*user_printer)(const char *);
+    typedef void (*UserPrinterType)(const char *);
     
     /* registers monitor handler */
-    static stt_code start(user_printer, mode_type mode = ONLINE, bool lazyreg = true);
+    static stt_code start(UserPrinterType, ModeType mode = ONLINE, bool lazyreg = true);
     
     /* unregisters monitor handler */
     static stt_code stop();
@@ -282,10 +284,10 @@ struct monitor
 
  protected:
  
-    static stt_code Kstdcall internal_mon_handler( byte *, byte );
+    static stt_code Kstdcall internalHandler( byte *, byte );
 
-    static void call_printer( const char *, unsigned char, kind_msg, unsigned int, unsigned int );
-    static const char * group_string( mfc_group, unsigned int );
+    static void callPrinter( const char *, unsigned char, MsgDirectionType, unsigned int, unsigned int );
+    static const char * groupString( MfcGroupType, unsigned int );
     
     static const char *finish_string;
     static const char *overflow_string;
@@ -303,15 +305,15 @@ struct monitor
     static const char *error_direction_string;
     static const char *error_no_group_string;
     
-    static user_printer  _printer;
-    static mode_type     _mode;
+    static UserPrinterType  _printer;
+    static ModeType         _mode;
 
     static bool          _lazyreg;
-    static state_type    _state;
+    static StateType    _state;
 
  private:
-     monitor();
-    ~monitor();
+     Monitor();
+    ~Monitor();
 };
 
 #endif /* _MONITOR_HPP_ */

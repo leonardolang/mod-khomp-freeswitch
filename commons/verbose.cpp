@@ -42,631 +42,700 @@
 #include <strings.hpp>
 #include <verbose.hpp>
 
-/* util macros */
-#define S(v) v
+#define PRESENTATION_CHECK_RETURN(fmt, txtexact, txthuman) \
+	{ \
+		switch(fmt) \
+		{ \
+			case EXACT: return txtexact; \
+			case HUMAN: return txthuman; \
+		} \
+		return txtexact; \
+	}
 
 /********************************************/
 
-std::string Verbose::channelStatus(int32 dev, int32 obj, int32 cs)
+std::string Verbose::channelStatus(int32 dev, int32 obj, int32 cs, Verbose::Presentation fmt)
 {
     try
     {
         K3L_CHANNEL_CONFIG & config = _api.channel_config(dev, obj);
-        return Verbose::channelStatus(config.Signaling, cs);
+        return Verbose::channelStatus(config.Signaling, cs, fmt);
     }
     catch (...)
     {
-        return std::string("<unknown>");
+        return presentation(fmt, "<unknown>", "Unknown");
     }
 }
 
-std::string Verbose::event(int32 obj, K3L_EVENT *ev, r2_country_type r2_country)
+std::string Verbose::event(int32 obj, K3L_EVENT *ev, r2_country_type r2_country, Verbose::Presentation fmt)
 {
 	try
 	{
 		K3L_CHANNEL_CONFIG & config = _api.channel_config(ev->DeviceId, obj);
-		return Verbose::event(config.Signaling, obj, ev, r2_country);
+		return Verbose::event(config.Signaling, obj, ev, r2_country, fmt);
 	}
 	catch (...)
 	{
-		return Verbose::event(ksigInactive, obj, ev, r2_country);
+		return Verbose::event(ksigInactive, obj, ev, r2_country, fmt);
 	}
 }
 
 /********************************************/
 
-std::string Verbose::echoLocation(KEchoLocation ec)
+std::string Verbose::echoLocation(KEchoLocation ec, Verbose::Presentation fmt)
 {
     switch (ec)
     {
 #if K3L_AT_LEAST(1,5,4)
-        case kelNetwork: return S("kelNetwork");
+        case kelNetwork: return presentation(fmt, "kelNetwork", "Network");
 #else
-        case kelE1:      return S("kelE1");
+        case kelE1:      return presentation(fmt, "kelE1",      "Network");
 #endif
-        case kelCtBus:   return S("kelCtBus");
+        case kelCtBus:   return presentation(fmt, "kelCtBus",   "CT-Bus");
     };
 
-    return S("<unknown>");
+    return presentation(fmt, "<unknown>", "Unknown");
 };
 
-std::string Verbose::echoCancellerConfig(KEchoCancellerConfig ec)
+std::string Verbose::echoCancellerConfig(KEchoCancellerConfig ec, Verbose::Presentation fmt)
 {
     switch (ec)
     {
-        case keccNotPresent:    return S("keccNotPresent");
-        case keccOneSingleBank: return S("keccOneSingleBank");
-        case keccOneDoubleBank: return S("keccOneDoubleBank");
-        case keccTwoSingleBank: return S("keccTwoSingleBank");
-        case keccTwoDoubleBank: return S("keccTwoDoubleBank");
-        case keccFail:          return S("keccFail");
+        case keccNotPresent:    return presentation(fmt, "keccNotPresent",    "Not Present");
+        case keccOneSingleBank: return presentation(fmt, "keccOneSingleBank", "One, Single Bank");
+        case keccOneDoubleBank: return presentation(fmt, "keccOneDoubleBank", "One, Double Bank");
+        case keccTwoSingleBank: return presentation(fmt, "keccTwoSingleBank", "Two, Single Bank");
+        case keccTwoDoubleBank: return presentation(fmt, "keccTwoDoubleBank", "Two, Double Bank");
+        case keccFail:          return presentation(fmt, "keccFail",          "Failure");
     };
 
-    return S("<unknown>");
+    return presentation(fmt, "<unknown>", "Unknown");
 };
 
-std::string Verbose::deviceName(KDeviceType dt, int32 model)
-{
-    std::string value;
-    
-    value += deviceType(dt);
-    value += "-";
-    value += deviceModel(dt, model);
-    
-    return value;
-}
+// TODO: internal_deviceType / internal_deviceModel
 
-std::string Verbose::deviceType(KDeviceType dt)
-{
-    switch (dt)
-    {
-        case kdtE1:      return S("K2E1");
-
-#if K3L_AT_LEAST(1,6,0)
-        case kdtFXO:     return S("KFXO");
-#else
-        case kdtFX:      return S("KFXO");
-#endif
-
-        case kdtConf:    return S("KCONF");
-        case kdtPR:      return S("KPR");
-        case kdtE1GW:    return S("KE1GW");
-
-#if K3L_AT_LEAST(1,6,0)
-        case kdtFXOVoIP: return S("KFXVoIP");
-#else
-        case kdtFXVoIP:  return S("KFXVoIP");
-#endif
-
-#if K3L_AT_LEAST(1,5,0)
-        case kdtE1IP:   return S("K2E1");
-#endif
-#if K3L_AT_LEAST(1,5,1)
-        case kdtE1Spx:  return S("K2E1");
-        case kdtGWIP:   return S("KGWIP");
-#endif
-
-#if K3L_AT_LEAST(1,6,0)
-        case kdtFXS:     return S("KFXS");
-        case kdtFXSSpx:  return S("KFXS");
-        case kdtGSM:     return S("KGSM");
-        case kdtGSMSpx:  return S("KGSM");
-#endif
-
-#if K3L_AT_LEAST(2,1,0)
-        case kdtGSMUSB:    return S("KGSMUSB");
-        case kdtGSMUSBSpx: return S("KGSMUSB");
-#endif
-    }
-
-    return STG(FMT("[deviceType='%d']") % (int)dt);
-}
-
-std::string Verbose::deviceModel(KDeviceType dt, int32 model)
+std::string Verbose::deviceName(KDeviceType dt, int32 model, Verbose::Presentation fmt)
 {
     try
     {
-        switch (dt)
-        {
-            case kdtE1:
-                switch ((KE1DeviceModel)model)
-                {
-                    case kdmE1600:   return S("600");
-                    case kdmE1600E:  return S("600E");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmE1600EX: return S("600EX");
-#endif
-                }
-                throw internal_not_found();
+        std::string value;
 
-#if K3L_AT_LEAST(1,6,0)
-            case kdtFXO:
-                switch ((KFXODeviceModel)model)
-#else
-            case kdtFX:
-                switch ((KFXDeviceModel)model)
-#endif
-                {
-#if K3L_AT_LEAST(1,6,0)
-                    case kdmFXO80:    return S("80");
-                    case kdmFXOHI:    return S("HI");
-                    case kdmFXO160HI: return S("160HI");
-#else
-                    case kdmFXO80:    return S("80");
-#endif
-                }
-
-                throw internal_not_found();
-
-            case kdtConf:
-                switch ((KConfDeviceModel)model)
-                {
-                    case kdmConf240:   return S("240");
-                    case kdmConf120:   return S("120");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmConf240EX: return S("240EX");
-                    case kdmConf120EX: return S("120EX");
-#endif
-                }
-
-                throw internal_not_found();
-
-            case kdtPR:
-                switch ((KPRDeviceModel)model)
-                {
-#if K3L_AT_LEAST(1,6,0)
-                    case kdmPR300v1:       return S("300v1");
-                    case kdmPR300SpxBased: return S("300S");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmPR300EX:       return S("300EX");
-#endif
-                    case kdmPR300:         return S("300");
-                }
-#endif
-                throw internal_not_found();
-
-#if K3L_AT_LEAST(1,4,0)
-            case kdtE1GW:
-                switch ((KE1GWDeviceModel)model)
-                {
-#if K3L_AT_LEAST(1,6,0)
-                    case kdmE1GW640:  return S("640");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmE1GW640EX:  return S("640EX");
-#endif
-#else
-                    case kdmE1600V:  return S("600V");
-                    case kdmE1600EV: return S("600EV");
-#endif
-                }
-
-                throw internal_not_found();
-#endif
-
-#if K3L_AT_LEAST(1,6,0)
-            case kdtFXOVoIP:
-                switch ((KFXOVoIPDeviceModel)model)
-                {
-                    case kdmFXGW180:  return S("180");
-                }
-
-                throw internal_not_found();
-                
-#elif K3L_AT_LEAST(1,4,0)
-            case kdtFXVoIP:
-                switch ((KFXVoIPDeviceModel)model)
-                {
-                    case kdmFXO80V: return S("80V");
-                }
-
-                throw internal_not_found();
-#endif
-
-#if K3L_AT_LEAST(1,5,0)
-            case kdtE1IP:
-                switch ((KE1IPDeviceModel)model)
-                {
-#if K3L_AT_LEAST(1,6,0)
-                    case kdmE1IP:  return S("E1IP");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmE1IPEX:  return S("E1IPEX");
-#endif
-#else
-                    case kdmE1600EG: return S("600EG");
-#endif
-                }
-                
-                throw internal_not_found();
-#endif
-
-#if K3L_AT_LEAST(1,5,1)
-            case kdtE1Spx:
-                switch ((KE1SpxDeviceModel)model)
-                {
-                    case kdmE1Spx:    return S("SPX");
-                    case kdm2E1Based: return S("SPX-2E1");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmE1SpxEX:    return S("SPXEX");
-#endif
-                }
-                throw internal_not_found();
-
-            case kdtGWIP:
-                switch ((KGWIPDeviceModel)model)
-                {
-#if K3L_AT_LEAST(1,6,0)
-                    case kdmGWIP:     return S("GWIP");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmGWIPEX:     return S("GWIPEX");
-#endif
-#else
-                    case kdmGW600G:   return S("600G");
-                    case kdmGW600EG:  return S("600EG");
-#endif
-                }
-
-                throw internal_not_found();
-#endif
-
-#if K3L_AT_LEAST(1,6,0)
-            case kdtFXS:
-                switch ((KFXSDeviceModel)model)
-                {
-                    case kdmFXS300:   return S("300");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmFXS300EX:   return S("300EX");
-#endif
-                }
-
-                throw internal_not_found();
-
-            case kdtFXSSpx:
-                switch ((KFXSSpxDeviceModel)model)
-                {
-                    case kdmFXSSpx300:       return S("SPX");
-                    case kdmFXSSpx2E1Based:  return S("SPX-2E1");
-#if K3L_AT_LEAST(2,0,0)
-                    case kdmFXSSpx300EX:       return S("SPXEX");
-#endif
-                }
-
-                throw internal_not_found();
-
-            case kdtGSM:
-                switch ((KGSMDeviceModel)model)
-                {
-                    case kdmGSM:       return S("40");
-                }
-
-                throw internal_not_found();
-
-            case kdtGSMSpx:
-                switch ((KGSMSpxDeviceModel)model)
-                {
-                    case kdmGSMSpx:    return S("SPX");
-                }
-
-                throw internal_not_found();
-
-#if K3L_AT_LEAST(2,1,0)
-            case kdtGSMUSB:
-                switch ((KGSMDeviceModel)model)
-                {
-                    case kdmGSMUSB:    return S("20");
-                }
-
-                throw internal_not_found();
-
-            case kdtGSMUSBSpx:
-                switch ((KGSMSpxDeviceModel)model)
-                {
-                    case kdmGSMUSBSpx: return S("SPX");
-                }
-
-                throw internal_not_found();
-#endif
-
-#endif
-        }
+        value += internal_deviceType(dt);
+        value += "-";
+        value += internal_deviceModel(dt, model);
+    
+        return value;
     }
     catch (internal_not_found e)
     {
-        /* this exception is used to break the control flow */
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[type/model='%d/%d']") % (int)dt % (int)model),
+            STG(FMT("Unknown device type/model (%d/%d)") % (int)dt % (int)model));
     }
-
-    return STG(FMT("[model='%d']") % (int)model);
 }
 
-std::string Verbose::signaling(KSignaling sig)
+std::string Verbose::deviceType(KDeviceType dt, Verbose::Presentation fmt)
+{
+    try
+    {
+        return internal_deviceType(dt);
+    }
+    catch (internal_not_found e)
+    {
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[type='%d']") % (int)dt),
+            STG(FMT("Unknown device type (%d)") % (int)dt));
+    }
+}
+
+std::string Verbose::internal_deviceType(KDeviceType dt)
+{
+    switch (dt)
+    {
+        case kdtE1:      return "K2E1";
+
+#if K3L_AT_LEAST(1,6,0)
+        case kdtFXO:     return "KFXO";
+#else
+        case kdtFX:      return "KFXO";
+#endif
+
+        case kdtConf:    return "KCONF";
+        case kdtPR:      return "KPR";
+        case kdtE1GW:    return "KE1GW";
+
+#if K3L_AT_LEAST(1,6,0)
+        case kdtFXOVoIP: return "KFXVoIP";
+#else
+        case kdtFXVoIP:  return "KFXVoIP";
+#endif
+
+#if K3L_AT_LEAST(1,5,0)
+        case kdtE1IP:   return "K2E1";
+#endif
+#if K3L_AT_LEAST(1,5,1)
+        case kdtE1Spx:  return "K2E1";
+        case kdtGWIP:   return "KGWIP";
+#endif
+
+#if K3L_AT_LEAST(1,6,0)
+        case kdtFXS:     return "KFXS";
+        case kdtFXSSpx:  return "KFXS";
+        case kdtGSM:     return "KGSM";
+        case kdtGSMSpx:  return "KGSM";
+#endif
+
+#if K3L_AT_LEAST(2,1,0)
+        case kdtGSMUSB:    return "KGSMUSB";
+        case kdtGSMUSBSpx: return "KGSMUSB";
+#endif
+    }
+
+    throw internal_not_found();
+}
+
+std::string Verbose::deviceModel(KDeviceType dt, int32 model, Verbose::Presentation fmt)
+{
+    try
+    {
+        return internal_deviceModel(dt, model);
+    }
+    catch (internal_not_found e)
+    {
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[model='%d']") % (int)model),
+            STG(FMT("Unknown device model (%d)") % (int)model));
+    }
+}
+
+std::string Verbose::internal_deviceModel(KDeviceType dt, int32 model)
+{
+    switch (dt)
+    {
+        case kdtE1:
+            switch ((KE1DeviceModel)model)
+            {
+                case kdmE1600:   return "600";
+                case kdmE1600E:  return "600E";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmE1600EX: return "600EX";
+#endif
+            }
+            throw internal_not_found();
+
+#if K3L_AT_LEAST(1,6,0)
+        case kdtFXO:
+            switch ((KFXODeviceModel)model)
+#else
+        case kdtFX:
+            switch ((KFXDeviceModel)model)
+#endif
+            {
+#if K3L_AT_LEAST(1,6,0)
+                case kdmFXO80:    return "80";
+                case kdmFXOHI:    return "HI";
+                case kdmFXO160HI: return "160HI";
+#else
+                case kdmFXO80:    return "80";
+#endif
+            }
+
+            throw internal_not_found();
+
+        case kdtConf:
+            switch ((KConfDeviceModel)model)
+            {
+                case kdmConf240:   return "240";
+                case kdmConf120:   return "120";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmConf240EX: return "240EX";
+                case kdmConf120EX: return "120EX";
+#endif
+            }
+
+            throw internal_not_found();
+
+        case kdtPR:
+            switch ((KPRDeviceModel)model)
+            {
+#if K3L_AT_LEAST(1,6,0)
+                case kdmPR300v1:       return "300v1";
+                case kdmPR300SpxBased: return "300S";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmPR300EX:       return "300EX";
+#endif
+                case kdmPR300:         return "300";
+            }
+#endif
+            throw internal_not_found();
+
+#if K3L_AT_LEAST(1,4,0)
+        case kdtE1GW:
+            switch ((KE1GWDeviceModel)model)
+            {
+#if K3L_AT_LEAST(1,6,0)
+                case kdmE1GW640:  return "640";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmE1GW640EX:  return "640EX";
+#endif
+#else
+                case kdmE1600V:  return "600V";
+                case kdmE1600EV: return "600EV";
+#endif
+            }
+
+            throw internal_not_found();
+#endif
+
+#if K3L_AT_LEAST(1,6,0)
+        case kdtFXOVoIP:
+            switch ((KFXOVoIPDeviceModel)model)
+            {
+                case kdmFXGW180:  return "180";
+            }
+
+            throw internal_not_found();
+            
+#elif K3L_AT_LEAST(1,4,0)
+        case kdtFXVoIP:
+            switch ((KFXVoIPDeviceModel)model)
+            {
+                case kdmFXO80V: return "80V";
+            }
+
+            throw internal_not_found();
+#endif
+
+#if K3L_AT_LEAST(1,5,0)
+        case kdtE1IP:
+            switch ((KE1IPDeviceModel)model)
+            {
+#if K3L_AT_LEAST(1,6,0)
+                case kdmE1IP:  return "E1IP";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmE1IPEX:  return "E1IPEX";
+#endif
+#else
+                case kdmE1600EG: return "600EG";
+#endif
+            }
+            
+            throw internal_not_found();
+#endif
+
+#if K3L_AT_LEAST(1,5,1)
+        case kdtE1Spx:
+            switch ((KE1SpxDeviceModel)model)
+            {
+                case kdmE1Spx:    return "SPX";
+                case kdm2E1Based: return "SPX-2E1";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmE1SpxEX:    return "SPXEX";
+#endif
+            }
+            throw internal_not_found();
+
+        case kdtGWIP:
+            switch ((KGWIPDeviceModel)model)
+            {
+#if K3L_AT_LEAST(1,6,0)
+                case kdmGWIP:     return "GWIP";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmGWIPEX:     return "GWIPEX";
+#endif
+#else
+                case kdmGW600G:   return "600G";
+                case kdmGW600EG:  return "600EG";
+#endif
+            }
+
+            throw internal_not_found();
+#endif
+
+#if K3L_AT_LEAST(1,6,0)
+        case kdtFXS:
+            switch ((KFXSDeviceModel)model)
+            {
+                case kdmFXS300:   return "300";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmFXS300EX:   return "300EX";
+#endif
+            }
+
+            throw internal_not_found();
+
+        case kdtFXSSpx:
+            switch ((KFXSSpxDeviceModel)model)
+            {
+                case kdmFXSSpx300:       return "SPX";
+                case kdmFXSSpx2E1Based:  return "SPX-2E1";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmFXSSpx300EX:       return "SPXEX";
+#endif
+            }
+
+            throw internal_not_found();
+
+        case kdtGSM:
+            switch ((KGSMDeviceModel)model)
+            {
+                case kdmGSM:       return "40";
+            }
+
+            throw internal_not_found();
+
+        case kdtGSMSpx:
+            switch ((KGSMSpxDeviceModel)model)
+            {
+                case kdmGSMSpx:    return "SPX";
+            }
+
+            throw internal_not_found();
+
+#if K3L_AT_LEAST(2,1,0)
+        case kdtGSMUSB:
+            switch ((KGSMDeviceModel)model)
+            {
+                case kdmGSMUSB:    return "20";
+            }
+
+            throw internal_not_found();
+
+        case kdtGSMUSBSpx:
+            switch ((KGSMSpxDeviceModel)model)
+            {
+                case kdmGSMUSBSpx: return "SPX";
+            }
+
+            throw internal_not_found();
+#endif
+#endif
+    }
+
+    throw internal_not_found();
+}
+
+std::string Verbose::signaling(KSignaling sig, Verbose::Presentation fmt)
 {
     switch (sig)
     {
-        case ksigInactive:      return S("ksigInactive");
-        case ksigAnalog:        return S("ksigAnalog");
-        case ksigContinuousEM:  return S("ksigContinuousEM");
-        case ksigPulsedEM:      return S("ksigPulsedEM");
-        case ksigOpenCAS:       return S("ksigOpenCAS");
-        case ksigOpenR2:        return S("ksigOpenR2");
-        case ksigR2Digital:     return S("ksigR2Digital");
-        case ksigUserR2Digital: return S("ksigUserR2Digital");
+        case ksigInactive:      return presentation(fmt, "ksigInactive",        "Inactive");
+        case ksigAnalog:        return presentation(fmt, "ksigAnalog",          "FXO (analog)");
+        case ksigContinuousEM:  return presentation(fmt, "ksigContinuousEM",    "E+M Continuous");
+        case ksigPulsedEM:      return presentation(fmt, "ksigPulsedEM",        "E+M PUlsed");
+        case ksigOpenCAS:       return presentation(fmt, "ksigOpenCAS",         "Open CAS");
+        case ksigOpenR2:        return presentation(fmt, "ksigOpenR2",          "Open R2");
+        case ksigR2Digital:     return presentation(fmt, "ksigR2Digital",       "R2/MFC");
+        case ksigUserR2Digital: return presentation(fmt, "ksigUserR2Digital",   "R2/Other");
 #if K3L_AT_LEAST(1,4,0)
-        case ksigSIP:           return S("ksigSIP");
+        case ksigSIP:           return presentation(fmt, "ksigSIP",             "SIP");
 #endif
 
 #if K3L_AT_LEAST(1,5,1)
-        case ksigOpenCCS:       return S("ksigOpenCCS");
-        case ksigPRI_EndPoint:  return S("ksigPRI_EndPoint");
-        case ksigPRI_Network:   return S("ksigPRI_Network");
-        case ksigPRI_Passive:   return S("ksigPRI_Passive");
+        case ksigOpenCCS:       return presentation(fmt, "ksigOpenCCS",         "Open CCS");
+        case ksigPRI_EndPoint:  return presentation(fmt, "ksigPRI_EndPoint",    "ISDN Endpoint");
+        case ksigPRI_Network:   return presentation(fmt, "ksigPRI_Network",     "ISDN Network");
+        case ksigPRI_Passive:   return presentation(fmt, "ksigPRI_Passive",     "ISDN Passive");
 #endif
 #if K3L_AT_LEAST(1,5,3)
-        case ksigLineSide:        return S("ksigLineSide");
+        case ksigLineSide:        return presentation(fmt, "ksigLineSide",      "Line Side");
 #endif
 #if K3L_AT_LEAST(1,6,0)
-        case ksigAnalogTerminal: return S("ksigAnalogTerminal");
-        case ksigCAS_EL7:        return S("ksigCAS_EL7");
-        case ksigGSM:            return S("ksigGSM");
-		case ksigE1LC:           return S("ksigE1LC");
+        case ksigAnalogTerminal: return presentation(fmt, "ksigAnalogTerminal", "FXS (analog)");
+        case ksigGSM:            return presentation(fmt, "ksigGSM",            "GSM");
+        case ksigCAS_EL7:        return presentation(fmt, "ksigCAS_EL7",        "CAS EL7");
+		case ksigE1LC:           return presentation(fmt, "ksigE1LC",           "E1 LC");
 #endif
     }
 
-    return STG(FMT("[KSignaling='%d']") % (int)sig);
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KSignaling='%d']") % (int)sig),
+		STG(FMT("Unknown siglaning (%d)") % (int)sig));
 }
 
-std::string Verbose::systemObject(KSystemObject so)
+std::string Verbose::systemObject(KSystemObject so, Verbose::Presentation fmt)
 {
     switch (so)
     {
-        case ksoLink:     return S("ksoLink");
-        case ksoLinkMon:  return S("ksoLinkMon");
-        case ksoChannel:  return S("ksoChannel");
-        case ksoH100:     return S("ksoH100");
-        case ksoFirmware: return S("ksoFirmware");
-        case ksoDevice:   return S("ksoDevice");
-        case ksoAPI:      return S("ksoAPI");
-
-        default:
-            return STG(FMT("[KSystemObject='%d']") % (int)so);
+        case ksoLink:     return presentation(fmt, "ksoLink",     "Link");
+        case ksoLinkMon:  return presentation(fmt, "ksoLinkMon",  "Link Monitor");
+        case ksoChannel:  return presentation(fmt, "ksoChannel",  "Channel");
+        case ksoH100:     return presentation(fmt, "ksoH100",     "H.100");
+        case ksoFirmware: return presentation(fmt, "ksoFirmware", "Firmware");
+        case ksoDevice:   return presentation(fmt, "ksoDevice",   "Device");
+        case ksoAPI:      return presentation(fmt, "ksoAPI",      "Software Layer");
     }
+
+	return presentation(fmt,
+		STG(FMT("[KSystemObject='%d']") % (int)so),
+		STG(FMT("Unknown object (%d)") % (int)so));
 }
 
-std::string Verbose::mixerTone(KMixerTone mt)
+std::string Verbose::mixerTone(KMixerTone mt, Verbose::Presentation fmt)
 {
     switch (mt)
     {
-        case kmtSilence:   return S("kmtSilence");
-        case kmtDial:      return S("kmtDial");
-        case kmtBusy:      return S("kmtBusy");
-        case kmtFax:       return S("kmtFax");
-        case kmtVoice:     return S("kmtVoice");
-        case kmtEndOf425:  return S("kmtEndOf425");
+        case kmtSilence:   return presentation(fmt, "kmtSilence",   "Silence");
+        case kmtDial:      return presentation(fmt, "kmtDial",      "Dialtone begin");
+        case kmtEndOf425:  return presentation(fmt, "kmtEndOf425",  "Dialtone end");
+        case kmtBusy:      return presentation(fmt, "kmtBusy",      "Busy");
+        case kmtFax:       return presentation(fmt, "kmtFax",       "Fax");
+        case kmtVoice:     return presentation(fmt, "kmtVoice",     "Voice");
 #if K3L_AT_LEAST(1,5,0)
-        case kmtCollect:   return S("kmtCollect");
+        case kmtCollect:   return presentation(fmt, "kmtCollect",   "Collect Call");
 #endif
 #if K3L_AT_LEAST(1,5,1)
-        case kmtEndOfDtmf: return S("kmtEndOfDtmf");
+        case kmtEndOfDtmf: return presentation(fmt, "kmtEndOfDtmf", "DTMF end");
 #endif
-        default:
-            return STG(FMT("[KMixerTone='%d']") % (int)mt);
     }
+
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KMixerTone='%d']") % (int)mt),
+		STG(FMT("Unknonwn tone (%d)") % (int)mt));
 }
 
-std::string Verbose::channelFeatures(int32 flags)
+std::string Verbose::mixerSource(KMixerSource ms, Verbose::Presentation fmt)
+{
+    switch (ms)
+    {
+        case kmsChannel:        return presentation(fmt, "kmsChannel",        "Channel");
+        case kmsPlay:           return presentation(fmt, "kmsPlay",           "Player");
+        case kmsGenerator:      return presentation(fmt, "kmsGenerator",      "Generator");
+        case kmsCTbus:          return presentation(fmt, "kmsCTbus",          "CT-bus");
+#if (K3L_AT_LEAST(1,4,0) && !K3L_AT_LEAST(1,6,0))
+        case kmsVoIP:           return presentation(fmt, "kmsVoIP",           "VoIP");
+#endif
+#if K3L_AT_LEAST(1,6,0)
+        case kmsNoDelayChannel: return presentation(fmt, "kmsNoDelayChannel", "No delay channel");
+#endif
+    }
+
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KMixerSource='%d']") % (int)ms),
+		STG(FMT("Unknonwn source (%d)") % (int)ms));
+}
+
+std::string Verbose::channelFeatures(int32 flags, Verbose::Presentation fmt)
 {
     if (0x00 != flags)
     {
         Strings::Merger strs;
         
-        if (kcfDtmfSuppression & flags)   strs.add("DtmfSuppression");
-        if (kcfCallProgress & flags)      strs.add("CallProgress");
-        if (kcfPulseDetection & flags)    strs.add("PulseDetection");
-        if (kcfAudioNotification & flags) strs.add("AudioNotification");
-        if (kcfEchoCanceller & flags)     strs.add("EchoCanceller");
-        if (kcfAutoGainControl & flags)   strs.add("AutoGainControl");
-        if (kcfHighImpEvents & flags)     strs.add("HighImpEvents");
+        if (kcfDtmfSuppression & flags)   strs.add(presentation(fmt, "DtmfSuppression",   "DTMF Suppression"));
+        if (kcfCallProgress & flags)      strs.add(presentation(fmt, "CallProgress",      "Call Progress"));
+        if (kcfPulseDetection & flags)    strs.add(presentation(fmt, "PulseDetection",    "Pulse Detection"));
+        if (kcfAudioNotification & flags) strs.add(presentation(fmt, "AudioNotification", "Audio Notification"));
+        if (kcfEchoCanceller & flags)     strs.add(presentation(fmt, "EchoCanceller",     "Echo Canceller"));
+        if (kcfAutoGainControl & flags)   strs.add(presentation(fmt, "AutoGainControl",   "Input AGC"));
+        if (kcfHighImpEvents & flags)     strs.add(presentation(fmt, "HighImpEvents",     "High Impedance Events"));
 #if K3L_AT_LEAST(1,6,0)
-        if (kcfCallAnswerInfo & flags)    strs.add("CallAnswerInfo");
-        if (kcfOutputVolume & flags)      strs.add("OutputVolume");
-        if (kcfPlayerAGC & flags)         strs.add("PlayerAGC");
+        if (kcfCallAnswerInfo & flags)    strs.add(presentation(fmt, "CallAnswerInfo",    "Call Answer Info"));
+        if (kcfOutputVolume & flags)      strs.add(presentation(fmt, "OutputVolume",      "Output Volume"));
+        if (kcfPlayerAGC & flags)         strs.add(presentation(fmt, "PlayerAGC",         "Player AGC"));
 #endif
 
-        return STG(FMT("kcf{%s}") % strs.merge(","));
+        return presentation(fmt,
+			STG(FMT("kcf{%s}") % strs.merge(",")),
+			STG(FMT("%s") % strs.merge(", ")));
     };
 
-    return S("");
+	PRESENTATION_CHECK_RETURN(fmt, "", "No features");
 }
 
-std::string Verbose::seizeFail(KSeizeFail sf)
+std::string Verbose::seizeFail(KSeizeFail sf, Verbose::Presentation fmt)
 {
     switch (sf)
     {
-        case ksfChannelLocked:   return S("ksfChannelLocked");
-        case ksfChannelBusy:     return S("ksfChannelBusy");
-        case ksfIncomingChannel: return S("ksfIncomingChannel");
-        case ksfDoubleSeizure:   return S("ksfDoubleSeizure");
-        case ksfCongestion:      return S("ksfCongestion");
-        case ksfNoDialTone:      return S("ksfNoDialTone");
-
-        default:
-            return STG(FMT("[KSeizeFail='%d']") % (int)sf);
+        case ksfChannelLocked:   return presentation(fmt, "ksfChannelLocked",   "Channel Locked");
+        case ksfChannelBusy:     return presentation(fmt, "ksfChannelBusy",     "Channel Busy");
+        case ksfIncomingChannel: return presentation(fmt, "ksfIncomingChannel", "Incoming Channel");
+        case ksfDoubleSeizure:   return presentation(fmt, "ksfDoubleSeizure",   "Double Seizure");
+        case ksfCongestion:      return presentation(fmt, "ksfCongestion",      "Congestion");
+        case ksfNoDialTone:      return presentation(fmt, "ksfNoDialTone",      "No Dial Tone");
     }
+
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KSeizeFail='%d']") % (int)sf),
+		STG(FMT("Unknown seize fail (%d)") % (int)sf));
 }
 
 #if K3L_AT_LEAST(1,5,0)
-std::string Verbose::internal_sipFailures(KSIP_Failures code)
+std::string Verbose::internal_sipFailures(KSIP_Failures code, Verbose::Presentation fmt)
 {
     switch (code)
     {
 #if K3L_AT_LEAST(1,6,0)
-        case kveResponse_200_OK_Success:                 return S("kveResponse_200_OK_Success");
+        case kveResponse_200_OK_Success:                 return presentation(fmt, "kveResponse_200_OK_Success",                 "200 OK");
 #endif
-        case kveRedirection_300_MultipleChoices:         return S("kveRedirection_300_MultipleChoices");
-        case kveRedirection_301_MovedPermanently:        return S("kveRedirection_301_MovedPermanently");
-        case kveRedirection_302_MovedTemporarily:        return S("kveRedirection_302_MovedTemporarily");
-        case kveRedirection_305_UseProxy:                return S("kveRedirection_305_UseProxy");
-        case kveRedirection_380_AlternativeService:      return S("kveRedirection_380_AlternativeService");
-        case kveFailure_400_BadRequest:                  return S("kveFailure_400_BadRequest");
-        case kveFailure_401_Unauthorized:                return S("kveFailure_401_Unauthorized");
-        case kveFailure_402_PaymentRequired:             return S("kveFailure_402_PaymentRequired");
-        case kveFailure_403_Forbidden:                   return S("kveFailure_403_Forbidden");
-        case kveFailure_404_NotFound:                    return S("kveFailure_404_NotFound");
-        case kveFailure_405_MethodNotAllowed:            return S("kveFailure_405_MethodNotAllowed");
-        case kveFailure_406_NotAcceptable:               return S("kveFailure_406_NotAcceptable");
-        case kveFailure_407_ProxyAuthenticationRequired: return S("kveFailure_407_ProxyAuthenticationRequired");
-        case kveFailure_408_RequestTimeout:              return S("kveFailure_408_RequestTimeout");
-        case kveFailure_410_Gone:                        return S("kveFailure_410_Gone");
-        case kveFailure_413_RequestEntityTooLarge:       return S("kveFailure_413_RequestEntityTooLarge");
-        case kveFailure_414_RequestURI_TooLong:          return S("kveFailure_414_RequestURI_TooLong");
-        case kveFailure_415_UnsupportedMediaType:        return S("kveFailure_415_UnsupportedMediaType");
-        case kveFailure_416_UnsupportedURI_Scheme:       return S("kveFailure_416_UnsupportedURI_Scheme");
-        case kveFailure_420_BadExtension:                return S("kveFailure_420_BadExtension");
-        case kveFailure_421_ExtensionRequired:           return S("kveFailure_421_ExtensionRequired");
-        case kveFailure_423_IntervalTooBrief:            return S("kveFailure_423_IntervalTooBrief");
-        case kveFailure_480_TemporarilyUnavailable:      return S("kveFailure_480_TemporarilyUnavailable");
-        case kveFailure_481_CallDoesNotExist:            return S("kveFailure_481_CallDoesNotExist");
-        case kveFailure_482_LoopDetected:                return S("kveFailure_482_LoopDetected");
-        case kveFailure_483_TooManyHops:                 return S("kveFailure_483_TooManyHops");
-        case kveFailure_484_AddressIncomplete:           return S("kveFailure_484_AddressIncomplete");
-        case kveFailure_485_Ambiguous:                   return S("kveFailure_485_Ambiguous");
-        case kveFailure_486_BusyHere:                    return S("kveFailure_486_BusyHere");
-        case kveFailure_487_RequestTerminated:           return S("kveFailure_487_RequestTerminated");
-        case kveFailure_488_NotAcceptableHere:           return S("kveFailure_488_NotAcceptableHere");
-        case kveFailure_491_RequestPending:              return S("kveFailure_491_RequestPending");
-        case kveFailure_493_Undecipherable:              return S("kveFailure_493_Undecipherable");
-        case kveServer_500_InternalError:                return S("kveServer_500_InternalError");
-        case kveServer_501_NotImplemented:               return S("kveServer_501_NotImplemented");
-        case kveServer_502_BadGateway:                   return S("kveServer_502_BadGateway");
-        case kveServer_503_ServiceUnavailable:           return S("kveServer_503_ServiceUnavailable");
-        case kveServer_504_TimeOut:                      return S("kveServer_504_TimeOut");
-        case kveServer_505_VersionNotSupported:          return S("kveServer_505_VersionNotSupported");
-        case kveServer_513_MessageTooLarge:              return S("kveServer_513_MessageTooLarge");
-        case kveGlobalFailure_600_BusyEverywhere:        return S("kveGlobalFailure_600_BusyEverywhere");
-        case kveGlobalFailure_603_Decline:               return S("kveGlobalFailure_603_Decline");
-        case kveGlobalFailure_604_DoesNotExistAnywhere:  return S("kveGlobalFailure_604_DoesNotExistAnywhere");
-        case kveGlobalFailure_606_NotAcceptable:         return S("kveGlobalFailure_606_NotAcceptable");
+        case kveRedirection_300_MultipleChoices:         return presentation(fmt, "kveRedirection_300_MultipleChoices",         "300 Multiple Choices");
+        case kveRedirection_301_MovedPermanently:        return presentation(fmt, "kveRedirection_301_MovedPermanently",        "301 Moved Permanently");
+        case kveRedirection_302_MovedTemporarily:        return presentation(fmt, "kveRedirection_302_MovedTemporarily",        "302 Moved Temporarily");
+        case kveRedirection_305_UseProxy:                return presentation(fmt, "kveRedirection_305_UseProxy",                "305 Use Proxy");
+        case kveRedirection_380_AlternativeService:      return presentation(fmt, "kveRedirection_380_AlternativeService",      "380 Alternate Service");
+        case kveFailure_400_BadRequest:                  return presentation(fmt, "kveFailure_400_BadRequest",                  "400 Bad Request");
+        case kveFailure_401_Unauthorized:                return presentation(fmt, "kveFailure_401_Unauthorized",                "401 Unauthorized");
+        case kveFailure_402_PaymentRequired:             return presentation(fmt, "kveFailure_402_PaymentRequired",             "402 Payment Required");
+        case kveFailure_403_Forbidden:                   return presentation(fmt, "kveFailure_403_Forbidden",                   "403 Forbidden");
+        case kveFailure_404_NotFound:                    return presentation(fmt, "kveFailure_404_NotFound",                    "404 Not Found");
+        case kveFailure_405_MethodNotAllowed:            return presentation(fmt, "kveFailure_405_MethodNotAllowed",            "405 Method Not Allowed");
+        case kveFailure_406_NotAcceptable:               return presentation(fmt, "kveFailure_406_NotAcceptable",               "406 Not Acceptable");
+        case kveFailure_407_ProxyAuthenticationRequired: return presentation(fmt, "kveFailure_407_ProxyAuthenticationRequired", "407 Proxy Authentication Required");
+        case kveFailure_408_RequestTimeout:              return presentation(fmt, "kveFailure_408_RequestTimeout",              "408 Request Timeout");
+        case kveFailure_410_Gone:                        return presentation(fmt, "kveFailure_410_Gone",                        "410 Gone");
+        case kveFailure_413_RequestEntityTooLarge:       return presentation(fmt, "kveFailure_413_RequestEntityTooLarge",       "413 Request Entity Too Large");
+        case kveFailure_414_RequestURI_TooLong:          return presentation(fmt, "kveFailure_414_RequestURI_TooLong",          "414 Request URI Too Long");
+        case kveFailure_415_UnsupportedMediaType:        return presentation(fmt, "kveFailure_415_UnsupportedMediaType",        "415 Unsupported Media Type");
+        case kveFailure_416_UnsupportedURI_Scheme:       return presentation(fmt, "kveFailure_416_UnsupportedURI_Scheme",       "416 Unsupported URI Scheme");
+        case kveFailure_420_BadExtension:                return presentation(fmt, "kveFailure_420_BadExtension",                "420 Bad Extension");
+        case kveFailure_421_ExtensionRequired:           return presentation(fmt, "kveFailure_421_ExtensionRequired",           "421 Extension Required");
+        case kveFailure_423_IntervalTooBrief:            return presentation(fmt, "kveFailure_423_IntervalTooBrief",            "423 Internal Too Brief");
+        case kveFailure_480_TemporarilyUnavailable:      return presentation(fmt, "kveFailure_480_TemporarilyUnavailable",      "480 Temporarily Unavailable");
+        case kveFailure_481_CallDoesNotExist:            return presentation(fmt, "kveFailure_481_CallDoesNotExist",            "481 Call Does Not Exist");
+        case kveFailure_482_LoopDetected:                return presentation(fmt, "kveFailure_482_LoopDetected",                "482 Loop Detected");
+        case kveFailure_483_TooManyHops:                 return presentation(fmt, "kveFailure_483_TooManyHops",                 "483 Too Many Hops");
+        case kveFailure_484_AddressIncomplete:           return presentation(fmt, "kveFailure_484_AddressIncomplete",           "484 Address Incomplete");
+        case kveFailure_485_Ambiguous:                   return presentation(fmt, "kveFailure_485_Ambiguous",                   "485 Ambiguous");
+        case kveFailure_486_BusyHere:                    return presentation(fmt, "kveFailure_486_BusyHere",                    "486 Busy Here");
+        case kveFailure_487_RequestTerminated:           return presentation(fmt, "kveFailure_487_RequestTerminated",           "487 Request Terminated");
+        case kveFailure_488_NotAcceptableHere:           return presentation(fmt, "kveFailure_488_NotAcceptableHere",           "488 Not Acceptable Here");
+        case kveFailure_491_RequestPending:              return presentation(fmt, "kveFailure_491_RequestPending",              "491 Request Pending");
+        case kveFailure_493_Undecipherable:              return presentation(fmt, "kveFailure_493_Undecipherable",              "493 Undecipherable");
+        case kveServer_500_InternalError:                return presentation(fmt, "kveServer_500_InternalError",                "500 Internal Error");
+        case kveServer_501_NotImplemented:               return presentation(fmt, "kveServer_501_NotImplemented",               "501 Not Implemented");
+        case kveServer_502_BadGateway:                   return presentation(fmt, "kveServer_502_BadGateway",                   "502 Bad Gateway");
+        case kveServer_503_ServiceUnavailable:           return presentation(fmt, "kveServer_503_ServiceUnavailable",           "503 Service Unavailable");
+        case kveServer_504_TimeOut:                      return presentation(fmt, "kveServer_504_TimeOut",                      "504 Timed Out");
+        case kveServer_505_VersionNotSupported:          return presentation(fmt, "kveServer_505_VersionNotSupported",          "505 Version Not Supported");
+        case kveServer_513_MessageTooLarge:              return presentation(fmt, "kveServer_513_MessageTooLarge",              "513 Message Too Large");
+        case kveGlobalFailure_600_BusyEverywhere:        return presentation(fmt, "kveGlobalFailure_600_BusyEverywhere",        "600 Busy Everywhere");
+        case kveGlobalFailure_603_Decline:               return presentation(fmt, "kveGlobalFailure_603_Decline",               "603 Decline");
+        case kveGlobalFailure_604_DoesNotExistAnywhere:  return presentation(fmt, "kveGlobalFailure_604_DoesNotExistAnywhere",  "604 Does Not Exist Anywhere");
+        case kveGlobalFailure_606_NotAcceptable:         return presentation(fmt, "kveGlobalFailure_606_NotAcceptable",         "606 Not Acceptable");
     }
 
     throw internal_not_found();
 }
 
-std::string Verbose::sipFailures(KSIP_Failures code)
+std::string Verbose::sipFailures(KSIP_Failures code, Verbose::Presentation fmt)
 {
     try
     {
-        return internal_sipFailures(code);
+        return internal_sipFailures(code, fmt);
     }
     catch (internal_not_found e)
     {
-        return STG(FMT("[KSIP_Failures='%d']") % (int)code);
+		PRESENTATION_CHECK_RETURN(fmt,
+			STG(FMT("[KSIP_Failures='%d']") % (int)code),
+			STG(FMT("Unknown SIP failure (%d)") % (int)code));
     }
 }
 
 #endif
 
 #if K3L_AT_LEAST(1,5,1)
-std::string Verbose::internal_isdnCause(KQ931Cause code)
+std::string Verbose::internal_isdnCause(KQ931Cause code, Verbose::Presentation fmt)
 {
     switch (code)
     {
-        case kq931cNone:                           return S("kq931cNone");
-        case kq931cUnallocatedNumber:              return S("kq931cUnallocatedNumber");
-        case kq931cNoRouteToTransitNet:            return S("kq931cNoRouteToTransitNet");
-        case kq931cNoRouteToDest:                  return S("kq931cNoRouteToDest");
+        case kq931cNone:                           return presentation(fmt, "kq931cNone",                           "None");
+        case kq931cUnallocatedNumber:              return presentation(fmt, "kq931cUnallocatedNumber",              "Unallocated number");
+        case kq931cNoRouteToTransitNet:            return presentation(fmt, "kq931cNoRouteToTransitNet",            "No route to transmit to network");
+        case kq931cNoRouteToDest:                  return presentation(fmt, "kq931cNoRouteToDest",                  "No route to destination");
 #if 1 /* this changed during K3L 1.6.0 development cycle... */
-        case kq931cSendSpecialInfoTone:            return S("kq931cSendSpecialInfoTone");
-        case kq931cMisdialedTrunkPrefix:           return S("kq931cMisdialedTrunkPrefix");
+        case kq931cSendSpecialInfoTone:            return presentation(fmt, "kq931cSendSpecialInfoTone",            "Send special information tone");
+        case kq931cMisdialedTrunkPrefix:           return presentation(fmt, "kq931cMisdialedTrunkPrefix",           "Misdialed trunk prefix");
 #endif
-        case kq931cChannelUnacceptable:            return S("kq931cChannelUnacceptable");
-        case kq931cCallAwarded:                    return S("kq931cCallAwarded");
+        case kq931cChannelUnacceptable:            return presentation(fmt, "kq931cChannelUnacceptable",            "Channel unacceptable");
+        case kq931cCallAwarded:                    return presentation(fmt, "kq931cCallAwarded",                    "Call awarded");
 #if 1 /* this changed during K3L 1.6.0 development cycle... */
-        case kq931cPreemption:                     return S("kq931cPreemption");
-        case kq931cPreemptionCircuitReuse:         return S("kq931cPreemptionCircuitReuse");
-        case kq931cQoR_PortedNumber:               return S("kq931cQoR_PortedNumber");
+        case kq931cPreemption:                     return presentation(fmt, "kq931cPreemption",                     "Preemption");
+        case kq931cPreemptionCircuitReuse:         return presentation(fmt, "kq931cPreemptionCircuitReuse",         "Preemption circuit reuse");
+        case kq931cQoR_PortedNumber:               return presentation(fmt, "kq931cQoR_PortedNumber",               "QoR ported number");
 #endif
-        case kq931cNormalCallClear:                return S("kq931cNormalCallClear");
-        case kq931cUserBusy:                       return S("kq931cUserBusy");
-        case kq931cNoUserResponding:               return S("kq931cNoUserResponding");
-        case kq931cNoAnswerFromUser:               return S("kq931cNoAnswerFromUser");
+        case kq931cNormalCallClear:                return presentation(fmt, "kq931cNormalCallClear",                "Normal call clear");
+        case kq931cUserBusy:                       return presentation(fmt, "kq931cUserBusy",                       "User busy");
+        case kq931cNoUserResponding:               return presentation(fmt, "kq931cNoUserResponding",               "No user responding");
+        case kq931cNoAnswerFromUser:               return presentation(fmt, "kq931cNoAnswerFromUser",               "No answer from user");
 #if 1 /* this changed during K3L 1.6.0 development cycle... */
-        case kq931cSubscriberAbsent:               return S("kq931cSubscriberAbsent");
+        case kq931cSubscriberAbsent:               return presentation(fmt, "kq931cSubscriberAbsent",               "Subscriber absent");
 #endif
-        case kq931cCallRejected:                   return S("kq931cCallRejected");
-        case kq931cNumberChanged:                  return S("kq931cNumberChanged");
+        case kq931cCallRejected:                   return presentation(fmt, "kq931cCallRejected",                   "Call rejected");
+        case kq931cNumberChanged:                  return presentation(fmt, "kq931cNumberChanged",                  "Number changed");
 #if 1 /* this changed during K3L 1.6.0 development cycle... */
-        case kq931cRedirectionToNewDest:           return S("kq931cRedirectionToNewDest");
-        case kq931cCallRejectedFeatureDest:        return S("kq931cCallRejectedFeatureDest");
-        case kq931cExchangeRoutingError:           return S("kq931cExchangeRoutingError");
+        case kq931cRedirectionToNewDest:           return presentation(fmt, "kq931cRedirectionToNewDest",           "Redirection to new destination");
+        case kq931cCallRejectedFeatureDest:        return presentation(fmt, "kq931cCallRejectedFeatureDest",        "Call rejected feature destination");
+        case kq931cExchangeRoutingError:           return presentation(fmt, "kq931cExchangeRoutingError",           "Exchange routing error");
 #endif
-        case kq931cNonSelectedUserClear:           return S("kq931cNonSelectedUserClear");
-        case kq931cDestinationOutOfOrder:          return S("kq931cDestinationOutOfOrder");
-        case kq931cInvalidNumberFormat:            return S("kq931cInvalidNumberFormat");
-        case kq931cFacilityRejected:               return S("kq931cFacilityRejected");
-        case kq931cRespStatusEnquiry:              return S("kq931cRespStatusEnquiry");
-        case kq931cNormalUnspecified:              return S("kq931cNormalUnspecified");
-        case kq931cNoCircuitChannelAvail:          return S("kq931cNoCircuitChannelAvail");
-        case kq931cNetworkOutOfOrder:              return S("kq931cNetworkOutOfOrder");
+        case kq931cNonSelectedUserClear:           return presentation(fmt, "kq931cNonSelectedUserClear",           "Non selected user clear");
+        case kq931cDestinationOutOfOrder:          return presentation(fmt, "kq931cDestinationOutOfOrder",          "Destination out of order");
+        case kq931cInvalidNumberFormat:            return presentation(fmt, "kq931cInvalidNumberFormat",            "Invalid number format");
+        case kq931cFacilityRejected:               return presentation(fmt, "kq931cFacilityRejected",               "Facility rejected");
+        case kq931cRespStatusEnquiry:              return presentation(fmt, "kq931cRespStatusEnquiry",              "Response status enquiry");
+        case kq931cNormalUnspecified:              return presentation(fmt, "kq931cNormalUnspecified",              "Normal unespecified");
+        case kq931cNoCircuitChannelAvail:          return presentation(fmt, "kq931cNoCircuitChannelAvail",          "No circuit channel available");
+        case kq931cNetworkOutOfOrder:              return presentation(fmt, "kq931cNetworkOutOfOrder",              "Network out of order");
 #if 1 /* this changed during K3L 1.6.0 development cycle... */
-        case kq931cPermanentFrameConnOutOfService: return S("kq931cPermanentFrameConnOutOfService");
-        case kq931cPermanentFrameConnOperational:  return S("kq931cPermanentFrameConnOperational");
+        case kq931cPermanentFrameConnOutOfService: return presentation(fmt, "kq931cPermanentFrameConnOutOfService", "Permanent frame connection out of service");
+        case kq931cPermanentFrameConnOperational:  return presentation(fmt, "kq931cPermanentFrameConnOperational",  "Permanent frame connection operational");
 #endif
-        case kq931cTemporaryFailure:               return S("kq931cTemporaryFailure");
-        case kq931cSwitchCongestion:               return S("kq931cSwitchCongestion");
-        case kq931cAccessInfoDiscarded:            return S("kq931cAccessInfoDiscarded");
-        case kq931cRequestedChannelUnav:           return S("kq931cRequestedChannelUnav");
-        case kq931cPrecedenceCallBlocked:          return S("kq931cPrecedenceCallBlocked");
-        case kq931cResourceUnavailable:            return S("kq931cResourceUnavailable");
-        case kq931cQosUnavailable:                 return S("kq931cQosUnavailable");
-        case kq931cReqFacilityNotSubsc:            return S("kq931cReqFacilityNotSubsc");
-        case kq931cOutCallsBarredWithinCUG:        return S("kq931cOutCallsBarredWithinCUG");
-        case kq931cInCallsBarredWithinCUG:         return S("kq931cInCallsBarredWithinCUG");
-        case kq931cBearerCapabNotAuthor:           return S("kq931cBearerCapabNotAuthor");
-        case kq931cBearerCapabNotAvail:            return S("kq931cBearerCapabNotAvail");
+        case kq931cTemporaryFailure:               return presentation(fmt, "kq931cTemporaryFailure",               "Temporary failure");
+        case kq931cSwitchCongestion:               return presentation(fmt, "kq931cSwitchCongestion",               "Switch congestion");
+        case kq931cAccessInfoDiscarded:            return presentation(fmt, "kq931cAccessInfoDiscarded",            "Access information discarded");
+        case kq931cRequestedChannelUnav:           return presentation(fmt, "kq931cRequestedChannelUnav",           "Requested channel unavailable");
+        case kq931cPrecedenceCallBlocked:          return presentation(fmt, "kq931cPrecedenceCallBlocked",          "Precedence call blocked");
+        case kq931cResourceUnavailable:            return presentation(fmt, "kq931cResourceUnavailable",            "Request resource unavailable");
+        case kq931cQosUnavailable:                 return presentation(fmt, "kq931cQosUnavailable",                 "QoS unavailable");
+        case kq931cReqFacilityNotSubsc:            return presentation(fmt, "kq931cReqFacilityNotSubsc",            "Request facility not subscribed");
+        case kq931cOutCallsBarredWithinCUG:        return presentation(fmt, "kq931cOutCallsBarredWithinCUG",        "Out calls barred within UG");
+        case kq931cInCallsBarredWithinCUG:         return presentation(fmt, "kq931cInCallsBarredWithinCUG",         "In calls barred within UG");
+        case kq931cBearerCapabNotAuthor:           return presentation(fmt, "kq931cBearerCapabNotAuthor",           "Bearer capability not authorized");
+        case kq931cBearerCapabNotAvail:            return presentation(fmt, "kq931cBearerCapabNotAvail",            "Bearer capability not available");
 #if 1 /* this changed during K3L 1.6.0 development cycle... */
-        case kq931cInconsistency:                  return S("kq931cInconsistency");
+        case kq931cInconsistency:                  return presentation(fmt, "kq931cInconsistency",                  "Inconsistency");
 #endif
-        case kq931cServiceNotAvailable:            return S("kq931cServiceNotAvailable");
-        case kq931cBcNotImplemented:               return S("kq931cBcNotImplemented");
-        case kq931cChannelTypeNotImplem:           return S("kq931cChannelTypeNotImplem");
-        case kq931cReqFacilityNotImplem:           return S("kq931cReqFacilityNotImplem");
-        case kq931cOnlyRestrictedBcAvail:          return S("kq931cOnlyRestrictedBcAvail");
-        case kq931cServiceNotImplemented:          return S("kq931cServiceNotImplemented");
-        case kq931cInvalidCrv:                     return S("kq931cInvalidCrv");
-        case kq931cChannelDoesNotExist:            return S("kq931cChannelDoesNotExist");
-        case kq931cCallIdDoesNotExist:             return S("kq931cCallIdDoesNotExist");
-        case kq931cCallIdInUse:                    return S("kq931cCallIdInUse");
-        case kq931cNoCallSuspended:                return S("kq931cNoCallSuspended");
-        case kq931cCallIdCleared:                  return S("kq931cCallIdCleared");
+        case kq931cServiceNotAvailable:            return presentation(fmt, "kq931cServiceNotAvailable",            "Service not available");
+        case kq931cBcNotImplemented:               return presentation(fmt, "kq931cBcNotImplemented",               "Bearer capability not implemented");
+        case kq931cChannelTypeNotImplem:           return presentation(fmt, "kq931cChannelTypeNotImplem",           "Channel type not implemented");
+        case kq931cReqFacilityNotImplem:           return presentation(fmt, "kq931cReqFacilityNotImplem",           "Request facility not implemented");
+        case kq931cOnlyRestrictedBcAvail:          return presentation(fmt, "kq931cOnlyRestrictedBcAvail",          "Only restricted bearer capability available");
+        case kq931cServiceNotImplemented:          return presentation(fmt, "kq931cServiceNotImplemented",          "Service not implemented");
+        case kq931cInvalidCrv:                     return presentation(fmt, "kq931cInvalidCrv",                     "Invalid call reference value");
+        case kq931cChannelDoesNotExist:            return presentation(fmt, "kq931cChannelDoesNotExist",            "Channel does not exist");
+        case kq931cCallIdDoesNotExist:             return presentation(fmt, "kq931cCallIdDoesNotExist",             "Call identification does not exist");
+        case kq931cCallIdInUse:                    return presentation(fmt, "kq931cCallIdInUse",                    "Call identification in use");
+        case kq931cNoCallSuspended:                return presentation(fmt, "kq931cNoCallSuspended",                "No call suspended");
+        case kq931cCallIdCleared:                  return presentation(fmt, "kq931cCallIdCleared",                  "Call identification cleared");
 #if 1 /* this changed during K3L 1.6.0 development cycle... */
-        case kq931cUserNotMemberofCUG:             return S("kq931cUserNotMemberofCUG");
+        case kq931cUserNotMemberofCUG:             return presentation(fmt, "kq931cUserNotMemberofCUG",             "User not member of UG");
 #endif
-        case kq931cIncompatibleDestination:        return S("kq931cIncompatibleDestination");
-        case kq931cInvalidTransitNetSel:           return S("kq931cInvalidTransitNetSel");
-        case kq931cInvalidMessage:                 return S("kq931cInvalidMessage");
-        case kq931cMissingMandatoryIe:             return S("kq931cMissingMandatoryIe");
-        case kq931cMsgTypeNotImplemented:          return S("kq931cMsgTypeNotImplemented");
-        case kq931cMsgIncompatWithState:           return S("kq931cMsgIncompatWithState");
-        case kq931cIeNotImplemented:               return S("kq931cIeNotImplemented");
-        case kq931cInvalidIe:                      return S("kq931cInvalidIe");
-        case kq931cMsgIncompatWithState2:          return S("kq931cMsgIncompatWithState2");
-        case kq931cRecoveryOnTimerExpiry:          return S("kq931cRecoveryOnTimerExpiry");
-        case kq931cProtocolError:                  return S("kq931cProtocolError");
+        case kq931cIncompatibleDestination:        return presentation(fmt, "kq931cIncompatibleDestination",        "Incompatible destination");
+        case kq931cInvalidTransitNetSel:           return presentation(fmt, "kq931cInvalidTransitNetSel",           "Invalid transit network selected");
+        case kq931cInvalidMessage:                 return presentation(fmt, "kq931cInvalidMessage",                 "Invalid message");
+        case kq931cMissingMandatoryIe:             return presentation(fmt, "kq931cMissingMandatoryIe",             "Missing mandatory information element");
+        case kq931cMsgTypeNotImplemented:          return presentation(fmt, "kq931cMsgTypeNotImplemented",          "Message type not implemented");
+        case kq931cMsgIncompatWithState:           return presentation(fmt, "kq931cMsgIncompatWithState",           "Message incompatible with state");
+        case kq931cIeNotImplemented:               return presentation(fmt, "kq931cIeNotImplemented",               "Information element not implemented");
+        case kq931cInvalidIe:                      return presentation(fmt, "kq931cInvalidIe",                      "Invalid information element");
+        case kq931cMsgIncompatWithState2:          return presentation(fmt, "kq931cMsgIncompatWithState2",          "Message incompatible with state (2)");
+        case kq931cRecoveryOnTimerExpiry:          return presentation(fmt, "kq931cRecoveryOnTimerExpiry",          "Recovery on timer expiry");
+        case kq931cProtocolError:                  return presentation(fmt, "kq931cProtocolError",                  "Protocol error");
 #if 1 /* this changed during K3L 1.6.0 development cycle... */
-        case kq931cMessageWithUnrecognizedParam:   return S("kq931cMessageWithUnrecognizedParam");
-        case kq931cProtocolErrorUnspecified:       return S("kq931cProtocolErrorUnspecified");
+        case kq931cMessageWithUnrecognizedParam:   return presentation(fmt, "kq931cMessageWithUnrecognizedParam",   "Message with unrecognized parameters");
+        case kq931cProtocolErrorUnspecified:       return presentation(fmt, "kq931cProtocolErrorUnspecified",       "Protocol error unspecified");
 #endif
-        case kq931cInterworking:                   return S("kq931cInterworking");
-        case kq931cCallConnected:                  return S("kq931cCallConnected");
-        case kq931cCallTimedOut:                   return S("kq931cCallTimedOut");
-        case kq931cCallNotFound:                   return S("kq931cCallNotFound");
-        case kq931cCantReleaseCall:                return S("kq931cCantReleaseCall");
-        case kq931cNetworkFailure:                 return S("kq931cNetworkFailure");
-        case kq931cNetworkRestart:                 return S("kq931cNetworkRestart");
+        case kq931cInterworking:                   return presentation(fmt, "kq931cInterworking",                   "Interworking");
+        case kq931cCallConnected:                  return presentation(fmt, "kq931cCallConnected",                  "Call connected");
+        case kq931cCallTimedOut:                   return presentation(fmt, "kq931cCallTimedOut",                   "Call timeout");
+        case kq931cCallNotFound:                   return presentation(fmt, "kq931cCallNotFound",                   "Call not found");
+        case kq931cCantReleaseCall:                return presentation(fmt, "kq931cCantReleaseCall",                "Cannot realese call");
+        case kq931cNetworkFailure:                 return presentation(fmt, "kq931cNetworkFailure",                 "Network failure");
+        case kq931cNetworkRestart:                 return presentation(fmt, "kq931cNetworkRestart",                 "Network restart");
     }
 
     throw internal_not_found();
 }
 
-std::string Verbose::isdnCause(KQ931Cause code)
+std::string Verbose::isdnCause(KQ931Cause code, Verbose::Presentation fmt)
 {
     try
     {
@@ -680,7 +749,7 @@ std::string Verbose::isdnCause(KQ931Cause code)
 #endif
 
 #if K3L_AT_LEAST(1,5,2)
-std::string Verbose::isdnDebug(int32 flags)
+std::string Verbose::isdnDebug(int32 flags, Verbose::Presentation fmt)
 {
     if (0x00 != flags)
     {
@@ -690,98 +759,100 @@ std::string Verbose::isdnDebug(int32 flags)
         if (flags & kidfLAPD)   strs.add("LAPD");
         if (flags & kidfSystem) strs.add("System");
         
-        return STG(FMT("kidf{%s}") % strs.merge(","));
+		PRESENTATION_CHECK_RETURN(fmt,
+			STG(FMT("kidf{%s}") % strs.merge(",")),
+			strs.merge(", "));
     }
     
-    return S("");
+    return presentation(fmt, "", "No debug active");
 }
 #endif
 
-std::string Verbose::internal_signGroupB(KSignGroupB group, r2_country_type country)
+std::string Verbose::internal_signGroupB(KSignGroupB group, r2_country_type country, Verbose::Presentation fmt)
 {
 	switch (country)
 	{
 		case R2_COUNTRY_ARG:
 			switch ((KSignGroupB_Argentina)group)
 			{
-				case kgbArNumberChanged:       return S("kgbArNumberChanged");
-				case kgbArBusy:                return S("kgbArBusy");
-				case kgbArCongestion:          return S("kgbArCongestion");
-				case kgbArInvalidNumber:       return S("kgbArInvalidNumber");
-				case kgbArLineFreeCharged:     return S("kgbArLineFreeCharged");
-				case kgbArLineFreeNotCharged:  return S("kgbArLineFreeNotCharged");
-				case kgbArLineOutOfOrder:      return S("kgbArLineOutOfOrder");
-				case kgbArNone:                return S("kgbArNone");
+				case kgbArNumberChanged:       return presentation(fmt, "kgbArNumberChanged",      "Number Changed");
+				case kgbArBusy:                return presentation(fmt, "kgbArBusy",               "Busy");
+				case kgbArCongestion:          return presentation(fmt, "kgbArCongestion",         "Congestion");
+				case kgbArInvalidNumber:       return presentation(fmt, "kgbArInvalidNumber",      "Invalid Number");
+				case kgbArLineFreeCharged:     return presentation(fmt, "kgbArLineFreeCharged",    "Line Free Charged");
+				case kgbArLineFreeNotCharged:  return presentation(fmt, "kgbArLineFreeNotCharged", "Line Free Not Charged");
+				case kgbArLineOutOfOrder:      return presentation(fmt, "kgbArLineOutOfOrder",     "Line Out Of Order");
+				case kgbArNone:                return presentation(fmt, "kgbArNone",               "None");
 			}
 			break;
 
 		case R2_COUNTRY_BRA:
 			switch ((KSignGroupB_Brazil)group)
 			{
-				case kgbBrLineFreeCharged:     return S("kgbBrLineFreeCharged");
-				case kgbBrLineFreeNotCharged:  return S("kgbBrLineFreeNotCharged");
-				case kgbBrLineFreeChargedLPR:  return S("kgbBrLineFreeChargedLPR");
-				case kgbBrBusy:                return S("kgbBrBusy");
-				case kgbBrNumberChanged:       return S("kgbBrNumberChanged");
-				case kgbBrCongestion:          return S("kgbBrCongestion");
-				case kgbBrInvalidNumber:       return S("kgbBrInvalidNumber");
-				case kgbBrLineOutOfOrder:      return S("kgbBrLineOutOfOrder");
-				case kgbBrNone:                return S("kgbBrNone");
+				case kgbBrLineFreeCharged:     return presentation(fmt, "kgbBrLineFreeCharged",    "Line Free Charged");
+				case kgbBrLineFreeNotCharged:  return presentation(fmt, "kgbBrLineFreeNotCharged", "Line Free Not Charged");
+				case kgbBrLineFreeChargedLPR:  return presentation(fmt, "kgbBrLineFreeChargedLPR", "Line Free Charged PLR");
+				case kgbBrBusy:                return presentation(fmt, "kgbBrBusy",               "Busy");
+				case kgbBrNumberChanged:       return presentation(fmt, "kgbBrNumberChanged",      "Number Changed");
+				case kgbBrCongestion:          return presentation(fmt, "kgbBrCongestion",         "Congestion");
+				case kgbBrInvalidNumber:       return presentation(fmt, "kgbBrInvalidNumber",      "Invalid Number");
+				case kgbBrLineOutOfOrder:      return presentation(fmt, "kgbBrLineOutOfOrder",     "Line Out Of Order");
+				case kgbBrNone:                return presentation(fmt, "kgbBrNone",               "None");
 			}
 			break;
 
 		case R2_COUNTRY_CHI:
 			switch ((KSignGroupB_Chile)group)
 			{
-				case kgbClNumberChanged:       return S("kgbClNumberChanged");
-				case kgbClBusy:                return S("kgbClBusy");
-				case kgbClCongestion:          return S("kgbClCongestion");
-				case kgbClInvalidNumber:       return S("kgbClInvalidNumber");
-				case kgbClLineFreeCharged:     return S("kgbClLineFreeCharged");
-				case kgbClLineFreeNotCharged:  return S("kgbClLineFreeNotCharged");
-				case kgbClLineOutOfOrder:      return S("kgbClLineOutOfOrder");
-				case kgbClNone:                return S("kgbClNone");
+				case kgbClNumberChanged:       return presentation(fmt, "kgbClNumberChanged",      "Number Changed");
+				case kgbClBusy:                return presentation(fmt, "kgbClBusy",               "Busy");
+				case kgbClCongestion:          return presentation(fmt, "kgbClCongestion",         "Congestion");
+				case kgbClInvalidNumber:       return presentation(fmt, "kgbClInvalidNumber",      "Invalid Number");
+				case kgbClLineFreeCharged:     return presentation(fmt, "kgbClLineFreeCharged",    "Line Free Charged");
+				case kgbClLineFreeNotCharged:  return presentation(fmt, "kgbClLineFreeNotCharged", "Line Free Not Charged");
+				case kgbClLineOutOfOrder:      return presentation(fmt, "kgbClLineOutOfOrder",     "Line Out Of Order");
+				case kgbClNone:                return presentation(fmt, "kgbClNone",               "None");
 			}
 			break;
 
 		case R2_COUNTRY_MEX:
 			switch ((KSignGroupB_Mexico)group)
 			{
-				case kgbMxLineFreeCharged:     return S("kgbMxLineFreeCharged");
-				case kgbMxBusy:                return S("kgbMxBusy");
-				case kgbMxLineFreeNotCharged:  return S("kgbMxLineFreeNotCharged");
-				case kgbMxNone:                return S("kgbMxNone");
+				case kgbMxLineFreeCharged:     return presentation(fmt, "kgbMxLineFreeCharged",    "Line Free Charged");
+				case kgbMxBusy:                return presentation(fmt, "kgbMxBusy",               "Busy");
+				case kgbMxLineFreeNotCharged:  return presentation(fmt, "kgbMxLineFreeNotCharged", "Line Free Not Charged");
+				case kgbMxNone:                return presentation(fmt, "kgbMxNone",               "None");
 			}
 			break;
 
 		case R2_COUNTRY_URY:
 			switch ((KSignGroupB_Uruguay)group)
 			{
-				case kgbUyNumberChanged:       return S("kgbUyNumberChanged");
-				case kgbUyBusy:                return S("kgbUyBusy");
-				case kgbUyCongestion:          return S("kgbUyCongestion");
-				case kgbUyInvalidNumber:       return S("kgbUyInvalidNumber");
-				case kgbUyLineFreeCharged:     return S("kgbUyLineFreeCharged");
-				case kgbUyLineFreeNotCharged:  return S("kgbUyLineFreeNotCharged");
-				case kgbUyLineOutOfOrder:      return S("kgbUyLineOutOfOrder");
-				case kgbUyNone:                return S("kgbUyNone");
+				case kgbUyNumberChanged:       return presentation(fmt, "kgbUyNumberChanged",      "Number Changed");
+				case kgbUyBusy:                return presentation(fmt, "kgbUyBusy",               "Busy");
+				case kgbUyCongestion:          return presentation(fmt, "kgbUyCongestion",         "Congestion");
+				case kgbUyInvalidNumber:       return presentation(fmt, "kgbUyInvalidNumber",      "Invalid Number");
+				case kgbUyLineFreeCharged:     return presentation(fmt, "kgbUyLineFreeCharged",    "Line Free Charged");
+				case kgbUyLineFreeNotCharged:  return presentation(fmt, "kgbUyLineFreeNotCharged", "Line Free Not Charged");
+				case kgbUyLineOutOfOrder:      return presentation(fmt, "kgbUyLineOutOfOrder",     "Line Out Of Order");
+				case kgbUyNone:                return presentation(fmt, "kgbUyNone",               "None");
 			}
 			break;
 
 		case R2_COUNTRY_VEN:
 			switch ((KSignGroupB_Venezuela)group)
 			{
-				case kgbVeLineFreeChargedLPR:  return S("kgbVeLineFreeChargedLPR");
-				case kgbVeNumberChanged:       return S("kgbVeNumberChanged");
-				case kgbVeBusy:                return S("kgbVeBusy");
-				case kgbVeCongestion:          return S("kgbVeCongestion");
-				case kgbVeInformationTone:     return S("kgbVeInformationTone");
-				case kgbVeLineFreeCharged:     return S("kgbVeLineFreeCharged");
-				case kgbVeLineFreeNotCharged:  return S("kgbVeLineFreeNotCharged");
-				case kgbVeLineBlocked:         return S("kgbVeLineBlocked");
-				case kgbVeIntercepted:         return S("kgbVeIntercepted");
-				case kgbVeDataTrans:           return S("kgbVeDataTrans");
-				case kgbVeNone:                return S("kgbVeNone");
+				case kgbVeLineFreeChargedLPR:  return presentation(fmt, "kgbVeLineFreeChargedLPR", "Line Free Charged PLR");
+				case kgbVeNumberChanged:       return presentation(fmt, "kgbVeNumberChanged",      "Number Changed");
+				case kgbVeBusy:                return presentation(fmt, "kgbVeBusy",               "Busy");
+				case kgbVeCongestion:          return presentation(fmt, "kgbVeCongestion",         "Congestion");
+				case kgbVeInformationTone:     return presentation(fmt, "kgbVeInformationTone",    "Information Tone");
+				case kgbVeLineFreeCharged:     return presentation(fmt, "kgbVeLineFreeCharged",    "Line Free Charged");
+				case kgbVeLineFreeNotCharged:  return presentation(fmt, "kgbVeLineFreeNotCharged", "Line Free Not Charged");
+				case kgbVeLineBlocked:         return presentation(fmt, "kgbVeLineBlocked",        "Line Blocked");
+				case kgbVeIntercepted:         return presentation(fmt, "kgbVeIntercepted",        "Intercepted");
+				case kgbVeDataTrans:           return presentation(fmt, "kgbVeDataTrans",          "Data Transfer");
+				case kgbVeNone:                return presentation(fmt, "kgbVeNone",               "None");
 			}
 			break;
 	}
@@ -789,99 +860,101 @@ std::string Verbose::internal_signGroupB(KSignGroupB group, r2_country_type coun
 	throw internal_not_found();
 }
 
-std::string Verbose::signGroupB(KSignGroupB group, r2_country_type r2_country)
+std::string Verbose::signGroupB(KSignGroupB group, r2_country_type r2_country, Verbose::Presentation fmt)
 {
 	try
 	{
-		return internal_signGroupB(group, r2_country);
+		return internal_signGroupB(group, r2_country, fmt);
 	}
 	catch (internal_not_found e)
 	{
-		return S(STG(FMT("[KSignGroupB='%d']") % (int)group));
+		PRESENTATION_CHECK_RETURN(fmt,
+			STG(FMT("[KSignGroupB='%d']") % (int)group),
+			STG(FMT("Unknown group B (%d)") % (int)group));
 	}
 }
 
-std::string Verbose::internal_signGroupII(KSignGroupII group, r2_country_type country)
+std::string Verbose::internal_signGroupII(KSignGroupII group, r2_country_type country, Verbose::Presentation fmt)
 {
 	switch (country)
 	{
 		case R2_COUNTRY_ARG:
 			switch ((KSignGroupII_Argentina)group)
 			{
-				case kg2ArOrdinary:             return S("kg2ArOrdinary");
-				case kg2ArPriority:             return S("kg2ArPriority");
-				case kg2ArMaintenance:          return S("kg2ArMaintenance");
-				case kg2ArLocalPayPhone:        return S("kg2ArLocalPayPhone");
-				case kg2ArTrunkOperator:        return S("kg2ArTrunkOperator");
-				case kg2ArDataTrans:            return S("kg2ArDataTrans");
-				case kg2ArCPTP:                 return S("kg2ArCPTP");
-				case kg2ArSpecialLine:          return S("kg2ArSpecialLine");
-				case kg2ArMobileUser:           return S("kg2ArMobileUser");
-				case kg2ArPrivateRedLine:       return S("kg2ArPrivateRedLine");
-				case kg2ArSpecialPayPhoneLine:  return S("kg2ArSpecialPayPhoneLine");
+				case kg2ArOrdinary:             return presentation(fmt, "kg2ArOrdinary",            "Ordinary");
+				case kg2ArPriority:             return presentation(fmt, "kg2ArPriority",            "Priority");
+				case kg2ArMaintenance:          return presentation(fmt, "kg2ArMaintenance",         "Maintenance");
+				case kg2ArLocalPayPhone:        return presentation(fmt, "kg2ArLocalPayPhone",       "Local pay phone");
+				case kg2ArTrunkOperator:        return presentation(fmt, "kg2ArTrunkOperator",       "Trunk operator");
+				case kg2ArDataTrans:            return presentation(fmt, "kg2ArDataTrans",           "Data transfer");
+				case kg2ArCPTP:                 return presentation(fmt, "kg2ArCPTP",                "CPTP");
+				case kg2ArSpecialLine:          return presentation(fmt, "kg2ArSpecialLine",         "Special line");
+				case kg2ArMobileUser:           return presentation(fmt, "kg2ArMobileUser",          "Mobile user");
+				case kg2ArPrivateRedLine:       return presentation(fmt, "kg2ArPrivateRedLine",      "Private red line");
+				case kg2ArSpecialPayPhoneLine:  return presentation(fmt, "kg2ArSpecialPayPhoneLine", "Special pay phone line");
 			}
 			break;
 
 		case R2_COUNTRY_BRA:
 			switch ((KSignGroupII_Brazil)group)
 			{
-				case kg2BrOrdinary:         return S("kg2BrOrdinary");
-				case kg2BrPriority:         return S("kg2BrPriority");
-				case kg2BrMaintenance:      return S("kg2BrMaintenance");
-				case kg2BrLocalPayPhone:    return S("kg2BrLocalPayPhone");
-				case kg2BrTrunkOperator:    return S("kg2BrTrunkOperator");
-				case kg2BrDataTrans:        return S("kg2BrDataTrans");
-				case kg2BrNonLocalPayPhone: return S("kg2BrNonLocalPayPhone");
-				case kg2BrCollectCall:      return S("kg2BrCollectCall");
-				case kg2BrOrdinaryInter:    return S("kg2BrOrdinaryInter");
-				case kg2BrTransfered:       return S("kg2BrTransfered");
+				case kg2BrOrdinary:         return presentation(fmt, "kg2BrOrdinary",            "Ordinary");
+				case kg2BrPriority:         return presentation(fmt, "kg2BrPriority",            "Priority");
+				case kg2BrMaintenance:      return presentation(fmt, "kg2BrMaintenance",         "Maintenance");
+				case kg2BrLocalPayPhone:    return presentation(fmt, "kg2BrLocalPayPhone",       "Local pay phone");
+				case kg2BrTrunkOperator:    return presentation(fmt, "kg2BrTrunkOperator",       "Trunk operator");
+				case kg2BrDataTrans:        return presentation(fmt, "kg2BrDataTrans",           "Data transfer");
+				case kg2BrNonLocalPayPhone: return presentation(fmt, "kg2BrNonLocalPayPhone",    "Non local pay phone");
+				case kg2BrCollectCall:      return presentation(fmt, "kg2BrCollectCall",         "Collect call");
+				case kg2BrOrdinaryInter:    return presentation(fmt, "kg2BrOrdinaryInter",       "Ordinary international");
+				case kg2BrTransfered:       return presentation(fmt, "kg2BrTransfered",          "Transfered");
 			}
 			break;
 
 		case R2_COUNTRY_CHI:
 			switch ((KSignGroupII_Chile)group)
 			{
-				case kg2ClOrdinary:               return S("kg2ClOrdinary");
-				case kg2ClPriority:               return S("kg2ClPriority");
-				case kg2ClMaintenance:            return S("kg2ClMaintenance");
-				case kg2ClTrunkOperator:          return S("kg2ClTrunkOperator");
-				case kg2ClDataTrans:              return S("kg2ClDataTrans");
-				case kg2ClUnidentifiedSubscriber: return S("kg2ClUnidentifiedSubscriber");
+				case kg2ClOrdinary:               return presentation(fmt, "kg2ClOrdinary",               "Ordinary");
+				case kg2ClPriority:               return presentation(fmt, "kg2ClPriority",               "Priority");
+				case kg2ClMaintenance:            return presentation(fmt, "kg2ClMaintenance",            "Maintenance");
+				case kg2ClTrunkOperator:          return presentation(fmt, "kg2ClTrunkOperator",          "Trunk operator");
+				case kg2ClDataTrans:              return presentation(fmt, "kg2ClDataTrans",              "Data transfer");
+				case kg2ClUnidentifiedSubscriber: return presentation(fmt, "kg2ClUnidentifiedSubscriber", "Unidentified subscriber");
 			}
 			break;
 
 		case R2_COUNTRY_MEX:
 			switch ((KSignGroupII_Mexico)group)
 			{
-				case kg2MxTrunkOperator:    return S("kg2MxTrunkOperator");
-				case kg2MxOrdinary:         return S("kg2MxOrdinary");
-				case kg2MxMaintenance:      return S("kg2MxMaintenance");
+				case kg2MxTrunkOperator:    return presentation(fmt, "kg2MxTrunkOperator",       "Trunk operator");
+				case kg2MxOrdinary:         return presentation(fmt, "kg2MxOrdinary",            "Ordinary");
+				case kg2MxMaintenance:      return presentation(fmt, "kg2MxMaintenance",         "Maintenance");
 			}
 			break;
 
 		case R2_COUNTRY_URY:
 			switch ((KSignGroupII_Uruguay)group)
 			{
-				case kg2UyOrdinary:         return S("kg2UyOrdinary");
-				case kg2UyPriority:         return S("kg2UyPriority");
-				case kg2UyMaintenance:      return S("kg2UyMaintenance");
-				case kg2UyLocalPayPhone:    return S("kg2UyLocalPayPhone");
-				case kg2UyTrunkOperator:    return S("kg2UyTrunkOperator");
-				case kg2UyDataTrans:        return S("kg2UyDataTrans");
-				case kg2UyInternSubscriber: return S("kg2UyInternSubscriber");
+				case kg2UyOrdinary:         return presentation(fmt, "kg2UyOrdinary",            "Ordinary");
+				case kg2UyPriority:         return presentation(fmt, "kg2UyPriority",            "Priority");
+				case kg2UyMaintenance:      return presentation(fmt, "kg2UyMaintenance",         "Maintenance");
+				case kg2UyLocalPayPhone:    return presentation(fmt, "kg2UyLocalPayPhone",       "Local pay phone");
+				case kg2UyTrunkOperator:    return presentation(fmt, "kg2UyTrunkOperator",       "Trunk operator");
+				case kg2UyDataTrans:        return presentation(fmt, "kg2UyDataTrans",           "Data transfer");
+				case kg2UyInternSubscriber: return presentation(fmt, "kg2UyInternSubscriber",    "International subscriber");
 			}
 			break;
 
 		case R2_COUNTRY_VEN:
 			switch ((KSignGroupII_Venezuela)group)
 			{
-				case kg2VeOrdinary:           return S("kg2VeOrdinary");
-				case kg2VePriority:           return S("kg2VePriority");
-				case kg2VeMaintenance:        return S("kg2VeMaintenance");
-				case kg2VeLocalPayPhone:      return S("kg2VeLocalPayPhone");
-				case kg2VeTrunkOperator:      return S("kg2VeTrunkOperator");
-				case kg2VeDataTrans:          return S("kg2VeDataTrans");
-				case kg2VeNoTransferFacility: return S("kg2VeNoTransferFacility");
+				case kg2VeOrdinary:           return presentation(fmt, "kg2VeOrdinary",            "Ordinary");
+				case kg2VePriority:           return presentation(fmt, "kg2VePriority",            "Priority");
+				case kg2VeMaintenance:        return presentation(fmt, "kg2VeMaintenance",         "Maintenance");
+				case kg2VeLocalPayPhone:      return presentation(fmt, "kg2VeLocalPayPhone",       "Local pay phone");
+				case kg2VeTrunkOperator:      return presentation(fmt, "kg2VeTrunkOperator",       "Trunk operator");
+				case kg2VeDataTrans:          return presentation(fmt, "kg2VeDataTrans",           "Data transfer");
+				case kg2VeNoTransferFacility: return presentation(fmt, "kg2VeNoTransferFacility",  "No transfer facility");
 			}
 			break;
 	}
@@ -889,7 +962,7 @@ std::string Verbose::internal_signGroupII(KSignGroupII group, r2_country_type co
     throw internal_not_found();
 }
 
-std::string Verbose::signGroupII(KSignGroupII group, r2_country_type r2_country)
+std::string Verbose::signGroupII(KSignGroupII group, r2_country_type r2_country, Verbose::Presentation fmt)
 {
 	try
 	{
@@ -897,11 +970,13 @@ std::string Verbose::signGroupII(KSignGroupII group, r2_country_type r2_country)
 	}
 	catch (internal_not_found e)
 	{
-		return S(STG(FMT("[KSignGroupII='%d']") % (int)group));
+		PRESENTATION_CHECK_RETURN(fmt,
+			STG(FMT("[KSignGroupII='%d']") % (int)group),
+			STG(FMT("Unknown group II (%d)") % (int)group));
 	}
 }
 
-std::string Verbose::callFail(KSignaling sig, r2_country_type country, int32 info)
+std::string Verbose::callFail(KSignaling sig, r2_country_type country, int32 info, Verbose::Presentation fmt)
 {
     try
     {
@@ -922,7 +997,7 @@ std::string Verbose::callFail(KSignaling sig, r2_country_type country, int32 inf
 #if K3L_AT_LEAST(1,6,0)
             case ksigCAS_EL7:
             case ksigE1LC:
-                return S("NOT IMPLEMENTED");
+                return "NOT IMPLEMENTED";
                 
             case ksigAnalogTerminal:
 #endif
@@ -961,10 +1036,12 @@ std::string Verbose::callFail(KSignaling sig, r2_country_type country, int32 inf
         /* this exception is used for breaking the control flow */
     }
 
-    return STG(FMT("[%s, callFail='%d']") % signaling(sig) % (int)info);
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[%s, callFail='%d']") % signaling(sig, fmt) % (int)info),
+		STG(FMT("Unknown call fail code for '%s' (%d)") % signaling(sig, fmt) % (int)info));
 }
 
-std::string Verbose::channelFail(KSignaling sig, int32 code)
+std::string Verbose::channelFail(KSignaling sig, int32 code, Verbose::Presentation fmt)
 {
     try
     {
@@ -995,11 +1072,11 @@ std::string Verbose::channelFail(KSignaling sig, int32 code)
             case ksigUserR2Digital:
                 switch ((KChannelFail)code)
                 {
-                    case kfcRemoteFail:         return S("kfcRemoteFail");
-                    case kfcLocalFail:          return S("kfcLocalFail");
-                    case kfcRemoteLock:         return S("kfcRemoteLock");
-                    case kfcLineSignalFail:     return S("kfcLineSignalFail");
-                    case kfcAcousticSignalFail: return S("kfcAcousticSignalFail");
+                    case kfcRemoteFail:         return presentation(fmt, "kfcRemoteFail",         "Remote failure");
+                    case kfcLocalFail:          return presentation(fmt, "kfcLocalFail",          "Local failure");
+                    case kfcRemoteLock:         return presentation(fmt, "kfcRemoteLock",         "Remote lock");
+                    case kfcLineSignalFail:     return presentation(fmt, "kfcLineSignalFail",     "Line signal failure");
+                    case kfcAcousticSignalFail: return presentation(fmt, "kfcAcousticSignalFail", "Acoustic signal failure");
                 }
 
                 throw internal_not_found();
@@ -1018,78 +1095,94 @@ std::string Verbose::channelFail(KSignaling sig, int32 code)
         /* this exception is used for breaking the control flow */
     }
 
-    return STG(FMT("[%s, channelFail='%d']") % signaling(sig) % (int)code);
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[%s, channelFail='%d']") % signaling(sig, fmt) % (int)code),
+		STG(FMT("Unknown channel fail code for '%s' (%d)") % signaling(sig, fmt) % (int)code));
 }
 
-std::string Verbose::internalFail(KInternalFail inf)
+std::string Verbose::internalFail(KInternalFail inf, Verbose::Presentation fmt)
 {
     switch (inf)
     {
-        case kifInterruptCtrl:     return S("kifInterruptCtrl");
-        case kifCommunicationFail: return S("kifCommunicationFail");
-        case kifProtocolFail:      return S("kifProtocolFail");
-        case kifInternalBuffer:    return S("kifInternalBuffer");
-        case kifMonitorBuffer:     return S("kifMonitorBuffer");
-        case kifInitialization:    return S("kifInitialization");
-        case kifInterfaceFail:     return S("kifInterfaceFail");
-        case kifClientCommFail:    return S("kifClientCommFail");
+        case kifInterruptCtrl:     return presentation(fmt, "kifInterruptCtrl",     "Interrupt control");
+        case kifCommunicationFail: return presentation(fmt, "kifCommunicationFail", "Communication failure");
+        case kifProtocolFail:      return presentation(fmt, "kifProtocolFail",      "Protocol failure");
+        case kifInternalBuffer:    return presentation(fmt, "kifInternalBuffer",    "Internal buffer");
+        case kifMonitorBuffer:     return presentation(fmt, "kifMonitorBuffer",     "Monitor buffer");
+        case kifInitialization:    return presentation(fmt, "kifInitialization",    "Initialization");
+        case kifInterfaceFail:     return presentation(fmt, "kifInterfaceFail",     "Interface failure");
+        case kifClientCommFail:    return presentation(fmt, "kifClientCommFail",    "Client communication failure");
     }
 
-    return STG(FMT("[KInternalFail='%d']") % (int)inf);
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KInternalFail='%d']") % (int)inf),
+		STG(FMT("Unknown internal failure (%d)") % (int)inf));
 }
 
-std::string Verbose::linkErrorCounter(KLinkErrorCounter ec)
+std::string Verbose::linkErrorCounter(KLinkErrorCounter ec, Verbose::Presentation fmt)
 {
     switch (ec)
     {
-        case klecChangesToLock:     return S("klecChangesToLock");
-        case klecLostOfSignal:      return S("klecLostOfSignal");
-        case klecAlarmNotification: return S("klecAlarmNotification");
-        case klecLostOfFrame:       return S("klecLostOfFrame");
-        case klecLostOfMultiframe:  return S("klecLostOfMultiframe");
-        case klecRemoteAlarm:       return S("klecRemoteAlarm");
-        case klecUnknowAlarm:       return S("klecUnknowAlarm");
-        case klecPRBS:              return S("klecPRBS");
-           case klecWrogrBits:         return S("klecWrongBits");
-        case klecJitterVariation:   return S("klecJitterVariation");
-           case klecFramesWithoutSync: return S("klecFramesWithoutSync");
-        case klecMultiframeSignal:  return S("klecMultiframeSignal");
-           case klecFrameError:        return S("klecFrameError");
-        case klecBipolarViolation:  return S("klecBipolarViolation");
-           case klecCRC4:              return S("klecCRC4");
-        case klecCount:             return S("klecCount");
+        case klecChangesToLock:     return presentation(fmt, "klecChangesToLock",     "Changes to lock");
+        case klecLostOfSignal:      return presentation(fmt, "klecLostOfSignal",      "Lost of signal");
+        case klecAlarmNotification: return presentation(fmt, "klecAlarmNotification", "Alarm notification");
+        case klecLostOfFrame:       return presentation(fmt, "klecLostOfFrame",       "Lost of frame");
+        case klecLostOfMultiframe:  return presentation(fmt, "klecLostOfMultiframe",  "Lost of multiframe");
+        case klecRemoteAlarm:       return presentation(fmt, "klecRemoteAlarm",       "Remote alarm");
+        case klecUnknowAlarm:       return presentation(fmt, "klecUnknowAlarm",       "Unknown alarm");
+        case klecPRBS:              return presentation(fmt, "klecPRBS",              "PRBS");
+        case klecWrogrBits:         return presentation(fmt, "klecWrongBits",         "Wrong bits");
+        case klecJitterVariation:   return presentation(fmt, "klecJitterVariation",   "Jitter variation");
+        case klecFramesWithoutSync: return presentation(fmt, "klecFramesWithoutSync", "Frames without sync");
+        case klecMultiframeSignal:  return presentation(fmt, "klecMultiframeSignal",  "Multiframe Signal");
+        case klecFrameError:        return presentation(fmt, "klecFrameError",        "Frame error");
+        case klecBipolarViolation:  return presentation(fmt, "klecBipolarViolation",  "Bipolar violation");
+        case klecCRC4:              return presentation(fmt, "klecCRC4",              "CRC4 error");
+        case klecCount:             return ""; /* this should never be verbosed */
     }
 
-    return STG(FMT("[KLinkErrorCounter='%d']") % (int)ec);
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KLinkErrorCounter='%d']") % (int)ec),
+		STG(FMT("Unknown link error counter (%d)") % (int)ec));
 }
 
-std::string Verbose::callStatus(KCallStatus code)
+std::string Verbose::callStatus(KCallStatus code, Verbose::Presentation fmt)
 {
     switch (code)
     {
-        case kcsFree:       return S("kcsFree");
-        case kcsIncoming:   return S("kcsIncoming");
-        case kcsOutgoing:   return S("kcsOutgoing");
-        case kcsFail:       return S("kcsFail");
+        case kcsFree:       return presentation(fmt, "kcsFree",     "Free");
+        case kcsIncoming:   return presentation(fmt, "kcsIncoming", "Incoming");
+        case kcsOutgoing:   return presentation(fmt, "kcsOutgoing", "Outgoing");
+        case kcsFail:       return presentation(fmt, "kcsFail",     "Failure");
     }
 
-    return STG(FMT("[KCallStatus='%d']") % (int)code);
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KCallStatus='%d']") % (int)code),
+    	STG(FMT("Unknown call status (%d)") % (int)code));
 }
 
-std::string Verbose::linkStatus(KSignaling sig, int32 code)
+std::string Verbose::linkStatus(KSignaling sig, int32 code, Verbose::Presentation fmt)
 {
     switch (sig)
     {
         case ksigInactive:
-            return S("[ksigInactive]");
+            return presentation(fmt, "[ksigInactive]", "Inactive trunk");
 
         case ksigAnalog:
-            return S("[ksigAnalog]");
+            return presentation(fmt, "[ksigAnalog]", "Analog trunk");
 
 #if K3L_AT_LEAST(1,4,1)
         case ksigSIP:
-            return S("[ksigSIP]");
+            return presentation(fmt, "[ksigSIP]", "SIP trunk");
 #endif
+
+#if K3L_AT_LEAST(1,6,0)
+        case ksigGSM:
+            return presentation(fmt, "[ksigGSM]", "GSM trunk");
+#endif
+
+        case ksigContinuousEM:
+        case ksigPulsedEM:
 
         case ksigOpenCAS:
         case ksigOpenR2:
@@ -1106,41 +1199,51 @@ std::string Verbose::linkStatus(KSignaling sig, int32 code)
         case ksigLineSide:
 #endif
 #if K3L_AT_LEAST(1,6,0)
-        case ksigCAS_EL7:
         case ksigAnalogTerminal:
+        case ksigCAS_EL7:
+        case ksigE1LC:
 #endif
             if (kesOk == code)
             {
-                return S("kesOk");
+                return presentation(fmt, "kesOk", "Up");
             }
             else
             {
                 Strings::Merger strs;
                 
-                if (kesSignalLost & code)         strs.add("SignalLost");
-                if (kesNetworkAlarm & code)       strs.add("NetworkAlarm");
-                if (kesFrameSyncLost & code)      strs.add("FrameSyncLost");
-                if (kesMultiframeSyncLost & code) strs.add("MultiframeSyncLost");
-                if (kesRemoteAlarm & code)        strs.add("RemoteAlarm");
-                if (kesHighErrorRate & code)      strs.add("HighErrorRate");
-                if (kesUnknownAlarm & code)       strs.add("UnknownAlarm");
-                if (kesE1Error & code)            strs.add("E1Error");
+                if (kesSignalLost & code)         strs.add(presentation(fmt, "SignalLost",         "Signal lost"));
+                if (kesNetworkAlarm & code)       strs.add(presentation(fmt, "NetworkAlarm",       "Network alarm"));
+                if (kesFrameSyncLost & code)      strs.add(presentation(fmt, "FrameSyncLost",      "Frame sync lost"));
+                if (kesMultiframeSyncLost & code) strs.add(presentation(fmt, "MultiframeSyncLost", "Multiframe sync lost"));
+                if (kesRemoteAlarm & code)        strs.add(presentation(fmt, "RemoteAlarm",        "Remote alarm"));
+                if (kesHighErrorRate & code)      strs.add(presentation(fmt, "HighErrorRate",      "High error rate"));
+                if (kesUnknownAlarm & code)       strs.add(presentation(fmt, "UnknownAlarm",       "Unknown alarm"));
+                if (kesE1Error & code)            strs.add(presentation(fmt, "E1Error",            "E1 error"));
 
-                return STG(FMT("kes{%s}") % strs.merge(","));
+				PRESENTATION_CHECK_RETURN(fmt,
+					STG(FMT("kes{%s}") % strs.merge(",")),
+                	strs.merge(", "));
             }
-        default:
-            return STG(FMT("[%s, linkStatus='%d']") % signaling(sig) % (int)code);
     }
+
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[%s, linkStatus='%d']") % signaling(sig) % (int)code),
+		STG(FMT("Unknown link status for '%s' (%d)") % signaling(sig) % (int)code));
 }
 
-std::string Verbose::channelStatus(KSignaling sig, int32 flags)
+std::string Verbose::channelStatus(KSignaling sig, int32 flags, Verbose::Presentation fmt)
 {
     try
     {
         switch (sig)
         {
             case ksigInactive:
-                return S("[ksigInactive]");
+                return presentation(fmt, "[ksigInactive]", "Inactive channel");
+
+#if K3L_AT_LEAST(1,4,1)
+            case ksigSIP:
+                return presentation(fmt, "[ksigSIP]", "SIP channel");
+#endif
 
             case ksigAnalog:
 #if K3L_AT_LEAST(1,6,0)
@@ -1149,8 +1252,8 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags)
                 switch ((KFXChannelStatus)flags)
 #endif
                 {
-                    case kfcsDisabled:   return S("kfcsDisabled");
-                    case kfcsEnabled:    return S("kfcsEnabled");
+                    case kfcsDisabled:   return presentation(fmt, "kfcsDisabled", "Disabled");
+                    case kfcsEnabled:    return presentation(fmt, "kfcsEnabled",  "Enabled");
                 }
 
                 throw internal_not_found();
@@ -1159,10 +1262,10 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags)
             case ksigAnalogTerminal:
                 switch ((KFXSChannelStatus)flags)
                 {
-                    case kfxsOnHook:   return S("kfxsOnHook");
-                    case kfxsOffHook:  return S("kfxsOffHook");
-                    case kfxsRinging:  return S("kfxsRinging");
-                    case kfxsFail:     return S("kfxsFail");
+                    case kfxsOnHook:   return presentation(fmt, "kfxsOnHook",  "On Hook");
+                    case kfxsOffHook:  return presentation(fmt, "kfxsOffHook", "Off Hook");
+                    case kfxsRinging:  return presentation(fmt, "kfxsRinging", "Ringing");
+                    case kfxsFail:     return presentation(fmt, "kfxsFail",    "Failure");
                 }
                 
                 throw internal_not_found();
@@ -1170,22 +1273,18 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags)
             case ksigGSM:
                 switch ((KGsmChannelStatus)flags)
                 {
-                    case kgsmIdle:            return S("kgsmIdle");
-                    case kgsmCallInProgress:  return S("kgsmCallInProgress");
-                    case kgsmSMSInProgress:   return S("kgsmSMSInProgress");
-                    case kgsmModemError:      return S("kgsmModemError");
-                    case kgsmSIMCardError:    return S("kgsmSIMCardError");
-                    case kgsmNetworkError:    return S("kgsmNetworkError");
-                    case kgsmNotReady:        return S("kgsmNotReady");
+                    case kgsmIdle:            return presentation(fmt, "kgsmIdle",           "Idle");
+                    case kgsmCallInProgress:  return presentation(fmt, "kgsmCallInProgress", "Call in progress");
+                    case kgsmSMSInProgress:   return presentation(fmt, "kgsmSMSInProgress",  "SMS in progress");
+                    case kgsmModemError:      return presentation(fmt, "kgsmModemError",     "Modem error");
+                    case kgsmSIMCardError:    return presentation(fmt, "kgsmSIMCardError",   "SIM card error");
+                    case kgsmNetworkError:    return presentation(fmt, "kgsmNetworkError",   "Network error");
+                    case kgsmNotReady:        return presentation(fmt, "kgsmNotReady",       "Initializing");
                 }
 
                 throw internal_not_found();
 #endif
 
-#if K3L_AT_LEAST(1,4,1)
-            case ksigSIP:
-                return S("[ksigSIP]");
-#endif
             /* deprecated, but still.. */
             case ksigPulsedEM:
             case ksigContinuousEM:
@@ -1211,7 +1310,7 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags)
             {
                 if (flags == kecsFree)
                 {
-                    return S("kecsFree");
+                    return presentation(fmt, "kecsFree", "Free");
                 }
                 else
                 {
@@ -1237,18 +1336,20 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags)
                     int32 value = (flags & 0xf0);
 
                     if (kecsOutgoingLock & value)
-                        strs.add("OutgoingLock");
+                        strs.add(presentation(fmt, "OutgoingLock", "Outgoing Lock"));
 
                     if (kecsLocalFail & value)
-                        strs.add("LocalFail");
+                        strs.add(presentation(fmt, "LocalFail", "Local Failure"));
 
                     if (kecsIncomingLock & value)
-                        strs.add("IncomingLock");
+                        strs.add(presentation(fmt, "IncomingLock", "Incoming Lock"));
 
                     if (kecsRemoteLock & value)
-                        strs.add("RemoteLock");
+                        strs.add(presentation(fmt, "RemoteLock", "Remote Lock"));
 
-                    return STG(FMT("kecs{%s}") % strs.merge(","));
+					PRESENTATION_CHECK_RETURN(fmt,
+						STG(FMT("kecs{%s}") % strs.merge(",")),
+                    	strs.merge(", "));
                 }
                 
                 throw internal_not_found();
@@ -1259,273 +1360,285 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags)
     {
         /* we use this exception to break the control flow */
     }
-    
-    return STG(FMT("[%s, channelStatus='%d']") % signaling(sig) % flags);
+
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[%s, channelStatus='%d']") % signaling(sig) % flags),
+		STG(FMT("Unknown channel status for '%s' (%d)") % signaling(sig) % flags));
 }
 
-std::string Verbose::status(KLibraryStatus code)
+std::string Verbose::status(KLibraryStatus code, Verbose::Presentation fmt)
 {
     switch (code)
     {
-        case ksSuccess:        return S("ksSuccess");
-        case ksFail:           return S("ksFail");
-        case ksTimeOut:        return S("ksTimeOut");
-        case ksBusy:           return S("ksBusy");
-        case ksLocked:         return S("ksLocked");
-        case ksInvalidParams:  return S("ksInvalidParams");
-        case ksEndOfFile:      return S("ksEndOfFile");
-        case ksInvalidState:   return S("ksInvalidState");
-        case ksServerCommFail: return S("ksServerCommFail");
-        case ksOverflow:       return S("ksOverflow");
-        case ksUnderrun:       return S("ksUnderrun");
+        case ksSuccess:        return presentation(fmt, "ksSuccess",        "Success");
+        case ksFail:           return presentation(fmt, "ksFail",           "Failure");
+        case ksTimeOut:        return presentation(fmt, "ksTimeOut",        "Time Out");
+        case ksBusy:           return presentation(fmt, "ksBusy",           "Busy");
+        case ksLocked:         return presentation(fmt, "ksLocked",         "Locked");
+        case ksInvalidParams:  return presentation(fmt, "ksInvalidParams",  "Invalid Parameters");
+        case ksEndOfFile:      return presentation(fmt, "ksEndOfFile",      "End of File");
+        case ksInvalidState:   return presentation(fmt, "ksInvalidState",   "Invalid State");
+        case ksServerCommFail: return presentation(fmt, "ksServerCommFail", "Communication Failure");
+        case ksOverflow:       return presentation(fmt, "ksOverflow",       "Overflow");
+        case ksUnderrun:       return presentation(fmt, "ksUnderrun",       "Underrun");
 
 #if K3L_AT_LEAST(1,4,0)
-        case ksNotFound:       return S("ksNotFound");
-        case ksNotAvailable:   return S("ksNotAvaiable");
+        case ksNotFound:       return presentation(fmt, "ksNotFound",       "Not Found");
+        case ksNotAvailable:   return presentation(fmt, "ksNotAvaiable",    "Not Available");
 #endif
     }
 
-    return STG(FMT("[KLibraryStatus='%d']") % (int)code);
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KLibraryStatus='%d']") % (int)code),
+		STG(FMT("Unknown library status (%d)") % (int)code));
 }
 
-std::string Verbose::h100configIndex(KH100ConfigIndex code)
+std::string Verbose::h100configIndex(KH100ConfigIndex code, Verbose::Presentation fmt)
 {
     switch (code)
     {
-        case khciDeviceMode:         return S("khciDeviceMode");
-        case khciMasterGenClock:     return S("khciMasterGenClock");
-        case khciCTNetRefEnable:     return S("khciCTNetRefEnable");
-        case khciSCbusEnable:        return S("khciSCbusEnable");
-        case khciHMVipEnable:        return S("khciHMVipEnable");
-        case khciMVip90Enable:       return S("khciMVip90Enable");
-        case khciCTbusDataEnable:    return S("khciCTbusDataEnable");
-        case khciCTbusFreq03_00:     return S("khciCTbusFreq03_00");
-        case khciCTbusFreq07_04:     return S("khciCTbusFreq07_04");
-        case khciCTbusFreq11_08:     return S("khciCTbusFreq11_08");
-        case khciCTbusFreq15_12:     return S("khciCTbusFreq15_12");
-        case khciMax:                return S("khciMax");
-        case khciMasterDevId:        return S("khciMasterDevId");
-        case khciSecMasterDevId:     return S("khciSecMasterDevId");
-        case khciCtNetrefDevId:      return S("khciCtNetrefDevId");
+        case khciDeviceMode:         return presentation(fmt, "khciDeviceMode",      "Device Mode");
+        case khciMasterGenClock:     return presentation(fmt, "khciMasterGenClock",  "Master Generated Clock");
+        case khciCTNetRefEnable:     return presentation(fmt, "khciCTNetRefEnable",  "CTBus Network Reference Enable");
+        case khciSCbusEnable:        return presentation(fmt, "khciSCbusEnable",     "SCBus Enable");
+        case khciHMVipEnable:        return presentation(fmt, "khciHMVipEnable",     "HMVip Enable");
+        case khciMVip90Enable:       return presentation(fmt, "khciMVip90Enable",    "MVip90 Enable");
+        case khciCTbusDataEnable:    return presentation(fmt, "khciCTbusDataEnable", "CTBus Data Enable");
+        case khciCTbusFreq03_00:     return presentation(fmt, "khciCTbusFreq03_00",  "CTBus Frequency 03 00"); // TODO: find better name
+        case khciCTbusFreq07_04:     return presentation(fmt, "khciCTbusFreq07_04",  "CTBus Frequency 07 04"); // TODO: find better name
+        case khciCTbusFreq11_08:     return presentation(fmt, "khciCTbusFreq11_08",  "CTBus Frequency 11 08"); // TODO: find better name
+        case khciCTbusFreq15_12:     return presentation(fmt, "khciCTbusFreq15_12",  "CTBus Frequency 15 12"); // TODO: find better name
+        case khciMax:                return presentation(fmt, "khciMax",             "Max"); // TODO: find better name
+        case khciMasterDevId:        return presentation(fmt, "khciMasterDevId",     "Master Device Number");
+        case khciSecMasterDevId:     return presentation(fmt, "khciSecMasterDevId",  "Secondary Master Device Number");
+        case khciCtNetrefDevId:      return presentation(fmt, "khciCtNetrefDevId",   "CTBus Network Reference Device Number");
 #if K3L_AT_LEAST(1,6,0)
-        case khciMaxH100ConfigIndex: return S("khciMaxH100ConfigIndex");
+        case khciMaxH100ConfigIndex: return ""; /* do not verbose this value */
 #endif
     }
 
-    return STG(FMT("[KH100ConfigIndex='%d']") % (int)code);
+	PRESENTATION_CHECK_RETURN(fmt,
+	    STG(FMT("[KH100ConfigIndex='%d']") % (int)code),
+    	STG(FMT("Unknown H.100 config index (%d)") % (int)code));
 }
 
 #if K3L_AT_LEAST(1,6,0)
-std::string Verbose::callStartInfo(KCallStartInfo code)
+std::string Verbose::callStartInfo(KCallStartInfo code, Verbose::Presentation fmt)
 {
     switch (code)
     {
-        case kcsiHumanAnswer:         return S("kcsiHumanAnswer");
-        case kcsiAnsweringMachine:    return S("kcsiAnsweringMachine");
-        case kcsiCellPhoneMessageBox: return S("kcsiCellPhoneMessageBox");
-        case kcsiUnknown:             return S("kcsiUnknown");
-        case kcsiCarrierMessage:      return S("kcsiCarrierMessage");
+        case kcsiHumanAnswer:         return presentation(fmt, "kcsiHumanAnswer",         "Human Answer");
+        case kcsiAnsweringMachine:    return presentation(fmt, "kcsiAnsweringMachine",    "Answering Machine");
+        case kcsiCellPhoneMessageBox: return presentation(fmt, "kcsiCellPhoneMessageBox", "Cell Phone Message Box");
+        case kcsiCarrierMessage:      return presentation(fmt, "kcsiCarrierMessage",      "Carrier Message");
+        case kcsiUnknown:             return presentation(fmt, "kcsiUnknown",             "Unknown");
     }
     
-    return STG(FMT("[KCallStartInfo='%d']") % (int)code);
+	PRESENTATION_CHECK_RETURN(fmt,
+		STG(FMT("[KCallStartInfo='%d']") % (int)code),
+		STG(FMT("Unknown call answer info (%d)") % (int)code));
 }
 
-std::string Verbose::gsmCallCause(KGsmCallCause code)
+std::string Verbose::gsmCallCause(KGsmCallCause code, Verbose::Presentation fmt)
 {
     try
     {
-        return internal_gsmCallCause(code);
+        return internal_gsmCallCause(code, fmt);
     }
     catch (internal_not_found e)
     {
-        return STG(FMT("[KGsmCallCause='%d']") % (int)code);
+		PRESENTATION_CHECK_RETURN(fmt,
+			STG(FMT("[KGsmCallCause='%d']") % (int)code),
+			STG(FMT("Unknown GSM call cause (%d)") % (int)code));
     }
 }
 
-std::string Verbose::internal_gsmCallCause(KGsmCallCause code)
+std::string Verbose::internal_gsmCallCause(KGsmCallCause code, Verbose::Presentation fmt)
 {
     switch (code)
     {
-        case kgccNone:                               return S("kgccNone");
-        case kgccUnallocatedNumber:                  return S("kgccUnallocatedNumber");
-        case kgccNoRouteToDest:                      return S("kgccNoRouteToDest");
-        case kgccChannelUnacceptable:                return S("kgccChannelUnacceptable");
-        case kgccOperatorDeterminedBarring:          return S("kgccOperatorDeterminedBarring");
-        case kgccNormalCallClear:                    return S("kgccNormalCallClear");
-        case kgccUserBusy:                           return S("kgccUserBusy");
-        case kgccNoUserResponding:                   return S("kgccNoUserResponding");
-        case kgccNoAnswerFromUser:                   return S("kgccNoAnswerFromUser");
-        case kgccCallRejected:                       return S("kgccCallRejected");
-        case kgccNumberChanged:                      return S("kgccNumberChanged");
-        case kgccNonSelectedUserClear:               return S("kgccNonSelectedUserClear");
-        case kgccDestinationOutOfOrder:              return S("kgccDestinationOutOfOrder");
-        case kgccInvalidNumberFormat:                return S("kgccInvalidNumberFormat");
-        case kgccFacilityRejected:                   return S("kgccFacilityRejected");
-        case kgccRespStatusEnquiry:                  return S("kgccRespStatusEnquiry");
-        case kgccNormalUnspecified:                  return S("kgccNormalUnspecified");
-        case kgccNoCircuitChannelAvail:              return S("kgccNoCircuitChannelAvail");
-        case kgccNetworkOutOfOrder:                  return S("kgccNetworkOutOfOrder");
-        case kgccTemporaryFailure:                   return S("kgccTemporaryFailure");
-        case kgccSwitchCongestion:                   return S("kgccSwitchCongestion");
-        case kgccAccessInfoDiscarded:                return S("kgccAccessInfoDiscarded");
-        case kgccRequestedChannelUnav:               return S("kgccRequestedChannelUnav");
-        case kgccResourceUnavailable:                return S("kgccResourceUnavailable");
-        case kgccQosUnavailable:                     return S("kgccQosUnavailable");
-        case kgccReqFacilityNotSubsc:                return S("kgccReqFacilityNotSubsc");
-        case kgccCallBarredWitchCUG:                 return S("kgccCallBarredWitchCUG");
-        case kgccBearerCapabNotAuthor:               return S("kgccBearerCapabNotAuthor");
-        case kgccBearerCapabNotAvail:                return S("kgccBearerCapabNotAvail");
-        case kgccServiceNotAvailable:                return S("kgccServiceNotAvailable");
-        case kgccBcNotImplemented:                   return S("kgccBcNotImplemented");
-        case kgccReqFacilityNotImplem:               return S("kgccReqFacilityNotImplem");
-        case kgccOnlyRestrictedBcAvail:              return S("kgccOnlyRestrictedBcAvail");
-        case kgccServiceNotImplemented:              return S("kgccServiceNotImplemented");
-        case kgccInvalidCrv:                         return S("kgccInvalidCrv");
-        case kgccUserNotMemberOfCUG:                 return S("kgccUserNotMemberOfCUG");
-        case kgccIncompatibleDestination:            return S("kgccIncompatibleDestination");
-        case kgccInvalidTransitNetSel:               return S("kgccInvalidTransitNetSel");
-        case kgccInvalidMessage:                     return S("kgccInvalidMessage");
-        case kgccMissingMandatoryIe:                 return S("kgccMissingMandatoryIe");
-        case kgccMsgTypeNotImplemented:              return S("kgccMsgTypeNotImplemented");
-        case kgccMsgIncompatWithState:               return S("kgccMsgIncompatWithState");
-        case kgccIeNotImplemented:                   return S("kgccIeNotImplemented");
-        case kgccInvalidIe:                          return S("kgccInvalidIe");
-        case kgccMsgIncompatWithState2:              return S("kgccMsgIncompatWithState2");
-        case kgccRecoveryOnTimerExpiry:              return S("kgccRecoveryOnTimerExpiry");
-        case kgccProtocolError:                      return S("kgccProtocolError");
-        case kgccInterworking:                       return S("kgccInterworking");
+        case kgccNone:                               return presentation(fmt, "kgccNone",                      "None");
+        case kgccUnallocatedNumber:                  return presentation(fmt, "kgccUnallocatedNumber",         "Unallocated number");
+        case kgccNoRouteToDest:                      return presentation(fmt, "kgccNoRouteToDest",             "No route to destination");
+        case kgccChannelUnacceptable:                return presentation(fmt, "kgccChannelUnacceptable",       "Channel unacceptable");
+        case kgccOperatorDeterminedBarring:          return presentation(fmt, "kgccOperatorDeterminedBarring", "Operator determined barring");
+        case kgccNormalCallClear:                    return presentation(fmt, "kgccNormalCallClear",           "Normal call clear");
+        case kgccUserBusy:                           return presentation(fmt, "kgccUserBusy",                  "User busy");
+        case kgccNoUserResponding:                   return presentation(fmt, "kgccNoUserResponding",          "No user responding");
+        case kgccNoAnswerFromUser:                   return presentation(fmt, "kgccNoAnswerFromUser",          "No answer from user");
+        case kgccCallRejected:                       return presentation(fmt, "kgccCallRejected",              "Call rejected");
+        case kgccNumberChanged:                      return presentation(fmt, "kgccNumberChanged",             "Number changed");
+        case kgccNonSelectedUserClear:               return presentation(fmt, "kgccNonSelectedUserClear",      "Non Selected user clear");
+        case kgccDestinationOutOfOrder:              return presentation(fmt, "kgccDestinationOutOfOrder",     "Destination out of order");
+        case kgccInvalidNumberFormat:                return presentation(fmt, "kgccInvalidNumberFormat",       "Invalid number format");
+        case kgccFacilityRejected:                   return presentation(fmt, "kgccFacilityRejected",          "Facility rejected");
+        case kgccRespStatusEnquiry:                  return presentation(fmt, "kgccRespStatusEnquiry",         "Response status enquiry");
+        case kgccNormalUnspecified:                  return presentation(fmt, "kgccNormalUnspecified",         "Normal, unspecified");
+        case kgccNoCircuitChannelAvail:              return presentation(fmt, "kgccNoCircuitChannelAvail",     "No circuit channel available");
+        case kgccNetworkOutOfOrder:                  return presentation(fmt, "kgccNetworkOutOfOrder",         "Network out of order");
+        case kgccTemporaryFailure:                   return presentation(fmt, "kgccTemporaryFailure",          "Temporary failure");
+        case kgccSwitchCongestion:                   return presentation(fmt, "kgccSwitchCongestion",          "Switch congestion");
+        case kgccAccessInfoDiscarded:                return presentation(fmt, "kgccAccessInfoDiscarded",       "Access information discarded");
+        case kgccRequestedChannelUnav:               return presentation(fmt, "kgccRequestedChannelUnav",      "Requested channel unavailable");
+        case kgccResourceUnavailable:                return presentation(fmt, "kgccResourceUnavailable",       "Resource unavailable");
+        case kgccQosUnavailable:                     return presentation(fmt, "kgccQosUnavailable",            "QoS unavailable");
+        case kgccReqFacilityNotSubsc:                return presentation(fmt, "kgccReqFacilityNotSubsc",       "Request facility not subscribed");
+        case kgccCallBarredWitchCUG:                 return presentation(fmt, "kgccCallBarredWitchCUG",        "Call barred with UG");
+        case kgccBearerCapabNotAuthor:               return presentation(fmt, "kgccBearerCapabNotAuthor",      "Bearer capability not authorized");
+        case kgccBearerCapabNotAvail:                return presentation(fmt, "kgccBearerCapabNotAvail",       "Bearer capability not available");
+        case kgccServiceNotAvailable:                return presentation(fmt, "kgccServiceNotAvailable",       "Service not available");
+        case kgccBcNotImplemented:                   return presentation(fmt, "kgccBcNotImplemented",          "Bearer capability not implemented");
+        case kgccReqFacilityNotImplem:               return presentation(fmt, "kgccReqFacilityNotImplem",      "Request facility not implemented");
+        case kgccOnlyRestrictedBcAvail:              return presentation(fmt, "kgccOnlyRestrictedBcAvail",     "Only restricted bearer capability available");
+        case kgccServiceNotImplemented:              return presentation(fmt, "kgccServiceNotImplemented",     "Service not implemented");
+        case kgccInvalidCrv:                         return presentation(fmt, "kgccInvalidCrv",                "Invalid call reference value");
+        case kgccUserNotMemberOfCUG:                 return presentation(fmt, "kgccUserNotMemberOfCUG",        "User not member of UG");
+        case kgccIncompatibleDestination:            return presentation(fmt, "kgccIncompatibleDestination",   "Incompatible destination");
+        case kgccInvalidTransitNetSel:               return presentation(fmt, "kgccInvalidTransitNetSel",      "Invalid transit network selected");
+        case kgccInvalidMessage:                     return presentation(fmt, "kgccInvalidMessage",            "Invalid message");
+        case kgccMissingMandatoryIe:                 return presentation(fmt, "kgccMissingMandatoryIe",        "Missing mandatory information element");
+        case kgccMsgTypeNotImplemented:              return presentation(fmt, "kgccMsgTypeNotImplemented",     "Message type not implemented");
+        case kgccMsgIncompatWithState:               return presentation(fmt, "kgccMsgIncompatWithState",      "Message incompatible with state");
+        case kgccIeNotImplemented:                   return presentation(fmt, "kgccIeNotImplemented",          "Information element not implemented");
+        case kgccInvalidIe:                          return presentation(fmt, "kgccInvalidIe",                 "Invalid information element");
+        case kgccMsgIncompatWithState2:              return presentation(fmt, "kgccMsgIncompatWithState2",     "Message incompatible with state (2)");
+        case kgccRecoveryOnTimerExpiry:              return presentation(fmt, "kgccRecoveryOnTimerExpiry",     "Recovery on timer expiry");
+        case kgccProtocolError:                      return presentation(fmt, "kgccProtocolError",             "Protocol error");
+        case kgccInterworking:                       return presentation(fmt, "kgccInterworking",              "Interworking");
 #if 0 /* this changed during K3L 1.6.0 development cycle... */
-        case kgccPhoneFailure:                       return S("kgccPhoneFailure");
-        case kgccSmsServiceReserved:                 return S("kgccSmsServiceReserved");
-        case kgccOperationNotAllowed:                return S("kgccOperationNotAllowed");
-        case kgccOperationNotSupported:              return S("kgccOperationNotSupported");
-        case kgccInvalidPDUModeParameter:            return S("kgccInvalidPDUModeParameter");
-        case kgccInvalidTextModeParameter:           return S("kgccInvalidTextModeParameter");
-        case kgccSIMNotInserted:                     return S("kgccSIMNotInserted");
-        case kgccSIMPINNecessary:                    return S("kgccSIMPINNecessary");
-        case kgccPH_SIMPINNecessary:                 return S("kgccPH_SIMPINNecessary");
-        case kgccSIMFailure:                         return S("kgccSIMFailure");
-        case kgccSIMBusy:                            return S("kgccSIMBusy");
-        case kgccSIMWrong:                           return S("kgccSIMWrong");
-        case kgccMemoryFailure:                      return S("kgccMemoryFailure");
-        case kgccInvalidMemoryIndex:                 return S("kgccInvalidMemoryIndex");
-        case kgccMemoryFull:                         return S("kgccMemoryFull");
-        case kgccSMSCAddressUnknown:                 return S("kgccSMSCAddressUnknown");
-        case kgccNoNetworkService:                   return S("kgccNoNetworkService");
-        case kgccNetworkTimeout:                     return S("kgccNetworkTimeout");
-        case kgccUnknownError:                       return S("kgccUnknownError");
+        case kgccPhoneFailure:                       return presentation(fmt, "kgccPhoneFailure",              "");
+        case kgccSmsServiceReserved:                 return presentation(fmt, "kgccSmsServiceReserved",        "");
+        case kgccOperationNotAllowed:                return presentation(fmt, "kgccOperationNotAllowed",       "");
+        case kgccOperationNotSupported:              return presentation(fmt, "kgccOperationNotSupported",     "");
+        case kgccInvalidPDUModeParameter:            return presentation(fmt, "kgccInvalidPDUModeParameter",   "");
+        case kgccInvalidTextModeParameter:           return presentation(fmt, "kgccInvalidTextModeParameter",  "");
+        case kgccSIMNotInserted:                     return presentation(fmt, "kgccSIMNotInserted",            "");
+        case kgccSIMPINNecessary:                    return presentation(fmt, "kgccSIMPINNecessary",           "");
+        case kgccPH_SIMPINNecessary:                 return presentation(fmt, "kgccPH_SIMPINNecessary",        "");
+        case kgccSIMFailure:                         return presentation(fmt, "kgccSIMFailure",                "");
+        case kgccSIMBusy:                            return presentation(fmt, "kgccSIMBusy",                   "");
+        case kgccSIMWrong:                           return presentation(fmt, "kgccSIMWrong",                  "");
+        case kgccMemoryFailure:                      return presentation(fmt, "kgccMemoryFailure",             "");
+        case kgccInvalidMemoryIndex:                 return presentation(fmt, "kgccInvalidMemoryIndex",        "");
+        case kgccMemoryFull:                         return presentation(fmt, "kgccMemoryFull",                "");
+        case kgccSMSCAddressUnknown:                 return presentation(fmt, "kgccSMSCAddressUnknown",        "");
+        case kgccNoNetworkService:                   return presentation(fmt, "kgccNoNetworkService",          "");
+        case kgccNetworkTimeout:                     return presentation(fmt, "kgccNetworkTimeout",            "");
+        case kgccUnknownError:                       return presentation(fmt, "kgccUnknownError",              "");
 #endif
     }
 
     throw internal_not_found();
 }
 
-std::string Verbose::gsmMobileCause(KGsmMobileCause code)
+std::string Verbose::gsmMobileCause(KGsmMobileCause code, Verbose::Presentation fmt)
 {
     try
     {
-        return internal_gsmMobileCause(code);
+        return internal_gsmMobileCause(code, fmt);
     }
     catch (internal_not_found e)
     {
-        return STG(FMT("[KGsmMobileCause='%d']") % (int)code);
+		PRESENTATION_CHECK_RETURN(fmt,
+			STG(FMT("[KGsmMobileCause='%d']") % (int)code),
+			STG(FMT("Unknown GSM mobile caus (%d)") % (int)code));
     }
 }
 
-std::string Verbose::internal_gsmMobileCause(KGsmMobileCause code)
+std::string Verbose::internal_gsmMobileCause(KGsmMobileCause code, Verbose::Presentation fmt)
 {
     switch (code)
     {
-        case kgmcPhoneFailure:                    return S("kgmcPhoneFailure");
-        case kgmcNoConnectionToPhone:             return S("kgmcNoConnectionToPhone");
-        case kgmcPhoneAdaptorLinkReserved:        return S("kgmcPhoneAdaptorLinkReserved");
+        case kgmcPhoneFailure:                    return presentation(fmt, "kgmcPhoneFailure",               "Phone failure");
+        case kgmcNoConnectionToPhone:             return presentation(fmt, "kgmcNoConnectionToPhone",        "No connection to phone");
+        case kgmcPhoneAdaptorLinkReserved:        return presentation(fmt, "kgmcPhoneAdaptorLinkReserved",   "Phone adaptor link reserved");
 #if 0 /* this changed during K3L 1.6.0 development cycle... */
-        case kgmcCoperationNotAllowed:            return S("kgmcCoperationNotAllowed");
-        case kgmcCoperationNotSupported:          return S("kgmcCoperationNotSupported");
+        case kgmcCoperationNotAllowed:            return presentation(fmt, "kgmcCoperationNotAllowed",       "");
+        case kgmcCoperationNotSupported:          return presentation(fmt, "kgmcCoperationNotSupported",     "");
 #else
-        case kgmcOperationNotAllowed:             return S("kgmcOperationNotAllowed");
-        case kgmcOperationNotSupported:           return S("kgmcOperationNotSupported");
+        case kgmcOperationNotAllowed:             return presentation(fmt, "kgmcOperationNotAllowed",        "Operation not allowed");
+        case kgmcOperationNotSupported:           return presentation(fmt, "kgmcOperationNotSupported",      "Operation not supported");
 #endif
-        case kgmcPH_SIMPINRequired:               return S("kgmcPH_SIMPINRequired");
-        case kgmcPH_FSIMPINRequired:              return S("kgmcPH_FSIMPINRequired");
-        case kgmcPH_FSIMPUKRequired:              return S("kgmcPH_FSIMPUKRequired");
-        case kgmcSIMNotInserted:                  return S("kgmcSIMNotInserted");
-        case kgmcSIMPINRequired:                  return S("kgmcSIMPINRequired");
-        case kgmcSIMPUKRequired:                  return S("kgmcSIMPUKRequired");
-        case kgmcSIMFailure:                      return S("kgmcSIMFailure");
-        case kgmcSIMBusy:                         return S("kgmcSIMBusy");
-        case kgmcSIMWrong:                        return S("kgmcSIMWrong");
-        case kgmcIncorrectPassword:               return S("kgmcIncorrectPassword");
-        case kgmcSIMPIN2Required:                 return S("kgmcSIMPIN2Required");
-        case kgmcSIMPUK2Required:                 return S("kgmcSIMPUK2Required");
-        case kgmcMemoryFull:                      return S("kgmcMemoryFull");
-        case kgmcInvalidIndex:                    return S("kgmcInvalidIndex");
-        case kgmcNotFound:                        return S("kgmcNotFound");
-        case kgmcMemoryFailure:                   return S("kgmcMemoryFailure");
-        case kgmcTextStringTooLong:               return S("kgmcTextStringTooLong");
-        case kgmcInvalidCharInTextString:         return S("kgmcInvalidCharInTextString");
-        case kgmcDialStringTooLong:               return S("kgmcDialStringTooLong");
-        case kgmcInvalidCharInDialString:         return S("kgmcInvalidCharInDialString");
-        case kgmcNoNetworkService:                return S("kgmcNoNetworkService");
-        case kgmcNetworkTimeout:                  return S("kgmcNetworkTimeout");
-        case kgmcNetworkNotAllowed:               return S("kgmcNetworkNotAllowed");
-        case kgmcCommandAborted:                  return S("kgmcCommandAborted");
-        case kgmcNumParamInsteadTextParam:        return S("kgmcNumParamInsteadTextParam");
-        case kgmcTextParamInsteadNumParam:        return S("kgmcTextParamInsteadNumParam");
-        case kgmcNumericParamOutOfBounds:         return S("kgmcNumericParamOutOfBounds");
-        case kgmcTextStringTooShort:              return S("kgmcTextStringTooShort");
-        case kgmcNetworkPINRequired:              return S("kgmcNetworkPINRequired");
-        case kgmcNetworkPUKRequired:              return S("kgmcNetworkPUKRequired");
-        case kgmcNetworkSubsetPINRequired:        return S("kgmcNetworkSubsetPINRequired");
-        case kgmcNetworkSubnetPUKRequired:        return S("kgmcNetworkSubnetPUKRequired");
-        case kgmcServiceProviderPINRequired:      return S("kgmcServiceProviderPINRequired");
-        case kgmcServiceProviderPUKRequired:      return S("kgmcServiceProviderPUKRequired");
-        case kgmcCorporatePINRequired:            return S("kgmcCorporatePINRequired");
-        case kgmcCorporatePUKRequired:            return S("kgmcCorporatePUKRequired");
-        case kgmcSIMServiceOptNotSupported:       return S("kgmcSIMServiceOptNotSupported");
-        case kgmcUnknown:                         return S("kgmcUnknown");
-        case kgmcIllegalMS_N3:                    return S("kgmcIllegalMS_N3");
-        case kgmcIllegalME_N6:                    return S("kgmcIllegalME_N6");
-        case kgmcGPRSServicesNotAllowed_N7:       return S("kgmcGPRSServicesNotAllowed_N7");
-        case kgmcPLMNNotAllowed_No11:             return S("kgmcPLMNNotAllowed_No11");
-        case kgmcLocationAreaNotAllowed_N12:      return S("kgmcLocationAreaNotAllowed_N12");
-        case kgmcRoamingNotAllowed_N13:           return S("kgmcRoamingNotAllowed_N13");
-        case kgmcServiceOptNotSupported_N32:      return S("kgmcServiceOptNotSupported_N32");
-        case kgmcReqServOptNotSubscribed_N33:     return S("kgmcReqServOptNotSubscribed_N33");
-        case kgmcServOptTempOutOfOrder_N34:       return S("kgmcServOptTempOutOfOrder_N34");
-        case kgmcLongContextActivation:           return S("kgmcLongContextActivation");
-        case kgmcUnspecifiedGPRSError:            return S("kgmcUnspecifiedGPRSError");
-        case kgmcPDPAuthenticationFailure:        return S("kgmcPDPAuthenticationFailure");
-        case kgmcInvalidMobileClass:              return S("kgmcInvalidMobileClass");
-        case kgmcGPRSDisconnectionTmrActive:      return S("kgmcGPRSDisconnectionTmrActive");
-        case kgmcTooManyActiveCalls:              return S("kgmcTooManyActiveCalls");
-        case kgmcCallRejected:                    return S("kgmcCallRejected");
-        case kgmcUnansweredCallPending:           return S("kgmcUnansweredCallPending");
-        case kgmcUnknownCallingError:             return S("kgmcUnknownCallingError");
-        case kgmcNoPhoneNumRecognized:            return S("kgmcNoPhoneNumRecognized");
-        case kgmcCallStateNotIdle:                return S("kgmcCallStateNotIdle");
-        case kgmcCallInProgress:                  return S("kgmcCallInProgress");
-        case kgmcDialStateError:                  return S("kgmcDialStateError");
-        case kgmcUnlockCodeRequired:              return S("kgmcUnlockCodeRequired");
-        case kgmcNetworkBusy:                     return S("kgmcNetworkBusy");
-        case kgmcInvalidPhoneNumber:              return S("kgmcInvalidPhoneNumber");
-        case kgmcNumberEntryAlreadyStarted:       return S("kgmcNumberEntryAlreadyStarted");
-        case kgmcCancelledByUser:                 return S("kgmcCancelledByUser");
-        case kgmcNumEntryCouldNotBeStarted:       return S("kgmcNumEntryCouldNotBeStarted");
-        case kgmcDataLost:                        return S("kgmcDataLost");
-        case kgmcInvalidBessageBodyLength:        return S("kgmcInvalidBessageBodyLength");
-        case kgmcInactiveSocket:                  return S("kgmcInactiveSocket");
-        case kgmcSocketAlreadyOpen:               return S("kgmcSocketAlreadyOpen");
+        case kgmcPH_SIMPINRequired:               return presentation(fmt, "kgmcPH_SIMPINRequired",          "Phone SIM PIN required");
+        case kgmcPH_FSIMPINRequired:              return presentation(fmt, "kgmcPH_FSIMPINRequired",         "Phone FSIM PIN required");
+        case kgmcPH_FSIMPUKRequired:              return presentation(fmt, "kgmcPH_FSIMPUKRequired",         "Phone FSIM PUK required");
+        case kgmcSIMNotInserted:                  return presentation(fmt, "kgmcSIMNotInserted",             "SIM not inserted");
+        case kgmcSIMPINRequired:                  return presentation(fmt, "kgmcSIMPINRequired",             "SIM PIN required");
+        case kgmcSIMPUKRequired:                  return presentation(fmt, "kgmcSIMPUKRequired",             "SIM PUK required");
+        case kgmcSIMFailure:                      return presentation(fmt, "kgmcSIMFailure",                 "SIM failure");
+        case kgmcSIMBusy:                         return presentation(fmt, "kgmcSIMBusy",                    "SIM busy");
+        case kgmcSIMWrong:                        return presentation(fmt, "kgmcSIMWrong",                   "SIM wrong");
+        case kgmcIncorrectPassword:               return presentation(fmt, "kgmcIncorrectPassword",          "Incorrect password");
+        case kgmcSIMPIN2Required:                 return presentation(fmt, "kgmcSIMPIN2Required",            "SIM PIN2 required");
+        case kgmcSIMPUK2Required:                 return presentation(fmt, "kgmcSIMPUK2Required",            "SIM PUK2 required");
+        case kgmcMemoryFull:                      return presentation(fmt, "kgmcMemoryFull",                 "Memory full");
+        case kgmcInvalidIndex:                    return presentation(fmt, "kgmcInvalidIndex",               "Invalid index");
+        case kgmcNotFound:                        return presentation(fmt, "kgmcNotFound",                   "Not found");
+        case kgmcMemoryFailure:                   return presentation(fmt, "kgmcMemoryFailure",              "Memory failure");
+        case kgmcTextStringTooLong:               return presentation(fmt, "kgmcTextStringTooLong",          "Text string too long");
+        case kgmcInvalidCharInTextString:         return presentation(fmt, "kgmcInvalidCharInTextString",    "Invalid character in text string");
+        case kgmcDialStringTooLong:               return presentation(fmt, "kgmcDialStringTooLong",          "Dial string too long");
+        case kgmcInvalidCharInDialString:         return presentation(fmt, "kgmcInvalidCharInDialString",    "Invalid character in dial string");
+        case kgmcNoNetworkService:                return presentation(fmt, "kgmcNoNetworkService",           "No network service");
+        case kgmcNetworkTimeout:                  return presentation(fmt, "kgmcNetworkTimeout",             "Network timeout");
+        case kgmcNetworkNotAllowed:               return presentation(fmt, "kgmcNetworkNotAllowed",          "Network not allowed");
+        case kgmcCommandAborted:                  return presentation(fmt, "kgmcCommandAborted",             "Command aborted");
+        case kgmcNumParamInsteadTextParam:        return presentation(fmt, "kgmcNumParamInsteadTextParam",   "Number parameter instead of text parameter");
+        case kgmcTextParamInsteadNumParam:        return presentation(fmt, "kgmcTextParamInsteadNumParam",   "Text parameter instead of number parameter");
+        case kgmcNumericParamOutOfBounds:         return presentation(fmt, "kgmcNumericParamOutOfBounds",    "Numeric parameter out of bounds");
+        case kgmcTextStringTooShort:              return presentation(fmt, "kgmcTextStringTooShort",         "Text string too short");
+        case kgmcNetworkPINRequired:              return presentation(fmt, "kgmcNetworkPINRequired",         "Network PIN required");
+        case kgmcNetworkPUKRequired:              return presentation(fmt, "kgmcNetworkPUKRequired",         "Network PUK required");
+        case kgmcNetworkSubsetPINRequired:        return presentation(fmt, "kgmcNetworkSubsetPINRequired",   "Network subset PIN required");
+        case kgmcNetworkSubnetPUKRequired:        return presentation(fmt, "kgmcNetworkSubnetPUKRequired",   "Network subset PUK required");
+        case kgmcServiceProviderPINRequired:      return presentation(fmt, "kgmcServiceProviderPINRequired", "Network service provider PIN required");
+        case kgmcServiceProviderPUKRequired:      return presentation(fmt, "kgmcServiceProviderPUKRequired", "Network service provider PUK required");
+        case kgmcCorporatePINRequired:            return presentation(fmt, "kgmcCorporatePINRequired",       "Corporate PIN required");
+        case kgmcCorporatePUKRequired:            return presentation(fmt, "kgmcCorporatePUKRequired",       "Corporate PUK required");
+        case kgmcSIMServiceOptNotSupported:       return presentation(fmt, "kgmcSIMServiceOptNotSupported",  "SIM Service option not supported");
+        case kgmcUnknown:                         return presentation(fmt, "kgmcUnknown",                    "Unknown");
+        case kgmcIllegalMS_N3:                    return presentation(fmt, "kgmcIllegalMS_N3",               "Illegal MS #3");
+        case kgmcIllegalME_N6:                    return presentation(fmt, "kgmcIllegalME_N6",               "Illegal MS #6");
+        case kgmcGPRSServicesNotAllowed_N7:       return presentation(fmt, "kgmcGPRSServicesNotAllowed_N7",  "GPRS service not allowed #7");
+        case kgmcPLMNNotAllowed_No11:             return presentation(fmt, "kgmcPLMNNotAllowed_No11",        "PLMN not allowed #11");
+        case kgmcLocationAreaNotAllowed_N12:      return presentation(fmt, "kgmcLocationAreaNotAllowed_N12", "Location area not allowed #12");
+        case kgmcRoamingNotAllowed_N13:           return presentation(fmt, "kgmcRoamingNotAllowed_N13",      "Roaming not allowed #13");
+        case kgmcServiceOptNotSupported_N32:      return presentation(fmt, "kgmcServiceOptNotSupported_N32", "Service option not supported #32");
+        case kgmcReqServOptNotSubscribed_N33:     return presentation(fmt, "kgmcReqServOptNotSubscribed_N33", "Registration service option not subscribed #33");
+        case kgmcServOptTempOutOfOrder_N34:       return presentation(fmt, "kgmcServOptTempOutOfOrder_N34",   "Service option temporary out of order #34");
+        case kgmcLongContextActivation:           return presentation(fmt, "kgmcLongContextActivation",       "Long context activation");
+        case kgmcUnspecifiedGPRSError:            return presentation(fmt, "kgmcUnspecifiedGPRSError",        "Unspecified GPRS error");
+        case kgmcPDPAuthenticationFailure:        return presentation(fmt, "kgmcPDPAuthenticationFailure",    "PDP authentication failure");
+        case kgmcInvalidMobileClass:              return presentation(fmt, "kgmcInvalidMobileClass",          "Invalid mobile class");
+        case kgmcGPRSDisconnectionTmrActive:      return presentation(fmt, "kgmcGPRSDisconnectionTmrActive",  "GPRS disconnection TMR active");
+        case kgmcTooManyActiveCalls:              return presentation(fmt, "kgmcTooManyActiveCalls",          "Too many active calls");
+        case kgmcCallRejected:                    return presentation(fmt, "kgmcCallRejected",                "Call rejected");
+        case kgmcUnansweredCallPending:           return presentation(fmt, "kgmcUnansweredCallPending",       "Unanswered call pending");
+        case kgmcUnknownCallingError:             return presentation(fmt, "kgmcUnknownCallingError",         "Unknown calling error");
+        case kgmcNoPhoneNumRecognized:            return presentation(fmt, "kgmcNoPhoneNumRecognized",        "No phone number recognized");
+        case kgmcCallStateNotIdle:                return presentation(fmt, "kgmcCallStateNotIdle",            "Call state not idle");
+        case kgmcCallInProgress:                  return presentation(fmt, "kgmcCallInProgress",              "Call in progress");
+        case kgmcDialStateError:                  return presentation(fmt, "kgmcDialStateError",              "Dial state error");
+        case kgmcUnlockCodeRequired:              return presentation(fmt, "kgmcUnlockCodeRequired",          "Unlock code required");
+        case kgmcNetworkBusy:                     return presentation(fmt, "kgmcNetworkBusy",                 "Network busy");
+        case kgmcInvalidPhoneNumber:              return presentation(fmt, "kgmcInvalidPhoneNumber",          "Invalid phone number");
+        case kgmcNumberEntryAlreadyStarted:       return presentation(fmt, "kgmcNumberEntryAlreadyStarted",   "Number entry already started");
+        case kgmcCancelledByUser:                 return presentation(fmt, "kgmcCancelledByUser",             "Cancelled by user");
+        case kgmcNumEntryCouldNotBeStarted:       return presentation(fmt, "kgmcNumEntryCouldNotBeStarted",   "Number entry could not be started");
+        case kgmcDataLost:                        return presentation(fmt, "kgmcDataLost",                    "Data lost");
+        case kgmcInvalidBessageBodyLength:        return presentation(fmt, "kgmcInvalidBessageBodyLength",    "Invalid message body length");
+        case kgmcInactiveSocket:                  return presentation(fmt, "kgmcInactiveSocket",              "Inactive socket");
+        case kgmcSocketAlreadyOpen:               return presentation(fmt, "kgmcSocketAlreadyOpen",           "Socket already open");
     }
     
     throw internal_not_found();
 }
 
-std::string Verbose::gsmSmsCause(KGsmSmsCause code)
+std::string Verbose::gsmSmsCause(KGsmSmsCause code, Verbose::Presentation fmt)
 {
     try
     {
-        return internal_gsmSmsCause(code);
+        return internal_gsmSmsCause(code, fmt);
     }
     catch (internal_not_found e)
     {
@@ -1533,88 +1646,88 @@ std::string Verbose::gsmSmsCause(KGsmSmsCause code)
     }
 }
 
-std::string Verbose::internal_gsmSmsCause(KGsmSmsCause code)
+std::string Verbose::internal_gsmSmsCause(KGsmSmsCause code, Verbose::Presentation fmt)
 {
     switch (code)
     {
-        case kgscUnassigned:                     return S("kgscUnassigned");
-        case kgscOperatorDeterminedBarring:      return S("kgscOperatorDeterminedBarring");
-        case kgscCallBarred:                     return S("kgscCallBarred");
-        case kgscSMSTransferRejected:            return S("kgscSMSTransferRejected");
-        case kgscDestinationOutOfService:        return S("kgscDestinationOutOfService");
-        case kgscUnidentifiedSubscriber:         return S("kgscUnidentifiedSubscriber");
-        case kgscFacilityRejected:               return S("kgscFacilityRejected");
-        case kgscUnknownSubscriber:              return S("kgscUnknownSubscriber");
-        case kgscNetworkOutOfOrder:              return S("kgscNetworkOutOfOrder");
-        case kgscTemporaryFailure:               return S("kgscTemporaryFailure");
-        case kgscCongestion:                     return S("kgscCongestion");
-        case kgscResourcesUnavailable:           return S("kgscResourcesUnavailable");
-        case kgscFacilityNotSubscribed:          return S("kgscFacilityNotSubscribed");
-        case kgscFacilityNotImplemented:         return S("kgscFacilityNotImplemented");
-        case kgscInvalidSMSTransferRefValue:     return S("kgscInvalidSMSTransferRefValue");
-        case kgscInvalidMessage:                 return S("kgscInvalidMessage");
-        case kgscInvalidMandatoryInformation:    return S("kgscInvalidMandatoryInformation");
-        case kgscMessageTypeNonExistent:         return S("kgscMessageTypeNonExistent");
-        case kgscMsgNotCompatWithSMProtState:    return S("kgscMsgNotCompatWithSMProtState");
-        case kgscInformationElementNonExiste:    return S("kgscInformationElementNonExiste");
-        case kgscProtocolError:                  return S("kgscProtocolError");
-        case kgscInterworking:                   return S("kgscInterworking");
-        case kgscTelematicInterworkingNotSup:    return S("kgscTelematicInterworkingNotSup");
-        case kgscSMSTypeZeroNotSupported:        return S("kgscSMSTypeZeroNotSupported");
-        case kgscCannotReplaceSMS:               return S("kgscCannotReplaceSMS");
-        case kgscUnspecifiedTPPIDError:          return S("kgscUnspecifiedTPPIDError");
-        case kgscAlphabetNotSupported:           return S("kgscAlphabetNotSupported");
-        case kgscMessageClassNotSupported:       return S("kgscMessageClassNotSupported");
-        case kgscUnspecifiedTPDCSError:          return S("kgscUnspecifiedTPDCSError");
-        case kgscCommandCannotBeActioned:        return S("kgscCommandCannotBeActioned");
-        case kgscCommandUnsupported:             return S("kgscCommandUnsupported");
-        case kgscUnspecifiedTPCommandError:      return S("kgscUnspecifiedTPCommandError");
-        case kgscTPDUNotSupported:               return S("kgscTPDUNotSupported");
-        case kgscSCBusy:                         return S("kgscSCBusy");
-        case kgscNoSCSubscription:               return S("kgscNoSCSubscription");
-        case kgscSCSystemFailure:                return S("kgscSCSystemFailure");
-        case kgscInvalidSMEAddress:              return S("kgscInvalidSMEAddress");
-        case kgscDestinationSMEBarred:           return S("kgscDestinationSMEBarred");
-        case kgscSMRejectedDuplicateSM:          return S("kgscSMRejectedDuplicateSM");
-        case kgscTPVPFNotSupported:              return S("kgscTPVPFNotSupported");
-        case kgscTPVPNotSupported:               return S("kgscTPVPNotSupported");
-        case kgscSIMSMSStorageFull:              return S("kgscSIMSMSStorageFull");
-        case kgscNoSMSStorageCapabilityInSIM:    return S("kgscNoSMSStorageCapabilityInSIM");
-        case kgscErrorInMS:                      return S("kgscErrorInMS");
-        case kgscMemoryCapacityExceeded:         return S("kgscMemoryCapacityExceeded");
-        case kgscSIMDataDownloadError:           return S("kgscSIMDataDownloadError");
-        case kgscUnspecifiedError:               return S("kgscUnspecifiedError");
-        case kgscPhoneFailure:                   return S("kgscPhoneFailure");
-        case kgscSmsServiceReserved:             return S("kgscSmsServiceReserved");
-        case kgscOperationNotAllowed:            return S("kgscOperationNotAllowed");
-        case kgscOperationNotSupported:          return S("kgscOperationNotSupported");
-        case kgscInvalidPDUModeParameter:        return S("kgscInvalidPDUModeParameter");
-        case kgscInvalidTextModeParameter:       return S("kgscInvalidTextModeParameter");
-        case kgscSIMNotInserted:                 return S("kgscSIMNotInserted");
-        case kgscSIMPINNecessary:                return S("kgscSIMPINNecessary");
-        case kgscPH_SIMPINNecessary:             return S("kgscPH_SIMPINNecessary");
-        case kgscSIMFailure:                     return S("kgscSIMFailure");
-        case kgscSIMBusy:                        return S("kgscSIMBusy");
-        case kgscSIMWrong:                       return S("kgscSIMWrong");
-        case kgscMemoryFailure:                  return S("kgscMemoryFailure");
-        case kgscInvalidMemoryIndex:             return S("kgscInvalidMemoryIndex");
-        case kgscMemoryFull:                     return S("kgscMemoryFull");
-        case kgscSMSCAddressUnknown:             return S("kgscSMSCAddressUnknown");
-        case kgscNoNetworkService:               return S("kgscNoNetworkService");
-        case kgscNetworkTimeout:                 return S("kgscNetworkTimeout");
-        case kgscUnknownError:                   return S("kgscUnknownError");
-        case kgscNetworkBusy:                    return S("kgscNetworkBusy");
-        case kgscInvalidDestinationAddress:      return S("kgscInvalidDestinationAddress");
-        case kgscInvalidMessageBodyLength:       return S("kgscInvalidMessageBodyLength");
-        case kgscPhoneIsNotInService:            return S("kgscPhoneIsNotInService");
-        case kgscInvalidPreferredMemStorage:     return S("kgscInvalidPreferredMemStorage");
-        case kgscUserTerminated:                 return S("kgscUserTerminated");
+        case kgscUnassigned:                     return presentation(fmt, "kgscUnassigned",                   "Unassigned");
+        case kgscOperatorDeterminedBarring:      return presentation(fmt, "kgscOperatorDeterminedBarring",    "Operator determined barring");
+        case kgscCallBarred:                     return presentation(fmt, "kgscCallBarred",                   "Call barred");
+        case kgscSMSTransferRejected:            return presentation(fmt, "kgscSMSTransferRejected",          "SMS transfer rejected");
+        case kgscDestinationOutOfService:        return presentation(fmt, "kgscDestinationOutOfService",      "Destination out of service");
+        case kgscUnidentifiedSubscriber:         return presentation(fmt, "kgscUnidentifiedSubscriber",       "Unidentified subscriber");
+        case kgscFacilityRejected:               return presentation(fmt, "kgscFacilityRejected",             "Facility rejected");
+        case kgscUnknownSubscriber:              return presentation(fmt, "kgscUnknownSubscriber",            "Unknown subscriber");
+        case kgscNetworkOutOfOrder:              return presentation(fmt, "kgscNetworkOutOfOrder",            "Network out of order");
+        case kgscTemporaryFailure:               return presentation(fmt, "kgscTemporaryFailure",             "Temporary failure");
+        case kgscCongestion:                     return presentation(fmt, "kgscCongestion",                   "Congestion");
+        case kgscResourcesUnavailable:           return presentation(fmt, "kgscResourcesUnavailable",         "Resources unavailable");
+        case kgscFacilityNotSubscribed:          return presentation(fmt, "kgscFacilityNotSubscribed",        "Facility not subscribed");
+        case kgscFacilityNotImplemented:         return presentation(fmt, "kgscFacilityNotImplemented",       "Facility not implemented");
+        case kgscInvalidSMSTransferRefValue:     return presentation(fmt, "kgscInvalidSMSTransferRefValue",   "Invalid SMS transfer reference value");
+        case kgscInvalidMessage:                 return presentation(fmt, "kgscInvalidMessage",               "Invalid message");
+        case kgscInvalidMandatoryInformation:    return presentation(fmt, "kgscInvalidMandatoryInformation",  "Invalid mandatory information");
+        case kgscMessageTypeNonExistent:         return presentation(fmt, "kgscMessageTypeNonExistent",       "Message type non existent");
+        case kgscMsgNotCompatWithSMProtState:    return presentation(fmt, "kgscMsgNotCompatWithSMProtState",  "Message not compatible with SMS protection state");
+        case kgscInformationElementNonExiste:    return presentation(fmt, "kgscInformationElementNonExiste",  "Information element non existent");
+        case kgscProtocolError:                  return presentation(fmt, "kgscProtocolError",                "Protocol error");
+        case kgscInterworking:                   return presentation(fmt, "kgscInterworking",                 "Interworking");
+        case kgscTelematicInterworkingNotSup:    return presentation(fmt, "kgscTelematicInterworkingNotSup",  "Telematic interworking not supported");
+        case kgscSMSTypeZeroNotSupported:        return presentation(fmt, "kgscSMSTypeZeroNotSupported",      "SMS type zero not supported");
+        case kgscCannotReplaceSMS:               return presentation(fmt, "kgscCannotReplaceSMS",             "Cannot replace SMS");
+        case kgscUnspecifiedTPPIDError:          return presentation(fmt, "kgscUnspecifiedTPPIDError",        "Unspecified TPPID error");
+        case kgscAlphabetNotSupported:           return presentation(fmt, "kgscAlphabetNotSupported",         "Alphabet not supported");
+        case kgscMessageClassNotSupported:       return presentation(fmt, "kgscMessageClassNotSupported",     "Message class not supported");
+        case kgscUnspecifiedTPDCSError:          return presentation(fmt, "kgscUnspecifiedTPDCSError",        "Unspecified TPDCS error");
+        case kgscCommandCannotBeActioned:        return presentation(fmt, "kgscCommandCannotBeActioned",      "Command cannot be actioned");
+        case kgscCommandUnsupported:             return presentation(fmt, "kgscCommandUnsupported",           "Command unsupported");
+        case kgscUnspecifiedTPCommandError:      return presentation(fmt, "kgscUnspecifiedTPCommandError",    "Unspecified TP command error");
+        case kgscTPDUNotSupported:               return presentation(fmt, "kgscTPDUNotSupported",             "TPDU not supported");
+        case kgscSCBusy:                         return presentation(fmt, "kgscSCBusy",                       "SC busy");
+        case kgscNoSCSubscription:               return presentation(fmt, "kgscNoSCSubscription",             "No SC subscription");
+        case kgscSCSystemFailure:                return presentation(fmt, "kgscSCSystemFailure",              "SC system failure");
+        case kgscInvalidSMEAddress:              return presentation(fmt, "kgscInvalidSMEAddress",            "Invalid SME address");
+        case kgscDestinationSMEBarred:           return presentation(fmt, "kgscDestinationSMEBarred",         "Destination SME barred");
+        case kgscSMRejectedDuplicateSM:          return presentation(fmt, "kgscSMRejectedDuplicateSM",        "SM rejected duplicate SM");
+        case kgscTPVPFNotSupported:              return presentation(fmt, "kgscTPVPFNotSupported",            "TPVPF not supported");
+        case kgscTPVPNotSupported:               return presentation(fmt, "kgscTPVPNotSupported",             "TPVP not supported");
+        case kgscSIMSMSStorageFull:              return presentation(fmt, "kgscSIMSMSStorageFull",            "SIM SMS storage full");
+        case kgscNoSMSStorageCapabilityInSIM:    return presentation(fmt, "kgscNoSMSStorageCapabilityInSIM",  "No SMS storage capability in SIM");
+        case kgscErrorInMS:                      return presentation(fmt, "kgscErrorInMS",                    "Error in SMS");
+        case kgscMemoryCapacityExceeded:         return presentation(fmt, "kgscMemoryCapacityExceeded",       "Memory capatity exceeded");
+        case kgscSIMDataDownloadError:           return presentation(fmt, "kgscSIMDataDownloadError",         "SIM data download error");
+        case kgscUnspecifiedError:               return presentation(fmt, "kgscUnspecifiedError",             "Unspecified error");
+        case kgscPhoneFailure:                   return presentation(fmt, "kgscPhoneFailure",                 "Phone failure");
+        case kgscSmsServiceReserved:             return presentation(fmt, "kgscSmsServiceReserved",           "SMS service reserved");
+        case kgscOperationNotAllowed:            return presentation(fmt, "kgscOperationNotAllowed",          "Operation not allowed");
+        case kgscOperationNotSupported:          return presentation(fmt, "kgscOperationNotSupported",        "Operation not supported");
+        case kgscInvalidPDUModeParameter:        return presentation(fmt, "kgscInvalidPDUModeParameter",      "Invalid PDU mode parameter");
+        case kgscInvalidTextModeParameter:       return presentation(fmt, "kgscInvalidTextModeParameter",     "Invalid text mode parameter");
+        case kgscSIMNotInserted:                 return presentation(fmt, "kgscSIMNotInserted",               "SIM not inserted");
+        case kgscSIMPINNecessary:                return presentation(fmt, "kgscSIMPINNecessary",              "SIM PIN necessary");
+        case kgscPH_SIMPINNecessary:             return presentation(fmt, "kgscPH_SIMPINNecessary",           "Phone SIM PIN necessary");
+        case kgscSIMFailure:                     return presentation(fmt, "kgscSIMFailure",                   "SIM failure");
+        case kgscSIMBusy:                        return presentation(fmt, "kgscSIMBusy",                      "SIM busy");
+        case kgscSIMWrong:                       return presentation(fmt, "kgscSIMWrong",                     "SIM wrong");
+        case kgscMemoryFailure:                  return presentation(fmt, "kgscMemoryFailure",                "Memory failure");
+        case kgscInvalidMemoryIndex:             return presentation(fmt, "kgscInvalidMemoryIndex",           "Invalid memory index");
+        case kgscMemoryFull:                     return presentation(fmt, "kgscMemoryFull",                   "Memory full");
+        case kgscSMSCAddressUnknown:             return presentation(fmt, "kgscSMSCAddressUnknown",           "SMSC address unknown");
+        case kgscNoNetworkService:               return presentation(fmt, "kgscNoNetworkService",             "No network service");
+        case kgscNetworkTimeout:                 return presentation(fmt, "kgscNetworkTimeout",               "Network timeout");
+        case kgscUnknownError:                   return presentation(fmt, "kgscUnknownError",                 "Unknown error");
+        case kgscNetworkBusy:                    return presentation(fmt, "kgscNetworkBusy",                  "Network busy");
+        case kgscInvalidDestinationAddress:      return presentation(fmt, "kgscInvalidDestinationAddress",    "Invalid destination address");
+        case kgscInvalidMessageBodyLength:       return presentation(fmt, "kgscInvalidMessageBodyLength",     "Invalid message body length");
+        case kgscPhoneIsNotInService:            return presentation(fmt, "kgscPhoneIsNotInService",          "Phone is not in service");
+        case kgscInvalidPreferredMemStorage:     return presentation(fmt, "kgscInvalidPreferredMemStorage",   "Invalid preferred memory storage");
+        case kgscUserTerminated:                 return presentation(fmt, "kgscUserTerminated",               "User terminated");
     }
     
     throw internal_not_found();
 }
 
-std::string Verbose::q931ProgressIndication(KQ931ProgressIndication code)
+std::string Verbose::q931ProgressIndication(KQ931ProgressIndication code, Verbose::Presentation fmt)
 {
 	try
 	{
@@ -1622,19 +1735,21 @@ std::string Verbose::q931ProgressIndication(KQ931ProgressIndication code)
 	}
 	catch (internal_not_found e)
 	{
-		return S(STG(FMT("[KQ931ProgressIndication='%d']") % (int)code));
+		PRESENTATION_CHECK_RETURN(fmt,
+			STG(FMT("[KQ931ProgressIndication='%d']") % (int)code),
+			STG(FMT("Unknown Q931 progress indication (%d)") % (int)code));
 	}
 }
 
-std::string Verbose::internal_q931ProgressIndication(KQ931ProgressIndication code)
+std::string Verbose::internal_q931ProgressIndication(KQ931ProgressIndication code, Verbose::Presentation fmt)
 {
 	switch (code)
 	{
-		case kq931pTonesMaybeAvailable:     return S("kq931pTonesMaybeAvailable");
-		case kq931pDestinationIsNonIsdn:    return S("kq931pDestinationIsNonIsdn");
-		case kq931pOriginationIsNonIsdn:    return S("kq931pOriginationIsNonIsdn");
-		case kq931pCallReturnedToIsdn:      return S("kq931pCallReturnedToIsdn");
-		case kq931pTonesAvailable:          return S("kq931pTonesAvailable");
+		case kq931pTonesMaybeAvailable:     return presentation(fmt, "kq931pTonesMaybeAvailable",  "Tones may be available");
+		case kq931pDestinationIsNonIsdn:    return presentation(fmt, "kq931pDestinationIsNonIsdn", "Destination is not ISDN");
+		case kq931pOriginationIsNonIsdn:    return presentation(fmt, "kq931pOriginationIsNonIsdn", "Origination is not ISDN");
+		case kq931pCallReturnedToIsdn:      return presentation(fmt, "kq931pCallReturnedToIsdn",   "Call returned to ISDN");
+		case kq931pTonesAvailable:          return presentation(fmt, "kq931pTonesAvailable",       "Tones available");
 	}
 
 	throw internal_not_found();
@@ -1648,164 +1763,164 @@ std::string Verbose::commandName(int32 code)
 {
     switch ((kcommand)code)
     {
-        case K_CM_SEIZE:                    return S("CM_SEIZE");
-        case K_CM_SYNC_SEIZE:               return S("CM_SYNC_SEIZE");
-        case K_CM_DIAL_DTMF:                return S("CM_DIAL_DTMF");
+        case K_CM_SEIZE:                    return "CM_SEIZE";
+        case K_CM_SYNC_SEIZE:               return "CM_SYNC_SEIZE";
+        case K_CM_DIAL_DTMF:                return "CM_DIAL_DTMF";
 #if K3L_AT_LEAST(1,6,0)
-        case K_CM_SIP_REGISTER:             return S("CM_SIP_REGISTER");
+        case K_CM_SIP_REGISTER:             return "CM_SIP_REGISTER";
 #endif
-        case K_CM_DISCONNECT:               return S("CM_DISCONNECT");
-        case K_CM_CONNECT:                  return S("CM_CONNECT");
-        case K_CM_PRE_CONNECT:              return S("CM_PRE_CONNECT");
-        case K_CM_CAS_CHANGE_LINE_STT:      return S("CM_CAS_CHANGE_LINE_STT");
-        case K_CM_CAS_SEND_MFC:             return S("CM_CAS_SEND_MFC");
-        case K_CM_SET_FORWARD_CHANNEL:      return S("CM_SET_FORWARD_CHANNEL");
-        case K_CM_CAS_SET_MFC_DETECT_MODE:  return S("CM_CAS_SET_MFC_DETECT_MODE");
-        case K_CM_DROP_COLLECT_CALL:        return S("CM_DROP_COLLECT_CALL");
+        case K_CM_DISCONNECT:               return "CM_DISCONNECT";
+        case K_CM_CONNECT:                  return "CM_CONNECT";
+        case K_CM_PRE_CONNECT:              return "CM_PRE_CONNECT";
+        case K_CM_CAS_CHANGE_LINE_STT:      return "CM_CAS_CHANGE_LINE_STT";
+        case K_CM_CAS_SEND_MFC:             return "CM_CAS_SEND_MFC";
+        case K_CM_SET_FORWARD_CHANNEL:      return "CM_SET_FORWARD_CHANNEL";
+        case K_CM_CAS_SET_MFC_DETECT_MODE:  return "CM_CAS_SET_MFC_DETECT_MODE";
+        case K_CM_DROP_COLLECT_CALL:        return "CM_DROP_COLLECT_CALL";
 
 #if K3L_AT_LEAST(1,5,0)
-        case K_CM_MAKE_CALL:                return S("CM_MAKE_CALL");
+        case K_CM_MAKE_CALL:                return "CM_MAKE_CALL";
 #endif
 
 #if K3L_AT_LEAST(1,4,0)
-        case K_CM_RINGBACK:                 return S("CM_RINGBACK");
+        case K_CM_RINGBACK:                 return "CM_RINGBACK";
 #endif
 
 #if K3L_AT_LEAST(1,5,1)
-        case K_CM_USER_INFORMATION:         return S("CM_USER_INFORMATION");
+        case K_CM_USER_INFORMATION:         return "CM_USER_INFORMATION";
 #endif
 
 #if K3L_AT_LEAST(1,4,0)
-        case K_CM_VOIP_SEIZE:               return S("CM_VOIP_SEIZE");
+        case K_CM_VOIP_SEIZE:               return "CM_VOIP_SEIZE";
 
 #if !K3L_AT_LEAST(2,0,0) 
         /* internal commands */
-        case K_CM_VOIP_START_DEBUG:         return S("CM_VOIP_START_DEBUG");
-        case K_CM_VOIP_STOP_DEBUG:          return S("CM_VOIP_STOP_DEBUG");
-        case K_CM_VOIP_DUMP_STAT:           return S("CM_VOIP_DUMP_STAT");
+        case K_CM_VOIP_START_DEBUG:         return "CM_VOIP_START_DEBUG";
+        case K_CM_VOIP_STOP_DEBUG:          return "CM_VOIP_STOP_DEBUG";
+        case K_CM_VOIP_DUMP_STAT:           return "CM_VOIP_DUMP_STAT";
 #endif
 #endif
 
 #if K3L_AT_LEAST(1,5,2) && !K3L_AT_LEAST(2,0,0) 
         /* internal command */
-        case K_CM_ISDN_DEBUG:               return S("CM_ISDN_DEBUG");
+        case K_CM_ISDN_DEBUG:               return "CM_ISDN_DEBUG";
 #endif
 
-        case K_CM_LOCK_INCOMING:            return S("CM_LOCK_INCOMING");
-        case K_CM_UNLOCK_INCOMING:          return S("CM_UNLOCK_INCOMING");
-        case K_CM_LOCK_OUTGOING:            return S("CM_LOCK_OUTGOING");
-        case K_CM_UNLOCK_OUTGOING:          return S("CM_UNLOCK_OUTGOING");
+        case K_CM_LOCK_INCOMING:            return "CM_LOCK_INCOMING";
+        case K_CM_UNLOCK_INCOMING:          return "CM_UNLOCK_INCOMING";
+        case K_CM_LOCK_OUTGOING:            return "CM_LOCK_OUTGOING";
+        case K_CM_UNLOCK_OUTGOING:          return "CM_UNLOCK_OUTGOING";
 
-        case K_CM_START_SEND_FAIL:          return S("CM_START_SEND_FAIL");
-        case K_CM_STOP_SEND_FAIL:           return S("CM_STOP_SEND_FAIL");
+        case K_CM_START_SEND_FAIL:          return "CM_START_SEND_FAIL";
+        case K_CM_STOP_SEND_FAIL:           return "CM_STOP_SEND_FAIL";
 
 #if K3L_AT_LEAST(1,5,3)
-        case K_CM_END_OF_NUMBER:            return S("CM_END_OF_NUMBER");
+        case K_CM_END_OF_NUMBER:            return "CM_END_OF_NUMBER";
 #endif
 
 #if K3L_AT_LEAST(1,6,0)
-        case K_CM_SS_TRANSFER:              return S("CM_SS_TRANSFER");
-        case K_CM_GET_SMS:                  return S("CM_GET_SMS");
-        case K_CM_PREPARE_SMS:              return S("CM_PREPARE_SMS");
-        case K_CM_SEND_SMS:                 return S("CM_SEND_SMS");
+        case K_CM_SS_TRANSFER:              return "CM_SS_TRANSFER";
+        case K_CM_GET_SMS:                  return "CM_GET_SMS";
+        case K_CM_PREPARE_SMS:              return "CM_PREPARE_SMS";
+        case K_CM_SEND_SMS:                 return "CM_SEND_SMS";
 #endif
 #if K3L_HAS_MPTY_SUPPORT
-        case K_CM_HOLD_SWITCH:              return S("CM_HOLD_SWITCH");
-        case K_CM_MPTY_CONF:                return S("CM_MPTY_CONF");
-        case K_CM_MPTY_SPLIT:               return S("CM_MPTY_SPLIT");
+        case K_CM_HOLD_SWITCH:              return "CM_HOLD_SWITCH";
+        case K_CM_MPTY_CONF:                return "CM_MPTY_CONF";
+        case K_CM_MPTY_SPLIT:               return "CM_MPTY_SPLIT";
 #endif
 
-        case K_CM_ENABLE_DTMF_SUPPRESSION:  return S("CM_ENABLE_DTMF_SUPPRESSION");
-        case K_CM_DISABLE_DTMF_SUPPRESSION: return S("CM_DISABLE_DTMF_SUPPRESSION");
-        case K_CM_ENABLE_AUDIO_EVENTS:      return S("CM_ENABLE_AUDIO_EVENTS");
-        case K_CM_DISABLE_AUDIO_EVENTS:     return S("CM_DISABLE_AUDIO_EVENTS");
-        case K_CM_ENABLE_CALL_PROGRESS:     return S("CM_ENABLE_CALL_PROGRESS");
-        case K_CM_DISABLE_CALL_PROGRESS:    return S("CM_DISABLE_CALL_PROGRESS");
-        case K_CM_FLASH:                    return S("CM_FLASH");
-        case K_CM_ENABLE_PULSE_DETECTION:   return S("CM_ENABLE_PULSE_DETECTION");
-        case K_CM_DISABLE_PULSE_DETECTION:  return S("CM_DISABLE_PULSE_DETECTION");
-        case K_CM_ENABLE_ECHO_CANCELLER:    return S("CM_ENABLE_ECHO_CANCELLER");
-        case K_CM_DISABLE_ECHO_CANCELLER:   return S("CM_DISABLE_ECHO_CANCELLER");
-        case K_CM_ENABLE_AGC:               return S("CM_ENABLE_AGC");
-        case K_CM_DISABLE_AGC:              return S("CM_DISABLE_AGC");
-        case K_CM_ENABLE_HIGH_IMP_EVENTS:   return S("CM_ENABLE_HIGH_IMP_EVENTS");
-        case K_CM_DISABLE_HIGH_IMP_EVENTS:  return S("CM_DISABLE_HIGH_IMP_EVENTS");
+        case K_CM_ENABLE_DTMF_SUPPRESSION:  return "CM_ENABLE_DTMF_SUPPRESSION";
+        case K_CM_DISABLE_DTMF_SUPPRESSION: return "CM_DISABLE_DTMF_SUPPRESSION";
+        case K_CM_ENABLE_AUDIO_EVENTS:      return "CM_ENABLE_AUDIO_EVENTS";
+        case K_CM_DISABLE_AUDIO_EVENTS:     return "CM_DISABLE_AUDIO_EVENTS";
+        case K_CM_ENABLE_CALL_PROGRESS:     return "CM_ENABLE_CALL_PROGRESS";
+        case K_CM_DISABLE_CALL_PROGRESS:    return "CM_DISABLE_CALL_PROGRESS";
+        case K_CM_FLASH:                    return "CM_FLASH";
+        case K_CM_ENABLE_PULSE_DETECTION:   return "CM_ENABLE_PULSE_DETECTION";
+        case K_CM_DISABLE_PULSE_DETECTION:  return "CM_DISABLE_PULSE_DETECTION";
+        case K_CM_ENABLE_ECHO_CANCELLER:    return "CM_ENABLE_ECHO_CANCELLER";
+        case K_CM_DISABLE_ECHO_CANCELLER:   return "CM_DISABLE_ECHO_CANCELLER";
+        case K_CM_ENABLE_AGC:               return "CM_ENABLE_AGC";
+        case K_CM_DISABLE_AGC:              return "CM_DISABLE_AGC";
+        case K_CM_ENABLE_HIGH_IMP_EVENTS:   return "CM_ENABLE_HIGH_IMP_EVENTS";
+        case K_CM_DISABLE_HIGH_IMP_EVENTS:  return "CM_DISABLE_HIGH_IMP_EVENTS";
 
 #if K3L_AT_LEAST(1,6,0)
-        case K_CM_ENABLE_CALL_ANSWER_INFO:  return S("CM_ENABLE_CALL_ANSWER_INFO");
-        case K_CM_DISABLE_CALL_ANSWER_INFO: return S("CM_DISABLE_CALL_ANSWER_INFO"); 
+        case K_CM_ENABLE_CALL_ANSWER_INFO:  return "CM_ENABLE_CALL_ANSWER_INFO";
+        case K_CM_DISABLE_CALL_ANSWER_INFO: return "CM_DISABLE_CALL_ANSWER_INFO"; 
 #endif
 
-        case K_CM_RESET_LINK:               return S("CM_RESET_LINK");
+        case K_CM_RESET_LINK:               return "CM_RESET_LINK";
 
 #if K3L_AT_LEAST(1,6,0)
-        case K_CM_CLEAR_LINK_ERROR_COUNTER: return S("CM_CLEAR_LINK_ERROR_COUNTER");
+        case K_CM_CLEAR_LINK_ERROR_COUNTER: return "CM_CLEAR_LINK_ERROR_COUNTER";
 #endif
 
-        case K_CM_SEND_DTMF:                return S("CM_SEND_DTMF");
-        case K_CM_STOP_AUDIO:               return S("CM_STOP_AUDIO");
-        case K_CM_HARD_RESET:               return S("CM_HARD_RESET");
+        case K_CM_SEND_DTMF:                return "CM_SEND_DTMF";
+        case K_CM_STOP_AUDIO:               return "CM_STOP_AUDIO";
+        case K_CM_HARD_RESET:               return "CM_HARD_RESET";
 
-        case K_CM_SEND_TO_CTBUS:            return S("CM_SEND_TO_CTBUS");
-        case K_CM_RECV_FROM_CTBUS:          return S("CM_RECV_FROM_CTBUS");
-        case K_CM_SETUP_H100:               return S("CM_SETUP_H100");
+        case K_CM_SEND_TO_CTBUS:            return "CM_SEND_TO_CTBUS";
+        case K_CM_RECV_FROM_CTBUS:          return "CM_RECV_FROM_CTBUS";
+        case K_CM_SETUP_H100:               return "CM_SETUP_H100";
 
-        case K_CM_MIXER:                    return S("CM_MIXER");
-        case K_CM_CLEAR_MIXER:              return S("CM_CLEAR_MIXER");
-        case K_CM_PLAY_FROM_FILE:           return S("CM_PLAY_FROM_FILE");
-        case K_CM_RECORD_TO_FILE:           return S("CM_RECORD_TO_FILE");
-        case K_CM_PLAY_FROM_STREAM:         return S("CM_PLAY_FROM_STREAM");
-        case K_CM_STOP_PLAY:                return S("CM_STOP_PLAY");
-        case K_CM_STOP_RECORD:              return S("CM_STOP_RECORD");
-        case K_CM_PAUSE_PLAY:               return S("CM_PAUSE_PLAY");
-        case K_CM_PAUSE_RECORD:             return S("CM_PAUSE_RECORD");
-        case K_CM_INCREASE_VOLUME:          return S("CM_INCREASE_VOLUME");
-        case K_CM_DECREASE_VOLUME:          return S("CM_DECREASE_VOLUME");
-        case K_CM_LISTEN:                   return S("CM_LISTEN");
-        case K_CM_STOP_LISTEN:              return S("CM_STOP_LISTEN");
-        case K_CM_PREPARE_FOR_LISTEN:       return S("CM_PREPARE_FOR_LISTEN");
+        case K_CM_MIXER:                    return "CM_MIXER";
+        case K_CM_CLEAR_MIXER:              return "CM_CLEAR_MIXER";
+        case K_CM_PLAY_FROM_FILE:           return "CM_PLAY_FROM_FILE";
+        case K_CM_RECORD_TO_FILE:           return "CM_RECORD_TO_FILE";
+        case K_CM_PLAY_FROM_STREAM:         return "CM_PLAY_FROM_STREAM";
+        case K_CM_STOP_PLAY:                return "CM_STOP_PLAY";
+        case K_CM_STOP_RECORD:              return "CM_STOP_RECORD";
+        case K_CM_PAUSE_PLAY:               return "CM_PAUSE_PLAY";
+        case K_CM_PAUSE_RECORD:             return "CM_PAUSE_RECORD";
+        case K_CM_INCREASE_VOLUME:          return "CM_INCREASE_VOLUME";
+        case K_CM_DECREASE_VOLUME:          return "CM_DECREASE_VOLUME";
+        case K_CM_LISTEN:                   return "CM_LISTEN";
+        case K_CM_STOP_LISTEN:              return "CM_STOP_LISTEN";
+        case K_CM_PREPARE_FOR_LISTEN:       return "CM_PREPARE_FOR_LISTEN";
 
-        case K_CM_PLAY_SOUND_CARD:          return S("CM_PLAY_SOUND_CARD");
-        case K_CM_STOP_SOUND_CARD:          return S("CM_STOP_SOUND_CARD");
+        case K_CM_PLAY_SOUND_CARD:          return "CM_PLAY_SOUND_CARD";
+        case K_CM_STOP_SOUND_CARD:          return "CM_STOP_SOUND_CARD";
 
-        case K_CM_MIXER_CTBUS:              return S("CM_MIXER_CTBUS");
-        case K_CM_PLAY_FROM_STREAM_EX:      return S("CM_PLAY_FROM_STREAM_EX");
-        case K_CM_ENABLE_PLAYER_AGC:        return S("CM_ENABLE_PLAYER_AGC");
-        case K_CM_DISABLE_PLAYER_AGC:       return S("CM_DISABLE_PLAYER_AGC");
-        case K_CM_START_STREAM_BUFFER:      return S("CM_START_STREAM_BUFFER");
-        case K_CM_ADD_STREAM_BUFFER:        return S("CM_ADD_STREAM_BUFFER");
-        case K_CM_STOP_STREAM_BUFFER:       return S("CM_STOP_STREAM_BUFFER");
-        case K_CM_SEND_BEEP:                return S("CM_SEND_BEEP");
-        case K_CM_SEND_BEEP_CONF:           return S("CM_SEND_BEEP_CONF");
-        case K_CM_ADD_TO_CONF:              return S("CM_ADD_TO_CONF");
-        case K_CM_REMOVE_FROM_CONF:         return S("CM_REMOVE_FROM_CONF");
-        case K_CM_RECORD_TO_FILE_EX:        return S("CM_RECORD_TO_FILE_EX");
+        case K_CM_MIXER_CTBUS:              return "CM_MIXER_CTBUS";
+        case K_CM_PLAY_FROM_STREAM_EX:      return "CM_PLAY_FROM_STREAM_EX";
+        case K_CM_ENABLE_PLAYER_AGC:        return "CM_ENABLE_PLAYER_AGC";
+        case K_CM_DISABLE_PLAYER_AGC:       return "CM_DISABLE_PLAYER_AGC";
+        case K_CM_START_STREAM_BUFFER:      return "CM_START_STREAM_BUFFER";
+        case K_CM_ADD_STREAM_BUFFER:        return "CM_ADD_STREAM_BUFFER";
+        case K_CM_STOP_STREAM_BUFFER:       return "CM_STOP_STREAM_BUFFER";
+        case K_CM_SEND_BEEP:                return "CM_SEND_BEEP";
+        case K_CM_SEND_BEEP_CONF:           return "CM_SEND_BEEP_CONF";
+        case K_CM_ADD_TO_CONF:              return "CM_ADD_TO_CONF";
+        case K_CM_REMOVE_FROM_CONF:         return "CM_REMOVE_FROM_CONF";
+        case K_CM_RECORD_TO_FILE_EX:        return "CM_RECORD_TO_FILE_EX";
 
 #if K3L_AT_LEAST(1,5,4)
-        case K_CM_SET_VOLUME:               return S("CM_SET_VOLUME");
+        case K_CM_SET_VOLUME:               return "CM_SET_VOLUME";
 #endif
-        case K_CM_SET_LINE_CONDITION:       return S("CM_SET_LINE_CONDITION");
-        case K_CM_SEND_LINE_CONDITION:      return S("CM_SEND_LINE_CONDITION");
-        case K_CM_SET_CALLER_CATEGORY:      return S("CM_SET_CALLER_CATEGORY");
-        case K_CM_DIAL_MFC:                 return S("CM_DIAL_MFC");
+        case K_CM_SET_LINE_CONDITION:       return "CM_SET_LINE_CONDITION";
+        case K_CM_SEND_LINE_CONDITION:      return "CM_SEND_LINE_CONDITION";
+        case K_CM_SET_CALLER_CATEGORY:      return "CM_SET_CALLER_CATEGORY";
+        case K_CM_DIAL_MFC:                 return "CM_DIAL_MFC";
 
-        case K_CM_INTERNAL_PLAY:            return S("CM_INTERNAL_PLAY");
-        case K_CM_RESUME_PLAY:              return S("CM_RESUME_PLAY");
-        case K_CM_RESUME_RECORD:            return S("CM_RESUME_RECORD");
-        case K_CM_INTERNAL_PLAY_EX:         return S("CM_INTERNAL_PLAY_EX");
+        case K_CM_INTERNAL_PLAY:            return "CM_INTERNAL_PLAY";
+        case K_CM_RESUME_PLAY:              return "CM_RESUME_PLAY";
+        case K_CM_RESUME_RECORD:            return "CM_RESUME_RECORD";
+        case K_CM_INTERNAL_PLAY_EX:         return "CM_INTERNAL_PLAY_EX";
 #if !K3L_AT_LEAST(2,0,0)
-        case K_CM_PING:                     return S("CM_PING");
+        case K_CM_PING:                     return "CM_PING";
 #if K3L_AT_LEAST(1,6,0)
-        case K_CM_LOG_REQUEST:              return S("CM_LOG_REQUEST");
-        case K_CM_LOG_CREATE_DISPATCHER:    return S("CM_LOG_CREATE_DISPATCHER");
-        case K_CM_LOG_DESTROY_DISPATCHER:   return S("CM_LOG_DESTROY_DISPATCHER");
+        case K_CM_LOG_REQUEST:              return "CM_LOG_REQUEST";
+        case K_CM_LOG_CREATE_DISPATCHER:    return "CM_LOG_CREATE_DISPATCHER";
+        case K_CM_LOG_DESTROY_DISPATCHER:   return "CM_LOG_DESTROY_DISPATCHER";
 #endif
 #endif
 
 #if K3L_AT_LEAST(1,6,0)
-        case K_CM_START_CADENCE:            return S("CM_START_CADENCE");
-        case K_CM_STOP_CADENCE:             return S("CM_STOP_CADENCE");
-        case K_CM_CHECK_NEW_SMS:            return S("CM_CHECK_NEW_SMS");
+        case K_CM_START_CADENCE:            return "CM_START_CADENCE";
+        case K_CM_STOP_CADENCE:             return "CM_STOP_CADENCE";
+        case K_CM_CHECK_NEW_SMS:            return "CM_CHECK_NEW_SMS";
 #endif
     }
 
@@ -1816,102 +1931,102 @@ std::string Verbose::eventName(int32 code)
 {
     switch ((kevent)code)
     {
-        case K_EV_CHANNEL_FREE:         return S("EV_CHANNEL_FREE");
-        case K_EV_CONNECT:              return S("EV_CONNECT");
-        case K_EV_DISCONNECT:           return S("EV_DISCONNECT");
-        case K_EV_CALL_SUCCESS:         return S("EV_CALL_SUCCESS");
-        case K_EV_CALL_FAIL:            return S("EV_CALL_FAIL");
-        case K_EV_NO_ANSWER:            return S("EV_NO_ANSWER");
-        case K_EV_BILLING_PULSE:        return S("EV_BILLING_PULSE");
-        case K_EV_SEIZE_SUCCESS:        return S("EV_SEIZE_SUCCESS");
-        case K_EV_SEIZE_FAIL:           return S("EV_SEIZE_FAIL");
-        case K_EV_SEIZURE_START:        return S("EV_SEIZURE_START");
-        case K_EV_CAS_LINE_STT_CHANGED: return S("EV_CAS_LINE_STT_CHANGED");
-        case K_EV_CAS_MFC_RECV:         return S("EV_CAS_MFC_RECV");
+        case K_EV_CHANNEL_FREE:         return "EV_CHANNEL_FREE";
+        case K_EV_CONNECT:              return "EV_CONNECT";
+        case K_EV_DISCONNECT:           return "EV_DISCONNECT";
+        case K_EV_CALL_SUCCESS:         return "EV_CALL_SUCCESS";
+        case K_EV_CALL_FAIL:            return "EV_CALL_FAIL";
+        case K_EV_NO_ANSWER:            return "EV_NO_ANSWER";
+        case K_EV_BILLING_PULSE:        return "EV_BILLING_PULSE";
+        case K_EV_SEIZE_SUCCESS:        return "EV_SEIZE_SUCCESS";
+        case K_EV_SEIZE_FAIL:           return "EV_SEIZE_FAIL";
+        case K_EV_SEIZURE_START:        return "EV_SEIZURE_START";
+        case K_EV_CAS_LINE_STT_CHANGED: return "EV_CAS_LINE_STT_CHANGED";
+        case K_EV_CAS_MFC_RECV:         return "EV_CAS_MFC_RECV";
 
 #if K3L_AT_LEAST(1,5,0)
-        case K_EV_NEW_CALL:             return S("EV_NEW_CALL");
+        case K_EV_NEW_CALL:             return "EV_NEW_CALL";
 #endif
 
 #if K3L_AT_LEAST(1,5,1)
-        case K_EV_USER_INFORMATION:     return S("EV_USER_INFORMATION");
+        case K_EV_USER_INFORMATION:     return "EV_USER_INFORMATION";
 #endif
 
 #if K3L_AT_LEAST(1,5,3)
-        case K_EV_DIALED_DIGIT:         return S("EV_DIALED_DIGIT");
+        case K_EV_DIALED_DIGIT:         return "EV_DIALED_DIGIT";
 #endif
 
 #if K3L_AT_LEAST(1,6,0)
-        case K_EV_SIP_REGISTER_INFO:    return S("EV_SIP_REGISTER_INFO");
+        case K_EV_SIP_REGISTER_INFO:    return "EV_SIP_REGISTER_INFO";
 #endif
 
 #if K3L_AT_LEAST(1,4,0)
-        case K_EV_CALL_HOLD_START:      return S("EV_CALL_HOLD_START");
-        case K_EV_CALL_HOLD_STOP:       return S("EV_CALL_HOLD_STOP");
+        case K_EV_CALL_HOLD_START:      return "EV_CALL_HOLD_START";
+        case K_EV_CALL_HOLD_STOP:       return "EV_CALL_HOLD_STOP";
 #endif
 
 #if K3L_AT_LEAST(1,6,0)
-        case K_EV_SS_TRANSFER_FAIL:     return S("EV_SS_TRANSFER_FAIL");
-        case K_EV_FLASH:                return S("EV_FLASH");
+        case K_EV_SS_TRANSFER_FAIL:     return "EV_SS_TRANSFER_FAIL";
+        case K_EV_FLASH:                return "EV_FLASH";
 #endif
 
-        case K_EV_DTMF_DETECTED:        return S("EV_DTMF_DETECTED");
-        case K_EV_DTMF_SEND_FINISH:     return S("EV_DTMF_SEND_FINISH");
-        case K_EV_AUDIO_STATUS:         return S("EV_AUDIO_STATUS");
-        case K_EV_CADENCE_RECOGNIZED:   return S("EV_CADENCE_RECOGNIZED");
+        case K_EV_DTMF_DETECTED:        return "EV_DTMF_DETECTED";
+        case K_EV_DTMF_SEND_FINISH:     return "EV_DTMF_SEND_FINISH";
+        case K_EV_AUDIO_STATUS:         return "EV_AUDIO_STATUS";
+        case K_EV_CADENCE_RECOGNIZED:   return "EV_CADENCE_RECOGNIZED";
 
-        case K_EV_END_OF_STREAM:        return S("EV_END_OF_STREAM");
-        case K_EV_PULSE_DETECTED:       return S("EV_PULSE_DETECTED");
+        case K_EV_END_OF_STREAM:        return "EV_END_OF_STREAM";
+        case K_EV_PULSE_DETECTED:       return "EV_PULSE_DETECTED";
 
 #if K3L_AT_LEAST(1,5,1)
-        case K_EV_POLARITY_REVERSAL:    return S("EV_POLARITY_REVERSAL");
+        case K_EV_POLARITY_REVERSAL:    return "EV_POLARITY_REVERSAL";
 #endif
 
 #if K3L_AT_LEAST(1,6,0)
-        case K_EV_ISDN_PROGRESS_INDICATOR: return S("EV_ISDN_PROGRESS_INDICATOR");
-        case K_EV_CALL_ANSWER_INFO:        return S("EV_CALL_ANSWER_INFO");
-        case K_EV_COLLECT_CALL:            return S("EV_COLLECT_CALL");
-        case K_EV_SIP_DTMF_DETECTED:       return S("EV_SIP_DTMF_DETECTED");
+        case K_EV_ISDN_PROGRESS_INDICATOR: return "EV_ISDN_PROGRESS_INDICATOR";
+        case K_EV_CALL_ANSWER_INFO:        return "EV_CALL_ANSWER_INFO";
+        case K_EV_COLLECT_CALL:            return "EV_COLLECT_CALL";
+        case K_EV_SIP_DTMF_DETECTED:       return "EV_SIP_DTMF_DETECTED";
 
-        case K_EV_RECV_FROM_MODEM:      return S("EV_RECV_FROM_MODEM");
-        case K_EV_NEW_SMS:              return S("EV_NEW_SMS");
-        case K_EV_SMS_INFO:             return S("EV_SMS_INFO");
-        case K_EV_SMS_DATA:             return S("EV_SMS_DATA");
-        case K_EV_SMS_SEND_RESULT:      return S("EV_SMS_SEND_RESULT");
-        case K_EV_RING_DETECTED:        return S("EV_RING_DETECTED");
-        case K_EV_PHYSICAL_LINK_DOWN:   return S("EV_PHYSICAL_LINK_DOWN");
-        case K_EV_PHYSICAL_LINK_UP:     return S("EV_PHYSICAL_LINK_UP");
+        case K_EV_RECV_FROM_MODEM:      return "EV_RECV_FROM_MODEM";
+        case K_EV_NEW_SMS:              return "EV_NEW_SMS";
+        case K_EV_SMS_INFO:             return "EV_SMS_INFO";
+        case K_EV_SMS_DATA:             return "EV_SMS_DATA";
+        case K_EV_SMS_SEND_RESULT:      return "EV_SMS_SEND_RESULT";
+        case K_EV_RING_DETECTED:        return "EV_RING_DETECTED";
+        case K_EV_PHYSICAL_LINK_DOWN:   return "EV_PHYSICAL_LINK_DOWN";
+        case K_EV_PHYSICAL_LINK_UP:     return "EV_PHYSICAL_LINK_UP";
 #endif
 #if K3L_HAS_MPTY_SUPPORT
-        case K_EV_CALL_MPTY_START:      return S("EV_CALL_MPTY_START");
-        case K_EV_CALL_MPTY_STOP:       return S("EV_CALL_MPTY_STOP");
+        case K_EV_CALL_MPTY_START:      return "EV_CALL_MPTY_START";
+        case K_EV_CALL_MPTY_STOP:       return "EV_CALL_MPTY_STOP";
 #endif
 #if !K3L_AT_LEAST(2,0,0)
-        case K_EV_PONG:                 return S("EV_PONG");
+        case K_EV_PONG:                 return "EV_PONG";
 #endif
-        case K_EV_CHANNEL_FAIL:         return S("EV_CHANNEL_FAIL");
-        case K_EV_REFERENCE_FAIL:       return S("EV_REFERENCE_FAIL");
-        case K_EV_INTERNAL_FAIL:        return S("EV_INTERNAL_FAIL");
-        case K_EV_HARDWARE_FAIL:        return S("EV_HARDWARE_FAIL");
-        case K_EV_LINK_STATUS:          return S("EV_LINK_STATUS");
+        case K_EV_CHANNEL_FAIL:         return "EV_CHANNEL_FAIL";
+        case K_EV_REFERENCE_FAIL:       return "EV_REFERENCE_FAIL";
+        case K_EV_INTERNAL_FAIL:        return "EV_INTERNAL_FAIL";
+        case K_EV_HARDWARE_FAIL:        return "EV_HARDWARE_FAIL";
+        case K_EV_LINK_STATUS:          return "EV_LINK_STATUS";
 
 #if K3L_AT_LEAST(1,4,0)
-        case K_EV_CLIENT_RECONNECT:     return S("EV_CLIENT_RECONNECT");
-        case K_EV_VOIP_SEIZURE:         return S("EV_VOIP_SEIZURE");
+        case K_EV_CLIENT_RECONNECT:     return "EV_CLIENT_RECONNECT";
+        case K_EV_VOIP_SEIZURE:         return "EV_VOIP_SEIZURE";
 #endif
-        case K_EV_SEIZURE:              return S("EV_SEIZURE");
+        case K_EV_SEIZURE:              return "EV_SEIZURE";
     }
     
     return STG(FMT("[event='%d']") % code);
 }
 
 
-std::string Verbose::command(int32 dev, K3L_COMMAND *k3lcmd, r2_country_type r2_country)
+std::string Verbose::command(int32 dev, K3L_COMMAND *k3lcmd, r2_country_type r2_country, Verbose::Presentation fmt)
 {
-	return command(k3lcmd->Cmd, dev, k3lcmd->Object, (const char *) k3lcmd->Params, r2_country);
+	return command(k3lcmd->Cmd, dev, k3lcmd->Object, (const char *) k3lcmd->Params, r2_country, fmt);
 }
 
-std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const char * params, r2_country_type r2_country)
+std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const char * params, r2_country_type r2_country, Verbose::Presentation fmt)
 {
     ushort dev = (ushort) dev_idx;
     ushort obj = (ushort) obj_idx;
@@ -2127,39 +2242,28 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
         {
             if (params)
             {
-                std::string src("<unknown>");
-                std::string idx("<unknown>");
-
                 KMixerCommand *m = (KMixerCommand*)params;
+
+                std::string src = mixerSource((KMixerSource)m->Source);
+                std::string idx("<unknown>");
 
                 switch (m->Source)
                 {
                     case kmsChannel:
-                        src = "kmsChannel";
-                        idx = STG(FMT("%02d") % (int)m->SourceIndex);
-                        break;
                     case kmsPlay:
-                        src = "kmsPlay";
-                        idx = STG(FMT("%02d") % (int)m->SourceIndex);
-                        break;
-                    case kmsGenerator:
-                        src = "kmsGenerator";
-                        idx = mixerTone((KMixerTone)m->SourceIndex);
-                        break;
                     case kmsCTbus:
-                        src = "kmsCTbus";
-                        idx = STG(FMT("%02d") % (int)m->SourceIndex);
-                        break;
 #if (K3L_AT_LEAST(1,4,0) && !K3L_AT_LEAST(1,6,0))
                     case kmsVoIP:
-                        src = "kmsVoIP";
-                        idx = STG(FMT("%02d") % (int)m->SourceIndex);
 #endif
 #if K3L_AT_LEAST(1,6,0)
                     case kmsNoDelayChannel:
-                        src = "kmsNoDelayChannel";
-                        idx = STG(FMT("%02d") % (int)m->SourceIndex);
 #endif
+                        idx = STG(FMT("%02d") % (int)m->SourceIndex);
+                        break;
+
+                    case kmsGenerator:
+                        idx = mixerTone((KMixerTone)m->SourceIndex);
+                        break;
                 };
 
                 extra = STG(FMT("track='%d',src='%s',index='%s'") % (int)m->Track % src % idx);
@@ -2348,7 +2452,7 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
     return show(buf, commandName(code), Target(CHANNEL, dev, obj));
 }
 
-std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_country_type r2_country)
+std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_country_type r2_country, Verbose::Presentation fmt)
 {
     ushort dev = (ushort) ev->DeviceId;
     ushort obj = (ushort) obj_idx;
