@@ -348,7 +348,7 @@ struct K3LAPI
     };
 
     int32 get_dsp(int32, DspType);
-	
+    
  protected:
 
     unsigned int           _device_count;

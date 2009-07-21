@@ -48,26 +48,27 @@
 template < typename Implementor >
 struct RefCount
 {
-	RefCount()
+    RefCount()
     : _reference_count(new unsigned int(1))
     {};
 
-	RefCount(const RefCount & o)
+    RefCount(const RefCount & o)
     : _reference_count(o._reference_count)
-	{
-		++(*_reference_count);
-	};
+    {
+        ++(*_reference_count);
+    };
 
-	~RefCount()
-	{
-		--(*_reference_count);
+    ~RefCount()
+    {
+        --(*_reference_count);
 
-		if (!_reference_count)
-			static_cast< Implementor * >(this)->unreference();
-	};
+        if (!_reference_count)
+            static_cast< Implementor * >(this)->unreference();
+    };
 
  private:
-	unsigned int * _reference_count;
+    unsigned int * _reference_count;
 };
 
 #endif /* _REFCOUNTER_HPP_ */
+

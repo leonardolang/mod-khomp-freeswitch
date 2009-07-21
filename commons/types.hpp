@@ -50,6 +50,6 @@
       (k3lApiMajorVersion  > major))
 
 #define K3L_EXACT(major,minor,build) \
-	((k3lApiMajorVersion == major) && (k3lApiMinorVersion == minor) && (k3lApiBuildVersion >= build))
+    ((k3lApiMajorVersion == major) && (k3lApiMinorVersion == minor) && (k3lApiBuildVersion >= build))
 
 #endif /* _TYPES_HPP_ */

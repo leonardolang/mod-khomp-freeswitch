@@ -115,7 +115,7 @@ struct Ringbuffer: protected Ringbuffer_traits
         unsigned int reader = _reader,
                      writer = _writer;
 
-//		fprintf(stderr, "%p> provide %d/%d!\n", this, reader, writer);
+//        fprintf(stderr, "%p> provide %d/%d!\n", this, reader, writer);
 
         if (((reader - writer) == 1) || (reader == 0 && writer == _size))
             return false;
@@ -131,7 +131,7 @@ struct Ringbuffer: protected Ringbuffer_traits
         _writer         = writer;
         _writer_partial = writer * sizeof(T);
 
-//		fprintf(stderr, "%p> write: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
+//        fprintf(stderr, "%p> write: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
 
         return true;
     }
@@ -141,7 +141,7 @@ struct Ringbuffer: protected Ringbuffer_traits
         unsigned int reader = _reader,
                      writer = _writer;
 
-//		fprintf(stderr, "%p> consume %d/%d!\n", this, reader, writer);
+//        fprintf(stderr, "%p> consume %d/%d!\n", this, reader, writer);
 
         if ((writer - reader) == 1)
             return false;
@@ -156,7 +156,7 @@ struct Ringbuffer: protected Ringbuffer_traits
         _reader         = reader;
         _reader_partial = reader * sizeof(T);
 
-//		fprintf(stderr, "%p> read: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
+//        fprintf(stderr, "%p> read: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
 
         return true;
     }
@@ -173,26 +173,26 @@ struct Ringbuffer: protected Ringbuffer_traits
         return traits_consume((const char *)_buffer, (char *) value, amount);
     }
 
-	/***** PARCIAL BUFFER FUNCTIONS (TWO-STAGE) *****/
+    /***** PARCIAL BUFFER FUNCTIONS (TWO-STAGE) *****/
 
-	T & provider_start(void)
-	{
+    T & provider_start(void)
+    {
         unsigned int reader = _reader,
                      writer = _writer;
 
-//		fprintf(stderr, "%p> provider start %d/%d!\n", this, reader, writer);
+//        fprintf(stderr, "%p> provider start %d/%d!\n", this, reader, writer);
 
         if (((reader - writer) == 1) || (reader == 0 && writer == _size))
             throw BufferFull();
 
         return _buffer[writer-1];
-	}
+    }
 
-	void provider_commit(void)
-	{
+    void provider_commit(void)
+    {
         unsigned int temp = _writer + 1;
 
-//		fprintf(stderr, "%p> provider commit %d!\n", this, temp);
+//        fprintf(stderr, "%p> provider commit %d!\n", this, temp);
 
         if (temp > _size)
             temp = 1;
@@ -200,27 +200,27 @@ struct Ringbuffer: protected Ringbuffer_traits
         _writer         = temp;
         _writer_partial = temp * sizeof(T);
 
-//		fprintf(stderr, "%p> write: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
-	}
+//        fprintf(stderr, "%p> write: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
+    }
 
-	T & consumer_start(void)
-	{
+    T & consumer_start(void)
+    {
         unsigned int reader = _reader,
                      writer = _writer;
 
-//		fprintf(stderr, "%p> consumer start %d/%d!\n", this, reader, writer);
+//        fprintf(stderr, "%p> consumer start %d/%d!\n", this, reader, writer);
 
         if ((writer - reader) == 1)
             throw BufferEmpty();
 
         return _buffer[reader];
-	}
+    }
 
-	void consumer_commit(void)
-	{
+    void consumer_commit(void)
+    {
         unsigned int temp = _reader + 1;
 
-//		fprintf(stderr, "%p> consumer commit %d!\n", this, temp);
+//        fprintf(stderr, "%p> consumer commit %d!\n", this, temp);
 
         if (temp == _size)
             temp = 0;
@@ -228,18 +228,18 @@ struct Ringbuffer: protected Ringbuffer_traits
         _reader         = temp;
         _reader_partial = temp * sizeof(T);
 
-//		fprintf(stderr, "%p> read: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
-	}
+//        fprintf(stderr, "%p> read: %d/%d [%d/%d]\n", this, _reader, _writer, _reader_partial, _writer_partial);
+    }
 
     /* writes everything or nothing, but works on bytes (may write incomplete elements) */
-	/* WARNING: do not mix this with full element provider */
+    /* WARNING: do not mix this with full element provider */
     inline bool provider_partial(const char *buffer, unsigned int amount)
     {
         return traits_provide_partial((char *)_buffer, buffer, amount);
     }
 
     /* returns the number of bytes that have been read (may read incomplete elements) */
-	/* WARNING: do not mix this with full element consumer */
+    /* WARNING: do not mix this with full element consumer */
     inline unsigned int consumer_partial(char *buffer, unsigned int amount)
     {
         return traits_consume_partial((const char *)_buffer, buffer, amount);

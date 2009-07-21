@@ -314,92 +314,92 @@ struct Format
     template < typename V >
     bool number_verify_signed_short( V value )
     {
-		return
-			(typeid(V) == typeid(short int) ||
-			 typeid(V) == typeid(short) ||
-			 typeid(V) == typeid(const short int) ||
-			 typeid(V) == typeid(const short) ||
-			 typeid(V) == typeid(volatile short int) ||
-			 typeid(V) == typeid(volatile short));
-	}
+        return
+            (typeid(V) == typeid(short int) ||
+             typeid(V) == typeid(short) ||
+             typeid(V) == typeid(const short int) ||
+             typeid(V) == typeid(const short) ||
+             typeid(V) == typeid(volatile short int) ||
+             typeid(V) == typeid(volatile short));
+    }
 
     template < typename V >
     bool number_verify_unsigned_short( V value )
     {
-		return
-			(typeid(V) == typeid(unsigned short int) ||
-			 typeid(V) == typeid(unsigned short) ||
-			 typeid(V) == typeid(const unsigned short int) ||
-			 typeid(V) == typeid(const unsigned short) ||
-			 typeid(V) == typeid(volatile unsigned short int) ||
-			 typeid(V) == typeid(volatile unsigned short));
-	}
+        return
+            (typeid(V) == typeid(unsigned short int) ||
+             typeid(V) == typeid(unsigned short) ||
+             typeid(V) == typeid(const unsigned short int) ||
+             typeid(V) == typeid(const unsigned short) ||
+             typeid(V) == typeid(volatile unsigned short int) ||
+             typeid(V) == typeid(volatile unsigned short));
+    }
 
     template < typename V >
     bool number_verify_signed_long( V value )
     {
-		return
-			(typeid(V) == typeid(long int) ||
-			 typeid(V) == typeid(long) ||
-			 typeid(V) == typeid(const long int) ||
-			 typeid(V) == typeid(const long) ||
-			 typeid(V) == typeid(volatile long int) ||
-			 typeid(V) == typeid(volatile long));
-	}
+        return
+            (typeid(V) == typeid(long int) ||
+             typeid(V) == typeid(long) ||
+             typeid(V) == typeid(const long int) ||
+             typeid(V) == typeid(const long) ||
+             typeid(V) == typeid(volatile long int) ||
+             typeid(V) == typeid(volatile long));
+    }
 
     template < typename V >
     bool number_verify_unsigned_long( V value )
     {
-		return
-			(typeid(V) == typeid(unsigned long int) ||
-			 typeid(V) == typeid(unsigned long) ||
-			 typeid(V) == typeid(const unsigned long int) ||
-			 typeid(V) == typeid(const unsigned long) ||
-			 typeid(V) == typeid(volatile unsigned long int) ||
-			 typeid(V) == typeid(volatile unsigned long));
-	}
+        return
+            (typeid(V) == typeid(unsigned long int) ||
+             typeid(V) == typeid(unsigned long) ||
+             typeid(V) == typeid(const unsigned long int) ||
+             typeid(V) == typeid(const unsigned long) ||
+             typeid(V) == typeid(volatile unsigned long int) ||
+             typeid(V) == typeid(volatile unsigned long));
+    }
 
     template < typename V >
     bool number_verify_signed_long_long( V value )
     {
-		return
-			(typeid(V) == typeid(long long int) ||
-			 typeid(V) == typeid(long long) ||
-			 typeid(V) == typeid(const long long int) ||
-			 typeid(V) == typeid(const long long) ||
-			 typeid(V) == typeid(volatile long long) ||
-			 typeid(V) == typeid(volatile long long int));
-	}
+        return
+            (typeid(V) == typeid(long long int) ||
+             typeid(V) == typeid(long long) ||
+             typeid(V) == typeid(const long long int) ||
+             typeid(V) == typeid(const long long) ||
+             typeid(V) == typeid(volatile long long) ||
+             typeid(V) == typeid(volatile long long int));
+    }
 
     template < typename V >
     bool number_verify_unsigned_long_long( V value )
     {
-		return
-			(typeid(V) == typeid(unsigned long long int) ||
-			 typeid(V) == typeid(unsigned long long) ||
-			 typeid(V) == typeid(const unsigned long long int) ||
-			 typeid(V) == typeid(const unsigned long long) ||
-			 typeid(V) == typeid(volatile unsigned long long) ||
-			 typeid(V) == typeid(volatile unsigned long long int));
-	}
+        return
+            (typeid(V) == typeid(unsigned long long int) ||
+             typeid(V) == typeid(unsigned long long) ||
+             typeid(V) == typeid(const unsigned long long int) ||
+             typeid(V) == typeid(const unsigned long long) ||
+             typeid(V) == typeid(volatile unsigned long long) ||
+             typeid(V) == typeid(volatile unsigned long long int));
+    }
 
     template < typename V >
     bool number_verify_signed_int( V value )
     {
-		return
-			(typeid(V) == typeid(int) ||
-			 typeid(V) == typeid(const int) ||
-			 typeid(V) == typeid(volatile int));
-	}
+        return
+            (typeid(V) == typeid(int) ||
+             typeid(V) == typeid(const int) ||
+             typeid(V) == typeid(volatile int));
+    }
 
     template < typename V >
     bool number_verify_unsigned_int( V value )
     {
-		return
-			(typeid(V) == typeid(unsigned int) ||
-			 typeid(V) == typeid(const unsigned int) ||
-			 typeid(V) == typeid(volatile unsigned int));
-	}
+        return
+            (typeid(V) == typeid(unsigned int) ||
+             typeid(V) == typeid(const unsigned int) ||
+             typeid(V) == typeid(volatile unsigned int));
+    }
 
     template < typename V >
     bool generic_verify( V value, Type type )
@@ -409,12 +409,12 @@ struct Format
             /* EXCEPTION: consider unsigned int an valid input. */
             case T_SIGNED_INT:
                 return
-					(number_verify_signed_int(value)    ||
-					 number_verify_unsigned_int(value)  ||
-					 number_verify_signed_long(value)   ||
-					 number_verify_unsigned_long(value) ||
-					 number_verify_signed_short(value)  ||
-					 number_verify_unsigned_short(value));
+                    (number_verify_signed_int(value)    ||
+                     number_verify_unsigned_int(value)  ||
+                     number_verify_signed_long(value)   ||
+                     number_verify_unsigned_long(value) ||
+                     number_verify_signed_short(value)  ||
+                     number_verify_unsigned_short(value));
 
             case T_SIGNED_SHORT_SHORT:
                 return (typeid(V) == typeid(char) || typeid(V) == typeid(const char));
@@ -436,9 +436,9 @@ struct Format
 
             case T_UNSIGNED_INT:
                 return
-					(number_verify_unsigned_int(value) ||
-					 number_verify_unsigned_long(value) ||
-					 number_verify_unsigned_short(value));
+                    (number_verify_unsigned_int(value) ||
+                     number_verify_unsigned_long(value) ||
+                     number_verify_unsigned_short(value));
 
             case T_UNSIGNED_LONG:
                 return number_verify_unsigned_long(value);

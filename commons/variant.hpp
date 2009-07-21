@@ -57,8 +57,8 @@ struct VariantBaseType
 
     virtual int which() = 0;
 
-	virtual ReturnType visit(void)           { return ReturnType(); };
-	virtual ReturnType visit(ArgumentType)   { return ReturnType(); };
+    virtual ReturnType visit(void)           { return ReturnType(); };
+    virtual ReturnType visit(ArgumentType)   { return ReturnType(); };
 };
 
 template < typename BaseType = VariantBaseType < void > >
@@ -70,10 +70,10 @@ struct Variant: public RefCount < Variant < BaseType > >
     struct InvalidType {};
 
     Variant(BaseType * value)
-	: _value(value) {};
+    : _value(value) {};
 
     Variant(const Variant & v)
-	: _value(v._value) {};
+    : _value(v._value) {};
 
     void unreference()
     {
