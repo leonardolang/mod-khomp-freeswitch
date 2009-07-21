@@ -387,7 +387,8 @@ struct Format
     bool number_verify_signed_int( V value )
     {
         return
-            (typeid(V) == typeid(int) ||
+            (sizeof(V) <= 4 || 
+             typeid(V) == typeid(int) ||
              typeid(V) == typeid(const int) ||
              typeid(V) == typeid(volatile int));
     }

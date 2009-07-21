@@ -55,12 +55,20 @@ struct K3LUtil
 
     K3LUtil(K3LAPI & k3lapi): _k3lapi(k3lapi) {};
 
-    std::string callStatus(int dev, int channel, Verbose::Presentation fmt = Verbose::HUMAN);
+    std::string callStatus(int32 dev, int32 channel, 
+            Verbose::Presentation fmt = Verbose::HUMAN);
 
-    std::string channelStatus(int, int, Verbose::Presentation fmt = Verbose::HUMAN);
-    std::string linkStatus(int, int, Verbose::Presentation fmt = Verbose::HUMAN);
+    std::string channelStatus(int32, int32, 
+            Verbose::Presentation fmt = Verbose::HUMAN);
 
-    ErrorCountType linkErrorCount(int, int, Verbose::Presentation fmt = Verbose::HUMAN);
+    std::string linkStatus(int32, int32, 
+            Verbose::Presentation fmt = Verbose::HUMAN, 
+            KSignaling sig = ksigInactive);
+
+    unsigned int physicalLinkCount(int32 dev, bool fxs_too = false);
+
+    ErrorCountType linkErrorCount(int32, int32, 
+            Verbose::Presentation fmt = Verbose::HUMAN);
 
  protected:
     K3LAPI & _k3lapi;

@@ -264,7 +264,7 @@ struct K3LAPI
 
     K3L_LINK_CONFIG & link_config(int32 dev, int32 obj)
     {
-        if (!valid_channel(dev, obj))
+        if (!valid_link(dev, obj))
             throw invalid_channel(dev, obj);
 
         return _link_config[dev][obj];

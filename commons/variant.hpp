@@ -41,6 +41,8 @@
 
 #include <refcounter.hpp>
 
+#include <typeinfo>
+
 #ifndef _VARIANT_H_
 #define _VARIANT_H_
 

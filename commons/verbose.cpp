@@ -1129,7 +1129,7 @@ std::string Verbose::linkErrorCounter(KLinkErrorCounter ec, Verbose::Presentatio
         case klecLostOfFrame:       return presentation(fmt, "klecLostOfFrame",       "Lost of frame");
         case klecLostOfMultiframe:  return presentation(fmt, "klecLostOfMultiframe",  "Lost of multiframe");
         case klecRemoteAlarm:       return presentation(fmt, "klecRemoteAlarm",       "Remote alarm");
-        case klecUnknowAlarm:       return presentation(fmt, "klecUnknowAlarm",       "Unknown alarm");
+        case klecUnknowAlarm:       return presentation(fmt, "klecUnknowAlarm",       "Slip alarm");
         case klecPRBS:              return presentation(fmt, "klecPRBS",              "PRBS");
         case klecWrogrBits:         return presentation(fmt, "klecWrongBits",         "Wrong bits");
         case klecJitterVariation:   return presentation(fmt, "klecJitterVariation",   "Jitter variation");
@@ -1217,7 +1217,7 @@ std::string Verbose::linkStatus(KSignaling sig, int32 code, Verbose::Presentatio
                 if (kesMultiframeSyncLost & code) strs.add(presentation(fmt, "MultiframeSyncLost", "Multiframe sync lost"));
                 if (kesRemoteAlarm & code)        strs.add(presentation(fmt, "RemoteAlarm",        "Remote alarm"));
                 if (kesHighErrorRate & code)      strs.add(presentation(fmt, "HighErrorRate",      "High error rate"));
-                if (kesUnknownAlarm & code)       strs.add(presentation(fmt, "UnknownAlarm",       "Unknown alarm"));
+                if (kesUnknownAlarm & code)       strs.add(presentation(fmt, "UnknownAlarm",       "Slip alarm"));
                 if (kesE1Error & code)            strs.add(presentation(fmt, "E1Error",            "E1 error"));
 
 				PRESENTATION_CHECK_RETURN(fmt,

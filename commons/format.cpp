@@ -208,10 +208,15 @@ void Format::initialize(const char * format_string)
                     break;
 
                 case 'p':
+                    arg += *ptr;
+                    push_argument(arg, T_POINTER);
+                    finished = true;
+                    break;
+
                 case 'C':
                 case 'S':
-                case 'n':
                 case 'm':
+                case 'n': // unsupported for now.
                     arg += *ptr;
                     push_argument(arg, T_ANYTHING);
                     finished = true;

@@ -45,6 +45,7 @@
 
 #include <strings.hpp>
 
+#include <function.hpp>
 #include <variant.hpp>
 #include <format.hpp>
 
@@ -64,15 +65,7 @@ struct ConfigOption
     typedef bool         BooleanType;
     typedef std::string  StringType;
 
-    //typedef boost::function1<void, std::string>     
-    //typedef void (*FunctionType)(std::string);
-
-    struct BaseFunctionType
-    {
-        virtual void operator()(std::string) {};
-    };
-
-    typedef BaseFunctionType  FunctionType;
+    typedef Function::Function1 < void, std::string > FunctionType;
 
     typedef std::set < StringType >     string_allowed_type;
     
