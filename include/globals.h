@@ -4,6 +4,7 @@
 #include "k3lapi.hpp"
 
 #include <config_options.hpp>
+#include <k3lutil.hpp>
 #include <verbose.hpp>
 
 #include <vector>
@@ -42,6 +43,7 @@ struct Globals
     static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
 
     static K3LAPI        k3lapi;
+    static K3LUtil       k3lutil;
 	static Verbose       verbose;
 
     /* Config options class */

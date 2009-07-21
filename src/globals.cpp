@@ -15,6 +15,7 @@
 #include "globals.h"
 
 K3LAPI  Globals::k3lapi;
+K3LUtil Globals::k3lutil(Globals::k3lapi);
 Verbose Globals::verbose(Globals::k3lapi);
 
 ConfigOptions Globals::options;

@@ -758,31 +758,11 @@ void printChannels(switch_stream_handle_t* stream, unsigned short device)
     for (unsigned short channel = 0 ; 
             channel < Globals::k3lapi.channel_count(device) ; channel++) 
     {
-        K3L_CHANNEL_CONFIG config;
-        try {
-            config = Globals::k3lapi.channel_config(device, channel);
-        }
-        catch (K3LAPI::invalid_channel & e)
-        {
-            stream->write_function(stream, OBJ_MSG(device, channel,
-					"Could not get channel config.\n")) ;
-            return;
-        }
-
-        K3L_CHANNEL_STATUS status;
-        if (k3lGetDeviceStatus(device, channel + ksoChannel, &status, 
-                sizeof(status)) != ksSuccess) 
-        {
-            stream->write_function(stream, OBJ_MSG(device, channel,
-                    "Could not get channel status.\n"));
-                return;
-        }
-
         stream->write_function(stream, 
             "| %d,%02d |   unused   | %11s | %-36s |\n",
             device, channel, 
-            Verbose::callStatus(status.CallStatus).c_str(), 
-            Verbose::channelStatus(config.Signaling, status.AddInfo).c_str());
+            Globals::k3lutil.callStatus(device, channel).c_str(), 
+            Globals::k3lutil.channelStatus(device, channel).c_str());
     }
     
 }
@@ -816,98 +796,17 @@ void apiPrintChannels(switch_stream_handle_t* stream)
 }
 
 
-unsigned int get_channel_count(int device)
-{
-    return Globals::k3lapi.channel_count(device);
-}
-
-unsigned int get_link_count(int device)
-{
-    return Globals::k3lapi.link_count(device);
-}
-
-
-
-unsigned int get_real_link_count(int device, bool fxs_too = false)
-{
-    int count = 0;
-
-    switch (Globals::k3lapi.device_type(device))
-    {
-#if K3L_AT_LEAST(1,6,0)
-        case kdtFXS:
-            count = (fxs_too ? (get_channel_count(device) == 64 ? 2 : 1) : 0);
-            break;
-
-        case kdtFXSSpx:
-            count = (fxs_too ? (get_channel_count(device) == 60 ? 2 : 1) : 0);
-            break;
-#endif
-        /* E1 boards */
-        case kdtE1:
-        case kdtE1Spx:
-        case kdtE1IP:
-            count = get_link_count(device);
-            break;
-
-        case kdtPR:
-        case kdtE1GW:
-            count = 1;
-            break;
-
-#if K3L_AT_LEAST(1,6,0)
-        case kdtFXO:
-        case kdtFXOVoIP:
-        case kdtGSM:
-        case kdtGSMSpx:
-#else
-        case kdtFX:
-        case kdtFXVoIP:
-#endif
-        case kdtConf:
-        case kdtGWIP:
-            count = 0;
-            break;
-    }
-
-    return count;
-}
-
-void get_link_status (int dev, int link, std::string & buf)
-{
-    try
-    {
-        K3L_LINK_CONFIG & config = Globals::k3lapi.link_config(dev, link);
-        K3L_LINK_STATUS   status;
-
-        KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus(dev, 
-                link + ksoLink, &status, sizeof(status));
-
-        buf = ((ret == ksSuccess) ? 
-            Verbose::linkStatus(config.Signaling, status.E1)
-            : std::string("<unknown>"));
-    } 
-    catch(K3LAPI::invalid_channel & e)
-    {
-        buf = std::string("<unknown>");
-    }
-}
-
-
- 
 void printLinks(switch_stream_handle_t* stream, unsigned int device)
 {
     
     stream->write_function(stream, 
 "|------------------------------------------------------------------------|\n");
 
-    switch (get_real_link_count(device, true))
+    switch (Globals::k3lutil.physicalLinkCount(device, true))
     {
         case 1:
         {
-            std::string str_link0;
-
-            get_link_status (device, 0, str_link0);
+            std::string str_link0 = Globals::k3lutil.linkStatus(device, 0);
 
             try
             {
@@ -927,10 +826,8 @@ void printLinks(switch_stream_handle_t* stream, unsigned int device)
 
         case 2:
         {
-            std::string str_link0, str_link1;
-
-            get_link_status (device, 0, str_link0);
-            get_link_status (device, 1, str_link1);
+            std::string str_link0 = Globals::k3lutil.linkStatus(device, 0);
+            std::string str_link1 = Globals::k3lutil.linkStatus(device, 1);
 
             try
             {
