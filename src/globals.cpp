@@ -14,7 +14,8 @@
 
 #include "globals.h"
 
-K3LAPI Globals::k3lapi;
+K3LAPI  Globals::k3lapi;
+Verbose Globals::verbose(Globals::k3lapi);
 
 ConfigOptions Globals::options;
 
@@ -26,5 +27,4 @@ int                           Globals::running = 1;
 unsigned int     Globals::flags = 0;
 int              Globals::calls = 0;
 switch_mutex_t * Globals::mutex = NULL;
-
 

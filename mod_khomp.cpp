@@ -573,7 +573,6 @@ switch_call_cause_t channel_outgoing_channel
             % tech_pvt->target().object 
             % argv[2]).c_str());
     
-    
     caller_profile = switch_caller_profile_clone(*new_session, outbound_profile);
     switch_channel_set_caller_profile(channel, caller_profile);
     tech_pvt->_caller_profile = caller_profile;
@@ -765,9 +764,8 @@ void printChannels(switch_stream_handle_t* stream, unsigned short device)
         }
         catch (K3LAPI::invalid_channel & e)
         {
-            stream->write_function(stream, "%s "
-                    "Could not get channel config.\n", 
-                    CHAN_VERBOSE(device, channel));
+            stream->write_function(stream, OBJ_MSG(device, channel,
+					"Could not get channel config.\n")) ;
             return;
         }
 
@@ -775,9 +773,8 @@ void printChannels(switch_stream_handle_t* stream, unsigned short device)
         if (k3lGetDeviceStatus(device, channel + ksoChannel, &status, 
                 sizeof(status)) != ksSuccess) 
         {
-            stream->write_function(stream, "%s "
-                    "Could not get channel status.\n", 
-                    CHAN_VERBOSE(device, channel));
+            stream->write_function(stream, OBJ_MSG(device, channel,
+                    "Could not get channel status.\n"));
                 return;
         }
 
@@ -1096,29 +1093,30 @@ void printSystemSummary(switch_stream_handle_t* stream) {
 
 
 /* Create a new channel on incoming call */
-KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KChannel, K3L_EVENT * event)
+bool khomp_channel_from_event(K3LAPI::target & target, K3L_EVENT * event)
 {
     switch_core_session_t *session = NULL;
     CBaseKhompPvt *tech_pvt = NULL;
     switch_channel_t *channel = NULL;
     
-    if (!(session = switch_core_session_request(Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, NULL))) {
+    if (!(session = switch_core_session_request(Globals::khomp_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, NULL)))
+	{
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
-        return ksFail;
+        return false;
     }
     
     switch_core_session_add_stream(session, NULL);
     
-    tech_pvt = CBaseKhompPvt::get(KDeviceId, KChannel);
+    tech_pvt = CBaseKhompPvt::get(target);
     assert(tech_pvt != NULL); // TODO: assert is bad, better is to log non-fatal error.
 
     channel = switch_core_session_get_channel(session);
 
-    //if (tech_init(tech_pvt, session) != SWITCH_STATUS_SUCCESS) {
-    if (tech_pvt->init(session) != SWITCH_STATUS_SUCCESS) {
+    if (tech_pvt->init(session) != SWITCH_STATUS_SUCCESS)
+	{
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Initilization Error!\n");
         switch_core_session_destroy(&session);
-        return ksFail;
+        return false;
     }
 
     /* Get all data from event */
@@ -1133,7 +1131,8 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
     catch ( K3LAPI::get_param_failed & err )
     {
         /* TODO: Can we set NULL variables? What should we do if this fails? */
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Could not get param %s on channel %u, board %u.\n", err.name.c_str(), KChannel, KDeviceId);
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+			PVT_MSG(target, "Could not get param '%s'.\n"), err.name.c_str());
     }
 
     /*if (switch_strlen_zero(sigmsg->channel->caller_data.cid_num.digits)) {
@@ -1168,9 +1167,10 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
     
     /* */
     std::string name = STG(FMT("Khomp/%hu/%hu/%s") 
-            % KDeviceId
-            % KChannel
+            % target.device
+            % target.object
             % tech_pvt->_caller_profile->destination_number);
+
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Connect inbound channel %s\n", name.c_str());
     switch_channel_set_name(channel, name.c_str());
     switch_channel_set_caller_profile(channel, tech_pvt->_caller_profile);
@@ -1178,10 +1178,11 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
 
     switch_channel_set_state(channel, CS_INIT);
 
-    if (switch_core_session_thread_launch(session) != SWITCH_STATUS_SUCCESS) {
+    if (switch_core_session_thread_launch(session) != SWITCH_STATUS_SUCCESS)
+	{
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Error spawning thread\n");
         switch_core_session_destroy(&session);
-        return ksFail;
+        return false;
     }
 
     /* WHAT?
@@ -1195,7 +1196,7 @@ KLibraryStatus khomp_channel_from_event(unsigned int KDeviceId, unsigned int KCh
     /* Set the session to the channel */
     tech_pvt->session(session);
 
-    return ksSuccess;
+    return true;
 }
 
 extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, byte * read_buffer, int32 read_size)
@@ -1209,8 +1210,7 @@ extern "C" void Kstdcall khomp_audio_listener (int32 deviceid, int32 objectid, b
     if (!pvt->_reader_frames.give((const char *)read_buffer, read_size))
     {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,
-            "%s Reader buffer full!\n",
-            CHAN_VERBOSE(pvt->target().device, pvt->target().object));
+            OBJ_MSG(deviceid, objectid, "Reader buffer full!\n"));
     }
 
     /* push audio from the write buffer */

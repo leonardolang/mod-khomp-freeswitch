@@ -8,8 +8,20 @@
 
 #include <vector>
 
-#define CHAN_VERBOSE(dev,obj) STG(FMT("(dev=%02hu,channel=%03hu)") % (unsigned short)dev % (unsigned short)obj).c_str()
+#define OBJ_FMT(dev,obj,msg) \
+	FMT("(dev=%02d,channel=%03d)" msg) % dev % obj
 
+#define OBJ_MSG(dev,obj,msg) \
+	"(dev=%02d,channel=%03d)" msg, dev, obj
+
+#define PVT_FMT(tgt,msg) \
+	FMT("(dev=%02hu,channel=%03hu)" msg) % tgt.device % tgt.object
+
+#define PVT_MSG(tgt,msg) \
+	"(dev=%02hu,channel=%03hu)" msg, tgt.device, tgt.object
+
+#define STR(fmt) \
+	STG(fmt).c_str()
 
 extern "C"
 {
@@ -30,6 +42,7 @@ struct Globals
     static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
 
     static K3LAPI        k3lapi;
+	static Verbose       verbose;
 
     /* Config options class */
     static ConfigOptions options;
