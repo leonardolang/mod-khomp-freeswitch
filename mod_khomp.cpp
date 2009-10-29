@@ -706,7 +706,7 @@ SWITCH_STANDARD_API(apiKhomp)
     /* We should not ever get a session here */
     if (session) return SWITCH_STATUS_FALSE;
 
-    if (switch_strlen_zero(cmd)) 
+    if (zstr(cmd)) 
     {
         stream->write_function(stream, "%s", KHOMP_SYNTAX);
         return status;
