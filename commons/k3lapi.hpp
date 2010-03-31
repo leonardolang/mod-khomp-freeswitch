@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,20 +23,20 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <string>
@@ -68,12 +68,12 @@ struct K3LAPI
         start_failed(const char * _msg) : msg(_msg) {};
         std::string msg;
     };
-    
+
     struct failed_command
     {
         failed_command(int32 _code, unsigned short _dev, unsigned short _obj, int32 _rc)
         : code(_code), dev(_dev), obj(_obj), rc(_rc) {};
-        
+
         int32           code;
         unsigned short  dev;
         unsigned short  obj;
@@ -84,7 +84,7 @@ struct K3LAPI
     {
         failed_raw_command(unsigned short _dev, unsigned short _dsp, int32 _rc)
         : dev(_dev), dsp(_dsp), rc(_rc) {};
-        
+
         unsigned short  dev;
         unsigned short  dsp;
         int32           rc;
@@ -94,7 +94,7 @@ struct K3LAPI
     {
         invalid_device(int32 _device)
         : device(_device) {};
-        
+
         int32 device;
     };
 
@@ -122,7 +122,7 @@ struct K3LAPI
         std::string name;
         KLibraryStatus rc;
     };
-    
+
     typedef K3L_DEVICE_CONFIG          device_conf_type;
     typedef K3L_CHANNEL_CONFIG        channel_conf_type;
     typedef K3L_CHANNEL_CONFIG *  channel_ptr_conf_type;
@@ -130,17 +130,17 @@ struct K3LAPI
     typedef K3L_LINK_CONFIG *        link_ptr_conf_type;
 
     /* constructors/destructors */
-    
-    K3LAPI();
-    ~K3LAPI();
+
+     K3LAPI();
+    ~K3LAPI() {};
 
     /* (init|final)ialize the whole thing! */
-    
+
     void start(void);
     void stop(void);
 
     /* verificacao de intervalos */
-    
+
     inline bool valid_device(int32 dev)
     {
         return (dev >= 0 && dev < ((int32)_device_count));
@@ -167,7 +167,7 @@ struct K3LAPI
         typedef enum { DEVICE, CHANNEL, MIXER, LINK } target_type;
 
         target(K3LAPI & k3lapi, target_type type_init, int32 device_value, int32 object_value)
-        : type(type_init), 
+        : type(type_init),
           device((unsigned short)device_value),
           object((unsigned short)object_value)
         {
@@ -204,14 +204,14 @@ struct K3LAPI
     void raw_command(int32 dev, int32 dsp, const char * cmds, int32 size);
 
     /* obter dados 'cacheados' (geral) */
-    
+
     inline unsigned int device_count(void)
     {
         return _device_count;
     }
 
     /* envio de comandos para placa (sem identificadores) */
-    
+
     void mixer(int32 dev, int32 obj, byte track, KMixerSource src, int32 index);
     void mixerRecord(int32 dev, int32 obj, byte track, KMixerSource src, int32 index);
     void mixerCTbus(int32 dev, int32 obj, byte track, KMixerSource src, int32 index);
@@ -237,14 +237,34 @@ struct K3LAPI
         return _link_count[dev];
     }
 
+    inline uint32 channel_stats(int32 dev, int32 obj, uint32 index)
+    {
+        if (!valid_channel(dev, obj))
+            throw invalid_channel(dev, obj);
+
+        uint32 res_value = (uint32)-1;
+        stt_code stt_res = ksFail;
+
+#if K3L_AT_LEAST(2,1,0)
+        stt_res = k3lGetChannelStats(dev, obj, index, &res_value);
+#endif
+
+        if(stt_res != ksSuccess)
+        {
+            return (uint32)-1;
+        }
+
+        return res_value;
+    }
+
     KDeviceType device_type(int32 dev)
     {
         if (!valid_device(dev))
             throw invalid_device(dev);
-        
+
         return _device_type[dev];
     }
-    
+
 
     K3L_DEVICE_CONFIG & device_config(int32 dev)
     {
@@ -271,7 +291,7 @@ struct K3LAPI
     }
 
     /* envio de comandos para placa (com identificadores) */
-    
+
     void mixer(target & tgt, byte track, KMixerSource src, int32 index)
     {
         mixer((int32)tgt.device, (int32)tgt.object, track, src, index);
@@ -298,7 +318,7 @@ struct K3LAPI
     };
 
     /* obter dados 'cacheados' (com indentificadores) */
-    
+
     inline unsigned int channel_count(target & tgt)
     {
         return _channel_count[tgt.device];
@@ -313,7 +333,7 @@ struct K3LAPI
     {
         return _device_type[tgt.device];
     }
-    
+
 
     K3L_DEVICE_CONFIG & device_config(target & tgt)
     {
@@ -338,6 +358,7 @@ struct K3LAPI
     /* inicializa valores em cache */
 
     void init(void);
+    void fini(void);
 
     /* utilidades diversas e informacoes */
 
@@ -348,13 +369,13 @@ struct K3LAPI
     };
 
     int32 get_dsp(int32, DspType);
-    
+
  protected:
 
     unsigned int           _device_count;
     unsigned int *        _channel_count;
     unsigned int *           _link_count;
-    
+
          device_conf_type *   _device_config;
     channel_ptr_conf_type *  _channel_config;
        link_ptr_conf_type *     _link_config;

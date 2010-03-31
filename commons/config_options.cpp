@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,59 +23,64 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <config_options.hpp>
 
 ConfigOption::ConfigOption(std::string name, const ConfigOption::StringType & value, const ConfigOption::StringType defvalue, string_allowed_type allowed, bool list_me)
-: _my_name(name), _value_data(new StringData(const_cast<StringType &>(value), defvalue, allowed)),
+: _my_name(name), _value_data(new StringData(const_cast<StringType &>(value), defvalue, allowed), true),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
 ConfigOption::ConfigOption(std::string name, const ConfigOption::StringType & value, const ConfigOption::StringType defvalue, bool list_me)
-: _my_name(name), _value_data(new StringData(const_cast<StringType &>(value), defvalue, string_allowed_type())),
+: _my_name(name), _value_data(new StringData(const_cast<StringType &>(value), defvalue, string_allowed_type()), true),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
 ConfigOption::ConfigOption(std::string name, const ConfigOption::SignedIntType & value, const ConfigOption::SignedIntType defvalue,
                              ConfigOption::SignedIntType min, ConfigOption::SignedIntType max, ConfigOption::SignedIntType step, bool list_me)
-: _my_name(name), _value_data(new SignedIntData(const_cast<SignedIntType &>(value), defvalue, Range<SignedIntType>(min, max, step))),
+: _my_name(name), _value_data(new SignedIntData(const_cast<SignedIntType &>(value), defvalue, Range<SignedIntType>(min, max, step)), true),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
 ConfigOption::ConfigOption(std::string name, const ConfigOption::UnsignedIntType & value, const ConfigOption::UnsignedIntType defvalue,
                              ConfigOption::UnsignedIntType min, ConfigOption::UnsignedIntType max, ConfigOption::UnsignedIntType step, bool list_me)
-: _my_name(name), _value_data(new UnsignedIntData(const_cast<UnsignedIntType &>(value), defvalue, Range<UnsignedIntType>(min, max, step))),
+: _my_name(name), _value_data(new UnsignedIntData(const_cast<UnsignedIntType &>(value), defvalue, Range<UnsignedIntType>(min, max, step)), true),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
 ConfigOption::ConfigOption(std::string name, const ConfigOption::BooleanType & value, const ConfigOption::BooleanType defvalue, bool list_me)
-: _my_name(name), _value_data(new BooleanData(const_cast<BooleanType &>(value), defvalue)),
+: _my_name(name), _value_data(new BooleanData(const_cast<BooleanType &>(value), defvalue), true),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
 ConfigOption::ConfigOption(std::string name, ConfigOption::FunctionType fun, std::string defvalue, string_allowed_type allowed, bool list_me)
-: _my_name(name), _value_data(new FunctionData(fun, defvalue, allowed)),
+: _my_name(name), _value_data(new FunctionData(fun, defvalue, allowed), true),
   _list_me(list_me), _values(NULL), _loaded(false)
 {};
 
 ConfigOption::ConfigOption(std::string name, ConfigOption::FunctionType fun, std::string defvalue, bool list_me)
-: _my_name(name), _value_data(new FunctionData(fun, defvalue, string_allowed_type())),
+: _my_name(name), _value_data(new FunctionData(fun, defvalue, string_allowed_type()), true),
   _list_me(list_me), _values(NULL), _loaded(false)
+{};
+
+ConfigOption::ConfigOption(const ConfigOption::ConfigOption & o)
+: _my_name(o._my_name), _value_data(o._value_data),
+  _list_me(o._list_me), _values(o._values), _loaded(o._loaded)
 {};
 
 ConfigOption::~ConfigOption(void)
@@ -86,6 +91,7 @@ ConfigOption::~ConfigOption(void)
             delete _values[i];
 
         delete[] _values;
+        _values = NULL;
     }
 };
 
@@ -95,10 +101,9 @@ void ConfigOption::set(ConfigOption::StringType value)
     {
         case ID_STRING:
         {
-            try 
+            try
             {
                 StringData & tmp = _value_data.get<StringData>();
-            
 
                 if (tmp.string_allowed.empty())
                 {
@@ -122,7 +127,7 @@ void ConfigOption::set(ConfigOption::StringType value)
                         allowed_string += (*i);
                         allowed_string += "'";
                     }
-    
+
                     throw ConfigProcessFailure(STG(FMT("value '%s' not allowed for option '%s' (allowed values:%s)")
                         % value % _my_name % allowed_string));
                 }
@@ -136,7 +141,7 @@ void ConfigOption::set(ConfigOption::StringType value)
 
         case ID_FUN:
         {
-            try 
+            try
             {
                 FunctionData & tmp = _value_data.get<FunctionData>();
                 tmp.fun_val(value);
@@ -221,9 +226,9 @@ void ConfigOption::set(ConfigOption::BooleanType value)
 
 std::string & ConfigOption::name(void) { return _my_name; };
 
-ConfigOption::value_id_type ConfigOption::type(void) 
-{ 
-    return (value_id_type) _value_data.which(); 
+ConfigOption::value_id_type ConfigOption::type(void)
+{
+    return (value_id_type) _value_data.which();
 };
 
 const char ** ConfigOption::values(void)
@@ -298,7 +303,7 @@ const char ** ConfigOption::values(void)
             try
             {
                 StringData & tmp = _value_data.get<StringData>();
-            
+
                 _values = new const char*[ tmp.string_allowed.size() + 1 ];
 
                 unsigned int index = 0;
@@ -321,11 +326,11 @@ const char ** ConfigOption::values(void)
             try
             {
                 FunctionData & tmp = _value_data.get<FunctionData>();
-            
+
                 _values = new const char*[ tmp.fun_allowed.size() + 1 ];
 
                 unsigned int index = 0;
-    
+
                 for (string_allowed_type::iterator i = tmp.fun_allowed.begin(); i != tmp.fun_allowed.end(); i++, index++)
                     _values[index] = strdup((*i).c_str());
 
@@ -544,7 +549,7 @@ bool ConfigOptions::add(ConfigOption option)
 {
     //option_map_type::iterator iter2 = _map.begin();
 
-    //boost::tie(iter2, ok2) 
+    //boost::tie(iter2, ok2)
     std::pair<option_map_type::iterator, bool> ret = _map.insert(option_pair_type(option.name(), option));
 
     return ret.second;
@@ -554,7 +559,7 @@ bool ConfigOptions::synonym(std::string equiv_opt, std::string main_opt)
 {
     //syn_option_map_type::iterator iter = _syn_map.begin();
 
-    //boost::tie(iter, ok) 
+    //boost::tie(iter, ok)
     std::pair<syn_option_map_type::iterator, bool> ret = _syn_map.insert(syn_option_pair_type(equiv_opt, main_opt));
 
     return ret.second;
@@ -652,7 +657,7 @@ void ConfigOptions::reset(void)
 ConfigOptions::messages_type ConfigOptions::commit(void)
 {
     messages_type msgs;
-    
+
     for (option_map_type::iterator i = _map.begin(); i != _map.end(); i++)
     {
         try
@@ -664,7 +669,7 @@ ConfigOptions::messages_type ConfigOptions::commit(void)
             msgs.push_back(e.msg);
         }
     }
-    
+
     return msgs;
 }
 

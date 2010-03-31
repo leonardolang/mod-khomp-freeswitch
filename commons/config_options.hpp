@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,20 +23,20 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <set>
@@ -68,7 +68,7 @@ struct ConfigOption
     typedef Function::Function1 < void, std::string > FunctionType;
 
     typedef std::set < StringType >     string_allowed_type;
-    
+
     /* this should reflect 'variant.which()'! */
     typedef enum
     {
@@ -123,7 +123,7 @@ struct ConfigOption
     {
         BooleanData(BooleanType & _bool_val, BooleanType _bool_default)
         : bool_val(_bool_val), bool_default(_bool_default) {};
-        
+
         int which()
         {
             return ID_BOOL;
@@ -137,7 +137,7 @@ struct ConfigOption
     {
         StringData(std::string & _string_val, std::string _string_default, string_allowed_type _string_allowed)
         : string_val(_string_val), string_default(_string_default), string_allowed(_string_allowed) {};
-        
+
         int which()
         {
             return ID_STRING;
@@ -152,7 +152,7 @@ struct ConfigOption
     {
         FunctionData(FunctionType _fun_val, std::string _fun_default, string_allowed_type _fun_allowed)
         : fun_val(_fun_val), fun_default(_fun_default), fun_allowed(_fun_allowed) {};
-        
+
         int which()
         {
             return ID_FUN;
@@ -174,6 +174,8 @@ struct ConfigOption
     ConfigOption(std::string, FunctionType, std::string defvalue, string_allowed_type allowed, bool list_me = true);
     ConfigOption(std::string, FunctionType, std::string defvalue = "", bool list_me = true);
 
+    ConfigOption(const ConfigOption & o);
+
     ~ConfigOption(void);
 
     void set(StringType value);
@@ -181,6 +183,11 @@ struct ConfigOption
     void set(SignedIntType value);
     void set(UnsignedIntType value);
     void set(BooleanType value);
+
+    BooleanType get_bool(){ return _value_data.get<BooleanData>().bool_val; }
+    std::string get_str(){ return _value_data.get<StringData>().string_val; }
+    SignedIntType get_sint(){ return _value_data.get<SignedIntData>().sint_val; }
+    UnsignedIntType get_uint(){ return _value_data.get<UnsignedIntData>().uint_val; }
 
     std::string    & name(void);
     value_id_type    type(void);
@@ -232,6 +239,23 @@ struct ConfigOptions
             throw ConfigProcessFailure(STG(FMT("unknown option: %s") % name));
 
         (*iter).second.set(value);
+    }
+
+    std::string get(std::string name)
+    {
+        option_map_type::iterator iter = _map.find(name);
+
+        if (iter == _map.end())
+            throw ConfigProcessFailure(STG(FMT("unknown option: %s") % name));
+
+        switch((*iter).second.type())
+        {
+            case ConfigOption::ID_BOOL: return (*iter).second.get_bool() ? "yes" : "no";
+            case ConfigOption::ID_STRING: return (*iter).second.get_str();
+            case ConfigOption::ID_UINT: return STG(FMT("%d") % (*iter).second.get_uint());
+            case ConfigOption::ID_SINT: return STG(FMT("%d") % (*iter).second.get_sint());
+            case ConfigOption::ID_FUN: return "";
+        }
     }
 
     string_set options(void);

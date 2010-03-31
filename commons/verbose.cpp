@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,34 +23,34 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <strings.hpp>
 #include <verbose.hpp>
 
 #define PRESENTATION_CHECK_RETURN(fmt, txtexact, txthuman) \
-	{ \
-		switch(fmt) \
-		{ \
-			case EXACT: return txtexact; \
-			case HUMAN: return txthuman; \
-		} \
-		return txtexact; \
-	}
+    { \
+        switch(fmt) \
+        { \
+            case EXACT: return txtexact; \
+            case HUMAN: return txthuman; \
+        } \
+        return txtexact; \
+    }
 
 /********************************************/
 
@@ -67,17 +67,29 @@ std::string Verbose::channelStatus(int32 dev, int32 obj, int32 cs, Verbose::Pres
     }
 }
 
-std::string Verbose::event(int32 obj, K3L_EVENT *ev, r2_country_type r2_country, Verbose::Presentation fmt)
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::event(int32 obj, K3L_EVENT *ev, R2CountryType r2_country, Verbose::Presentation fmt)
+#else
+std::string Verbose::event(int32 obj, K3L_EVENT *ev, Verbose::Presentation fmt)
+#endif
 {
-	try
-	{
-		K3L_CHANNEL_CONFIG & config = _api.channel_config(ev->DeviceId, obj);
-		return Verbose::event(config.Signaling, obj, ev, r2_country, fmt);
-	}
-	catch (...)
-	{
-		return Verbose::event(ksigInactive, obj, ev, r2_country, fmt);
-	}
+    try
+    {
+        K3L_CHANNEL_CONFIG & config = _api.channel_config(ev->DeviceId, obj);
+#if K3L_AT_LEAST(2,0,0)
+        return Verbose::event(config.Signaling, obj, ev, r2_country, fmt);
+#else
+        return Verbose::event(config.Signaling, obj, ev, fmt);
+#endif
+    }
+    catch (...)
+    {
+#if K3L_AT_LEAST(2,0,0)
+        return Verbose::event(ksigInactive, obj, ev, r2_country, fmt);
+#else
+        return Verbose::event(ksigInactive, obj, ev, fmt);
+#endif
+    }
 }
 
 /********************************************/
@@ -123,7 +135,7 @@ std::string Verbose::deviceName(KDeviceType dt, int32 model, Verbose::Presentati
         value += internal_deviceType(dt);
         value += "-";
         value += internal_deviceModel(dt, model);
-    
+
         return value;
     }
     catch (internal_not_found e)
@@ -152,42 +164,46 @@ std::string Verbose::internal_deviceType(KDeviceType dt)
 {
     switch (dt)
     {
-        case kdtE1:      return "K2E1";
+        case kdtE1:            return "K2E1";
 
 #if K3L_AT_LEAST(1,6,0)
-        case kdtFXO:     return "KFXO";
+        case kdtFXO:           return "KFXO";
 #else
-        case kdtFX:      return "KFXO";
+        case kdtFX:            return "KFXO";
 #endif
 
-        case kdtConf:    return "KCONF";
-        case kdtPR:      return "KPR";
-        case kdtE1GW:    return "KE1GW";
+        case kdtConf:          return "KCONF";
+        case kdtPR:            return "KPR";
+        case kdtE1GW:          return "KE1GW";
 
 #if K3L_AT_LEAST(1,6,0)
-        case kdtFXOVoIP: return "KFXVoIP";
+        case kdtFXOVoIP:       return "KFXVoIP";
 #else
-        case kdtFXVoIP:  return "KFXVoIP";
+        case kdtFXVoIP:        return "KFXVoIP";
 #endif
 
 #if K3L_AT_LEAST(1,5,0)
-        case kdtE1IP:   return "K2E1";
+        case kdtE1IP:          return "K2E1";
 #endif
 #if K3L_AT_LEAST(1,5,1)
-        case kdtE1Spx:  return "K2E1";
-        case kdtGWIP:   return "KGWIP";
+        case kdtE1Spx:         return "K2E1";
+        case kdtGWIP:          return "KGWIP";
 #endif
 
 #if K3L_AT_LEAST(1,6,0)
-        case kdtFXS:     return "KFXS";
-        case kdtFXSSpx:  return "KFXS";
-        case kdtGSM:     return "KGSM";
-        case kdtGSMSpx:  return "KGSM";
+        case kdtFXS:           return "KFXS";
+        case kdtFXSSpx:        return "KFXS";
+        case kdtGSM:           return "KGSM";
+        case kdtGSMSpx:        return "KGSM";
 #endif
 
 #if K3L_AT_LEAST(2,1,0)
-        case kdtGSMUSB:    return "KGSMUSB";
-        case kdtGSMUSBSpx: return "KGSMUSB";
+        case kdtReserved1:     return "Reserved1";
+        case kdtGSMUSB:        return "KGSMUSB";
+        case kdtGSMUSBSpx:     return "KGSMUSB";
+
+        case kdtE1FXSSpx:      return "KE1FXS";
+        case kdtDevTypeCount:  return "DevTypeCount";
 #endif
     }
 
@@ -235,6 +251,9 @@ std::string Verbose::internal_deviceModel(KDeviceType dt, int32 model)
                 case kdmFXO80:    return "80";
                 case kdmFXOHI:    return "HI";
                 case kdmFXO160HI: return "160HI";
+#if K3L_AT_LEAST(2,1,0)
+        case kdmFXO240HI: return "240HI";
+#endif
 #else
                 case kdmFXO80:    return "80";
 #endif
@@ -295,7 +314,7 @@ std::string Verbose::internal_deviceModel(KDeviceType dt, int32 model)
             }
 
             throw internal_not_found();
-            
+
 #elif K3L_AT_LEAST(1,4,0)
         case kdtFXVoIP:
             switch ((KFXVoIPDeviceModel)model)
@@ -319,7 +338,7 @@ std::string Verbose::internal_deviceModel(KDeviceType dt, int32 model)
                 case kdmE1600EG: return "600EG";
 #endif
             }
-            
+
             throw internal_not_found();
 #endif
 
@@ -380,6 +399,9 @@ std::string Verbose::internal_deviceModel(KDeviceType dt, int32 model)
             switch ((KGSMDeviceModel)model)
             {
                 case kdmGSM:       return "40";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmGSMEX:     return "40EX";
+#endif
             }
 
             throw internal_not_found();
@@ -388,13 +410,16 @@ std::string Verbose::internal_deviceModel(KDeviceType dt, int32 model)
             switch ((KGSMSpxDeviceModel)model)
             {
                 case kdmGSMSpx:    return "SPX";
+#if K3L_AT_LEAST(2,0,0)
+                case kdmGSMSpxEX:  return "SPXEX";
+#endif
             }
 
             throw internal_not_found();
 
 #if K3L_AT_LEAST(2,1,0)
         case kdtGSMUSB:
-            switch ((KGSMDeviceModel)model)
+            switch ((KGSMUSBDeviceModel)model)
             {
                 case kdmGSMUSB:    return "20";
             }
@@ -402,12 +427,26 @@ std::string Verbose::internal_deviceModel(KDeviceType dt, int32 model)
             throw internal_not_found();
 
         case kdtGSMUSBSpx:
-            switch ((KGSMSpxDeviceModel)model)
+            switch ((KGSMUSBSpxDeviceModel)model)
             {
                 case kdmGSMUSBSpx: return "SPX";
             }
 
             throw internal_not_found();
+
+        case kdtE1FXSSpx:
+            switch ((KGSMSpxDeviceModel)model)
+            {
+                case kdmE1FXSSpx:   return "SPX";
+                case kdmE1FXSSpxEX: return "SPXEX";
+            }
+
+            throw internal_not_found();
+
+        case kdtReserved1:
+        case kdtDevTypeCount:
+            throw internal_not_found();
+
 #endif
 #endif
     }
@@ -444,31 +483,38 @@ std::string Verbose::signaling(KSignaling sig, Verbose::Presentation fmt)
         case ksigAnalogTerminal: return presentation(fmt, "ksigAnalogTerminal", "FXS (analog)");
         case ksigGSM:            return presentation(fmt, "ksigGSM",            "GSM");
         case ksigCAS_EL7:        return presentation(fmt, "ksigCAS_EL7",        "CAS EL7");
-		case ksigE1LC:           return presentation(fmt, "ksigE1LC",           "E1 LC");
+        case ksigE1LC:           return presentation(fmt, "ksigE1LC",           "E1 LC");
+#endif
+#if K3L_AT_LEAST(2,1,0)
+        case ksigISUP:           return presentation(fmt, "ksigISUP",           "ISUP");
+        case ksigFax:           return presentation(fmt, "ksigFax",            "Fax");
 #endif
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KSignaling='%d']") % (int)sig),
-		STG(FMT("Unknown siglaning (%d)") % (int)sig));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KSignaling='%d']") % (int)sig),
+        STG(FMT("Unknown siglaning (%d)") % (int)sig));
 }
 
 std::string Verbose::systemObject(KSystemObject so, Verbose::Presentation fmt)
 {
     switch (so)
     {
-        case ksoLink:     return presentation(fmt, "ksoLink",     "Link");
-        case ksoLinkMon:  return presentation(fmt, "ksoLinkMon",  "Link Monitor");
-        case ksoChannel:  return presentation(fmt, "ksoChannel",  "Channel");
-        case ksoH100:     return presentation(fmt, "ksoH100",     "H.100");
-        case ksoFirmware: return presentation(fmt, "ksoFirmware", "Firmware");
-        case ksoDevice:   return presentation(fmt, "ksoDevice",   "Device");
-        case ksoAPI:      return presentation(fmt, "ksoAPI",      "Software Layer");
+        case ksoLink:      return presentation(fmt, "ksoLink",      "Link");
+        case ksoLinkMon:   return presentation(fmt, "ksoLinkMon",   "Link Monitor");
+        case ksoChannel:   return presentation(fmt, "ksoChannel",   "Channel");
+#if K3L_AT_LEAST(2,1,0)
+        case ksoGsmChannel:return presentation(fmt, "ksoGsmChannel","GsmChannel");
+#endif
+        case ksoH100:      return presentation(fmt, "ksoH100",      "H.100");
+        case ksoFirmware:  return presentation(fmt, "ksoFirmware",  "Firmware");
+        case ksoDevice:    return presentation(fmt, "ksoDevice",    "Device");
+        case ksoAPI:       return presentation(fmt, "ksoAPI",       "Software Layer");
     }
 
-	return presentation(fmt,
-		STG(FMT("[KSystemObject='%d']") % (int)so),
-		STG(FMT("Unknown object (%d)") % (int)so));
+    return presentation(fmt,
+        STG(FMT("[KSystemObject='%d']") % (int)so),
+        STG(FMT("Unknown object (%d)") % (int)so));
 }
 
 std::string Verbose::mixerTone(KMixerTone mt, Verbose::Presentation fmt)
@@ -489,9 +535,9 @@ std::string Verbose::mixerTone(KMixerTone mt, Verbose::Presentation fmt)
 #endif
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KMixerTone='%d']") % (int)mt),
-		STG(FMT("Unknonwn tone (%d)") % (int)mt));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KMixerTone='%d']") % (int)mt),
+        STG(FMT("Unknonwn tone (%d)") % (int)mt));
 }
 
 std::string Verbose::mixerSource(KMixerSource ms, Verbose::Presentation fmt)
@@ -510,9 +556,9 @@ std::string Verbose::mixerSource(KMixerSource ms, Verbose::Presentation fmt)
 #endif
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KMixerSource='%d']") % (int)ms),
-		STG(FMT("Unknonwn source (%d)") % (int)ms));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KMixerSource='%d']") % (int)ms),
+        STG(FMT("Unknonwn source (%d)") % (int)ms));
 }
 
 std::string Verbose::channelFeatures(int32 flags, Verbose::Presentation fmt)
@@ -520,7 +566,7 @@ std::string Verbose::channelFeatures(int32 flags, Verbose::Presentation fmt)
     if (0x00 != flags)
     {
         Strings::Merger strs;
-        
+
         if (kcfDtmfSuppression & flags)   strs.add(presentation(fmt, "DtmfSuppression",   "DTMF Suppression"));
         if (kcfCallProgress & flags)      strs.add(presentation(fmt, "CallProgress",      "Call Progress"));
         if (kcfPulseDetection & flags)    strs.add(presentation(fmt, "PulseDetection",    "Pulse Detection"));
@@ -535,11 +581,11 @@ std::string Verbose::channelFeatures(int32 flags, Verbose::Presentation fmt)
 #endif
 
         return presentation(fmt,
-			STG(FMT("kcf{%s}") % strs.merge(",")),
-			STG(FMT("%s") % strs.merge(", ")));
+            STG(FMT("kcf{%s}") % strs.merge(",")),
+            STG(FMT("%s") % strs.merge(", ")));
     };
 
-	PRESENTATION_CHECK_RETURN(fmt, "", "No features");
+    PRESENTATION_CHECK_RETURN(fmt, "", "No features");
 }
 
 std::string Verbose::seizeFail(KSeizeFail sf, Verbose::Presentation fmt)
@@ -554,9 +600,9 @@ std::string Verbose::seizeFail(KSeizeFail sf, Verbose::Presentation fmt)
         case ksfNoDialTone:      return presentation(fmt, "ksfNoDialTone",      "No Dial Tone");
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KSeizeFail='%d']") % (int)sf),
-		STG(FMT("Unknown seize fail (%d)") % (int)sf));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KSeizeFail='%d']") % (int)sf),
+        STG(FMT("Unknown seize fail (%d)") % (int)sf));
 }
 
 #if K3L_AT_LEAST(1,5,0)
@@ -624,9 +670,9 @@ std::string Verbose::sipFailures(KSIP_Failures code, Verbose::Presentation fmt)
     }
     catch (internal_not_found e)
     {
-		PRESENTATION_CHECK_RETURN(fmt,
-			STG(FMT("[KSIP_Failures='%d']") % (int)code),
-			STG(FMT("Unknown SIP failure (%d)") % (int)code));
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[KSIP_Failures='%d']") % (int)code),
+            STG(FMT("Unknown SIP failure (%d)") % (int)code));
     }
 }
 
@@ -758,225 +804,284 @@ std::string Verbose::isdnDebug(int32 flags, Verbose::Presentation fmt)
         if (flags & kidfQ931)   strs.add("Q931");
         if (flags & kidfLAPD)   strs.add("LAPD");
         if (flags & kidfSystem) strs.add("System");
-        
-		PRESENTATION_CHECK_RETURN(fmt,
-			STG(FMT("kidf{%s}") % strs.merge(",")),
-			strs.merge(", "));
+
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("kidf{%s}") % strs.merge(",")),
+            strs.merge(", "));
     }
-    
+
     return presentation(fmt, "", "No debug active");
 }
 #endif
 
-std::string Verbose::internal_signGroupB(KSignGroupB group, r2_country_type country, Verbose::Presentation fmt)
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::internal_signGroupB(KSignGroupB group, R2CountryType country, Verbose::Presentation fmt)
+#else
+std::string Verbose::internal_signGroupB(KSignGroupB group, Verbose::Presentation fmt)
+#endif
 {
-	switch (country)
-	{
-		case R2_COUNTRY_ARG:
-			switch ((KSignGroupB_Argentina)group)
-			{
-				case kgbArNumberChanged:       return presentation(fmt, "kgbArNumberChanged",      "Number Changed");
-				case kgbArBusy:                return presentation(fmt, "kgbArBusy",               "Busy");
-				case kgbArCongestion:          return presentation(fmt, "kgbArCongestion",         "Congestion");
-				case kgbArInvalidNumber:       return presentation(fmt, "kgbArInvalidNumber",      "Invalid Number");
-				case kgbArLineFreeCharged:     return presentation(fmt, "kgbArLineFreeCharged",    "Line Free Charged");
-				case kgbArLineFreeNotCharged:  return presentation(fmt, "kgbArLineFreeNotCharged", "Line Free Not Charged");
-				case kgbArLineOutOfOrder:      return presentation(fmt, "kgbArLineOutOfOrder",     "Line Out Of Order");
-				case kgbArNone:                return presentation(fmt, "kgbArNone",               "None");
-			}
-			break;
+#if K3L_AT_LEAST(2,0,0)
+    switch (country)
+    {
+        case R2_COUNTRY_ARG:
+            switch ((KSignGroupB_Argentina)group)
+            {
+                case kgbArNumberChanged:       return presentation(fmt, "kgbArNumberChanged",      "Number Changed");
+                case kgbArBusy:                return presentation(fmt, "kgbArBusy",               "Busy");
+                case kgbArCongestion:          return presentation(fmt, "kgbArCongestion",         "Congestion");
+                case kgbArInvalidNumber:       return presentation(fmt, "kgbArInvalidNumber",      "Invalid Number");
+                case kgbArLineFreeCharged:     return presentation(fmt, "kgbArLineFreeCharged",    "Line Free Charged");
+                case kgbArLineFreeNotCharged:  return presentation(fmt, "kgbArLineFreeNotCharged", "Line Free Not Charged");
+                case kgbArLineOutOfOrder:      return presentation(fmt, "kgbArLineOutOfOrder",     "Line Out Of Order");
+                case kgbArNone:                return presentation(fmt, "kgbArNone",               "None");
+            }
+            break;
 
-		case R2_COUNTRY_BRA:
-			switch ((KSignGroupB_Brazil)group)
-			{
-				case kgbBrLineFreeCharged:     return presentation(fmt, "kgbBrLineFreeCharged",    "Line Free Charged");
-				case kgbBrLineFreeNotCharged:  return presentation(fmt, "kgbBrLineFreeNotCharged", "Line Free Not Charged");
-				case kgbBrLineFreeChargedLPR:  return presentation(fmt, "kgbBrLineFreeChargedLPR", "Line Free Charged PLR");
-				case kgbBrBusy:                return presentation(fmt, "kgbBrBusy",               "Busy");
-				case kgbBrNumberChanged:       return presentation(fmt, "kgbBrNumberChanged",      "Number Changed");
-				case kgbBrCongestion:          return presentation(fmt, "kgbBrCongestion",         "Congestion");
-				case kgbBrInvalidNumber:       return presentation(fmt, "kgbBrInvalidNumber",      "Invalid Number");
-				case kgbBrLineOutOfOrder:      return presentation(fmt, "kgbBrLineOutOfOrder",     "Line Out Of Order");
-				case kgbBrNone:                return presentation(fmt, "kgbBrNone",               "None");
-			}
-			break;
+        case R2_COUNTRY_BRA:
+            switch ((KSignGroupB_Brazil)group)
+            {
+                case kgbBrLineFreeCharged:     return presentation(fmt, "kgbBrLineFreeCharged",    "Line Free Charged");
+                case kgbBrLineFreeNotCharged:  return presentation(fmt, "kgbBrLineFreeNotCharged", "Line Free Not Charged");
+                case kgbBrLineFreeChargedLPR:  return presentation(fmt, "kgbBrLineFreeChargedLPR", "Line Free Charged PLR");
+                case kgbBrBusy:                return presentation(fmt, "kgbBrBusy",               "Busy");
+                case kgbBrNumberChanged:       return presentation(fmt, "kgbBrNumberChanged",      "Number Changed");
+                case kgbBrCongestion:          return presentation(fmt, "kgbBrCongestion",         "Congestion");
+                case kgbBrInvalidNumber:       return presentation(fmt, "kgbBrInvalidNumber",      "Invalid Number");
+                case kgbBrLineOutOfOrder:      return presentation(fmt, "kgbBrLineOutOfOrder",     "Line Out Of Order");
+                case kgbBrNone:                return presentation(fmt, "kgbBrNone",               "None");
+            }
+            break;
 
-		case R2_COUNTRY_CHI:
-			switch ((KSignGroupB_Chile)group)
-			{
-				case kgbClNumberChanged:       return presentation(fmt, "kgbClNumberChanged",      "Number Changed");
-				case kgbClBusy:                return presentation(fmt, "kgbClBusy",               "Busy");
-				case kgbClCongestion:          return presentation(fmt, "kgbClCongestion",         "Congestion");
-				case kgbClInvalidNumber:       return presentation(fmt, "kgbClInvalidNumber",      "Invalid Number");
-				case kgbClLineFreeCharged:     return presentation(fmt, "kgbClLineFreeCharged",    "Line Free Charged");
-				case kgbClLineFreeNotCharged:  return presentation(fmt, "kgbClLineFreeNotCharged", "Line Free Not Charged");
-				case kgbClLineOutOfOrder:      return presentation(fmt, "kgbClLineOutOfOrder",     "Line Out Of Order");
-				case kgbClNone:                return presentation(fmt, "kgbClNone",               "None");
-			}
-			break;
+        case R2_COUNTRY_CHI:
+            switch ((KSignGroupB_Chile)group)
+            {
+                case kgbClNumberChanged:       return presentation(fmt, "kgbClNumberChanged",      "Number Changed");
+                case kgbClBusy:                return presentation(fmt, "kgbClBusy",               "Busy");
+                case kgbClCongestion:          return presentation(fmt, "kgbClCongestion",         "Congestion");
+                case kgbClInvalidNumber:       return presentation(fmt, "kgbClInvalidNumber",      "Invalid Number");
+                case kgbClLineFreeCharged:     return presentation(fmt, "kgbClLineFreeCharged",    "Line Free Charged");
+                case kgbClLineFreeNotCharged:  return presentation(fmt, "kgbClLineFreeNotCharged", "Line Free Not Charged");
+                case kgbClLineOutOfOrder:      return presentation(fmt, "kgbClLineOutOfOrder",     "Line Out Of Order");
+                case kgbClNone:                return presentation(fmt, "kgbClNone",               "None");
+            }
+            break;
 
-		case R2_COUNTRY_MEX:
-			switch ((KSignGroupB_Mexico)group)
-			{
-				case kgbMxLineFreeCharged:     return presentation(fmt, "kgbMxLineFreeCharged",    "Line Free Charged");
-				case kgbMxBusy:                return presentation(fmt, "kgbMxBusy",               "Busy");
-				case kgbMxLineFreeNotCharged:  return presentation(fmt, "kgbMxLineFreeNotCharged", "Line Free Not Charged");
-				case kgbMxNone:                return presentation(fmt, "kgbMxNone",               "None");
-			}
-			break;
+        case R2_COUNTRY_MEX:
+            switch ((KSignGroupB_Mexico)group)
+            {
+                case kgbMxLineFreeCharged:     return presentation(fmt, "kgbMxLineFreeCharged",    "Line Free Charged");
+                case kgbMxBusy:                return presentation(fmt, "kgbMxBusy",               "Busy");
+                case kgbMxLineFreeNotCharged:  return presentation(fmt, "kgbMxLineFreeNotCharged", "Line Free Not Charged");
+                case kgbMxNone:                return presentation(fmt, "kgbMxNone",               "None");
+            }
+            break;
 
-		case R2_COUNTRY_URY:
-			switch ((KSignGroupB_Uruguay)group)
-			{
-				case kgbUyNumberChanged:       return presentation(fmt, "kgbUyNumberChanged",      "Number Changed");
-				case kgbUyBusy:                return presentation(fmt, "kgbUyBusy",               "Busy");
-				case kgbUyCongestion:          return presentation(fmt, "kgbUyCongestion",         "Congestion");
-				case kgbUyInvalidNumber:       return presentation(fmt, "kgbUyInvalidNumber",      "Invalid Number");
-				case kgbUyLineFreeCharged:     return presentation(fmt, "kgbUyLineFreeCharged",    "Line Free Charged");
-				case kgbUyLineFreeNotCharged:  return presentation(fmt, "kgbUyLineFreeNotCharged", "Line Free Not Charged");
-				case kgbUyLineOutOfOrder:      return presentation(fmt, "kgbUyLineOutOfOrder",     "Line Out Of Order");
-				case kgbUyNone:                return presentation(fmt, "kgbUyNone",               "None");
-			}
-			break;
+        case R2_COUNTRY_URY:
+            switch ((KSignGroupB_Uruguay)group)
+            {
+                case kgbUyNumberChanged:       return presentation(fmt, "kgbUyNumberChanged",      "Number Changed");
+                case kgbUyBusy:                return presentation(fmt, "kgbUyBusy",               "Busy");
+                case kgbUyCongestion:          return presentation(fmt, "kgbUyCongestion",         "Congestion");
+                case kgbUyInvalidNumber:       return presentation(fmt, "kgbUyInvalidNumber",      "Invalid Number");
+                case kgbUyLineFreeCharged:     return presentation(fmt, "kgbUyLineFreeCharged",    "Line Free Charged");
+                case kgbUyLineFreeNotCharged:  return presentation(fmt, "kgbUyLineFreeNotCharged", "Line Free Not Charged");
+                case kgbUyLineOutOfOrder:      return presentation(fmt, "kgbUyLineOutOfOrder",     "Line Out Of Order");
+                case kgbUyNone:                return presentation(fmt, "kgbUyNone",               "None");
+            }
+            break;
 
-		case R2_COUNTRY_VEN:
-			switch ((KSignGroupB_Venezuela)group)
-			{
-				case kgbVeLineFreeChargedLPR:  return presentation(fmt, "kgbVeLineFreeChargedLPR", "Line Free Charged PLR");
-				case kgbVeNumberChanged:       return presentation(fmt, "kgbVeNumberChanged",      "Number Changed");
-				case kgbVeBusy:                return presentation(fmt, "kgbVeBusy",               "Busy");
-				case kgbVeCongestion:          return presentation(fmt, "kgbVeCongestion",         "Congestion");
-				case kgbVeInformationTone:     return presentation(fmt, "kgbVeInformationTone",    "Information Tone");
-				case kgbVeLineFreeCharged:     return presentation(fmt, "kgbVeLineFreeCharged",    "Line Free Charged");
-				case kgbVeLineFreeNotCharged:  return presentation(fmt, "kgbVeLineFreeNotCharged", "Line Free Not Charged");
-				case kgbVeLineBlocked:         return presentation(fmt, "kgbVeLineBlocked",        "Line Blocked");
-				case kgbVeIntercepted:         return presentation(fmt, "kgbVeIntercepted",        "Intercepted");
-				case kgbVeDataTrans:           return presentation(fmt, "kgbVeDataTrans",          "Data Transfer");
-				case kgbVeNone:                return presentation(fmt, "kgbVeNone",               "None");
-			}
-			break;
-	}
-	
-	throw internal_not_found();
-}
-
-std::string Verbose::signGroupB(KSignGroupB group, r2_country_type r2_country, Verbose::Presentation fmt)
-{
-	try
-	{
-		return internal_signGroupB(group, r2_country, fmt);
-	}
-	catch (internal_not_found e)
-	{
-		PRESENTATION_CHECK_RETURN(fmt,
-			STG(FMT("[KSignGroupB='%d']") % (int)group),
-			STG(FMT("Unknown group B (%d)") % (int)group));
-	}
-}
-
-std::string Verbose::internal_signGroupII(KSignGroupII group, r2_country_type country, Verbose::Presentation fmt)
-{
-	switch (country)
-	{
-		case R2_COUNTRY_ARG:
-			switch ((KSignGroupII_Argentina)group)
-			{
-				case kg2ArOrdinary:             return presentation(fmt, "kg2ArOrdinary",            "Ordinary");
-				case kg2ArPriority:             return presentation(fmt, "kg2ArPriority",            "Priority");
-				case kg2ArMaintenance:          return presentation(fmt, "kg2ArMaintenance",         "Maintenance");
-				case kg2ArLocalPayPhone:        return presentation(fmt, "kg2ArLocalPayPhone",       "Local pay phone");
-				case kg2ArTrunkOperator:        return presentation(fmt, "kg2ArTrunkOperator",       "Trunk operator");
-				case kg2ArDataTrans:            return presentation(fmt, "kg2ArDataTrans",           "Data transfer");
-				case kg2ArCPTP:                 return presentation(fmt, "kg2ArCPTP",                "CPTP");
-				case kg2ArSpecialLine:          return presentation(fmt, "kg2ArSpecialLine",         "Special line");
-				case kg2ArMobileUser:           return presentation(fmt, "kg2ArMobileUser",          "Mobile user");
-				case kg2ArPrivateRedLine:       return presentation(fmt, "kg2ArPrivateRedLine",      "Private red line");
-				case kg2ArSpecialPayPhoneLine:  return presentation(fmt, "kg2ArSpecialPayPhoneLine", "Special pay phone line");
-			}
-			break;
-
-		case R2_COUNTRY_BRA:
-			switch ((KSignGroupII_Brazil)group)
-			{
-				case kg2BrOrdinary:         return presentation(fmt, "kg2BrOrdinary",            "Ordinary");
-				case kg2BrPriority:         return presentation(fmt, "kg2BrPriority",            "Priority");
-				case kg2BrMaintenance:      return presentation(fmt, "kg2BrMaintenance",         "Maintenance");
-				case kg2BrLocalPayPhone:    return presentation(fmt, "kg2BrLocalPayPhone",       "Local pay phone");
-				case kg2BrTrunkOperator:    return presentation(fmt, "kg2BrTrunkOperator",       "Trunk operator");
-				case kg2BrDataTrans:        return presentation(fmt, "kg2BrDataTrans",           "Data transfer");
-				case kg2BrNonLocalPayPhone: return presentation(fmt, "kg2BrNonLocalPayPhone",    "Non local pay phone");
-				case kg2BrCollectCall:      return presentation(fmt, "kg2BrCollectCall",         "Collect call");
-				case kg2BrOrdinaryInter:    return presentation(fmt, "kg2BrOrdinaryInter",       "Ordinary international");
-				case kg2BrTransfered:       return presentation(fmt, "kg2BrTransfered",          "Transfered");
-			}
-			break;
-
-		case R2_COUNTRY_CHI:
-			switch ((KSignGroupII_Chile)group)
-			{
-				case kg2ClOrdinary:               return presentation(fmt, "kg2ClOrdinary",               "Ordinary");
-				case kg2ClPriority:               return presentation(fmt, "kg2ClPriority",               "Priority");
-				case kg2ClMaintenance:            return presentation(fmt, "kg2ClMaintenance",            "Maintenance");
-				case kg2ClTrunkOperator:          return presentation(fmt, "kg2ClTrunkOperator",          "Trunk operator");
-				case kg2ClDataTrans:              return presentation(fmt, "kg2ClDataTrans",              "Data transfer");
-				case kg2ClUnidentifiedSubscriber: return presentation(fmt, "kg2ClUnidentifiedSubscriber", "Unidentified subscriber");
-			}
-			break;
-
-		case R2_COUNTRY_MEX:
-			switch ((KSignGroupII_Mexico)group)
-			{
-				case kg2MxTrunkOperator:    return presentation(fmt, "kg2MxTrunkOperator",       "Trunk operator");
-				case kg2MxOrdinary:         return presentation(fmt, "kg2MxOrdinary",            "Ordinary");
-				case kg2MxMaintenance:      return presentation(fmt, "kg2MxMaintenance",         "Maintenance");
-			}
-			break;
-
-		case R2_COUNTRY_URY:
-			switch ((KSignGroupII_Uruguay)group)
-			{
-				case kg2UyOrdinary:         return presentation(fmt, "kg2UyOrdinary",            "Ordinary");
-				case kg2UyPriority:         return presentation(fmt, "kg2UyPriority",            "Priority");
-				case kg2UyMaintenance:      return presentation(fmt, "kg2UyMaintenance",         "Maintenance");
-				case kg2UyLocalPayPhone:    return presentation(fmt, "kg2UyLocalPayPhone",       "Local pay phone");
-				case kg2UyTrunkOperator:    return presentation(fmt, "kg2UyTrunkOperator",       "Trunk operator");
-				case kg2UyDataTrans:        return presentation(fmt, "kg2UyDataTrans",           "Data transfer");
-				case kg2UyInternSubscriber: return presentation(fmt, "kg2UyInternSubscriber",    "International subscriber");
-			}
-			break;
-
-		case R2_COUNTRY_VEN:
-			switch ((KSignGroupII_Venezuela)group)
-			{
-				case kg2VeOrdinary:           return presentation(fmt, "kg2VeOrdinary",            "Ordinary");
-				case kg2VePriority:           return presentation(fmt, "kg2VePriority",            "Priority");
-				case kg2VeMaintenance:        return presentation(fmt, "kg2VeMaintenance",         "Maintenance");
-				case kg2VeLocalPayPhone:      return presentation(fmt, "kg2VeLocalPayPhone",       "Local pay phone");
-				case kg2VeTrunkOperator:      return presentation(fmt, "kg2VeTrunkOperator",       "Trunk operator");
-				case kg2VeDataTrans:          return presentation(fmt, "kg2VeDataTrans",           "Data transfer");
-				case kg2VeNoTransferFacility: return presentation(fmt, "kg2VeNoTransferFacility",  "No transfer facility");
-			}
-			break;
-	}
+        case R2_COUNTRY_VEN:
+            switch ((KSignGroupB_Venezuela)group)
+            {
+                case kgbVeLineFreeChargedLPR:  return presentation(fmt, "kgbVeLineFreeChargedLPR", "Line Free Charged PLR");
+                case kgbVeNumberChanged:       return presentation(fmt, "kgbVeNumberChanged",      "Number Changed");
+                case kgbVeBusy:                return presentation(fmt, "kgbVeBusy",               "Busy");
+                case kgbVeCongestion:          return presentation(fmt, "kgbVeCongestion",         "Congestion");
+                case kgbVeInformationTone:     return presentation(fmt, "kgbVeInformationTone",    "Information Tone");
+                case kgbVeLineFreeCharged:     return presentation(fmt, "kgbVeLineFreeCharged",    "Line Free Charged");
+                case kgbVeLineFreeNotCharged:  return presentation(fmt, "kgbVeLineFreeNotCharged", "Line Free Not Charged");
+                case kgbVeLineBlocked:         return presentation(fmt, "kgbVeLineBlocked",        "Line Blocked");
+                case kgbVeIntercepted:         return presentation(fmt, "kgbVeIntercepted",        "Intercepted");
+                case kgbVeDataTrans:           return presentation(fmt, "kgbVeDataTrans",          "Data Transfer");
+                case kgbVeNone:                return presentation(fmt, "kgbVeNone",               "None");
+            }
+            break;
+    }
+#else
+    switch ((KSignGroupB)group)
+    {
+        case kgbLineFreeCharged:     return presentation(fmt, "kgbLineFreeCharged",    "Line Free Charged");
+        case kgbLineFreeNotCharged:  return presentation(fmt, "kgbLineFreeNotCharged", "Line Free Not Charged");
+        case kgbLineFreeChargedLPR:  return presentation(fmt, "kgbLineFreeChargedLPR", "Line Free Charged PLR");
+        case kgbBusy:                return presentation(fmt, "kgbBusy",               "Busy");
+        case kgbNumberChanged:       return presentation(fmt, "kgbNumberChanged",      "Number Changed");
+        case kgbCongestion:          return presentation(fmt, "kgbCongestion",         "Congestion");
+        case kgbInvalidNumber:       return presentation(fmt, "kgbInvalidNumber",      "Invalid Number");
+        case kgbLineOutOfOrder:      return presentation(fmt, "kgbLineOutOfOrder",     "Line Out Of Order");
+        case kgbNone:                return presentation(fmt, "kgbNone",               "None");
+    }
+#endif
 
     throw internal_not_found();
 }
 
-std::string Verbose::signGroupII(KSignGroupII group, r2_country_type r2_country, Verbose::Presentation fmt)
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::signGroupB(KSignGroupB group, R2CountryType r2_country, Verbose::Presentation fmt)
+#else
+std::string Verbose::signGroupB(KSignGroupB group, Verbose::Presentation fmt)
+#endif
 {
-	try
-	{
-		return internal_signGroupII(group, r2_country);
-	}
-	catch (internal_not_found e)
-	{
-		PRESENTATION_CHECK_RETURN(fmt,
-			STG(FMT("[KSignGroupII='%d']") % (int)group),
-			STG(FMT("Unknown group II (%d)") % (int)group));
-	}
+    try
+    {
+#if K3L_AT_LEAST(2,0,0)
+        return internal_signGroupB(group, r2_country, fmt);
+#else
+        return internal_signGroupB(group, fmt);
+#endif
+    }
+    catch (internal_not_found e)
+    {
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[KSignGroupB='%d']") % (int)group),
+            STG(FMT("Unknown group B (%d)") % (int)group));
+    }
 }
 
-std::string Verbose::callFail(KSignaling sig, r2_country_type country, int32 info, Verbose::Presentation fmt)
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::internal_signGroupII(KSignGroupII group, R2CountryType country, Verbose::Presentation fmt)
+#else
+std::string Verbose::internal_signGroupII(KSignGroupII group, Verbose::Presentation fmt)
+#endif
+{
+#if K3L_AT_LEAST(2,0,0)
+    switch (country)
+    {
+        case R2_COUNTRY_ARG:
+            switch ((KSignGroupII_Argentina)group)
+            {
+                case kg2ArOrdinary:             return presentation(fmt, "kg2ArOrdinary",            "Ordinary");
+                case kg2ArPriority:             return presentation(fmt, "kg2ArPriority",            "Priority");
+                case kg2ArMaintenance:          return presentation(fmt, "kg2ArMaintenance",         "Maintenance");
+                case kg2ArLocalPayPhone:        return presentation(fmt, "kg2ArLocalPayPhone",       "Local pay phone");
+                case kg2ArTrunkOperator:        return presentation(fmt, "kg2ArTrunkOperator",       "Trunk operator");
+                case kg2ArDataTrans:            return presentation(fmt, "kg2ArDataTrans",           "Data transfer");
+                case kg2ArCPTP:                 return presentation(fmt, "kg2ArCPTP",                "CPTP");
+                case kg2ArSpecialLine:          return presentation(fmt, "kg2ArSpecialLine",         "Special line");
+                case kg2ArMobileUser:           return presentation(fmt, "kg2ArMobileUser",          "Mobile user");
+                case kg2ArPrivateRedLine:       return presentation(fmt, "kg2ArPrivateRedLine",      "Private red line");
+                case kg2ArSpecialPayPhoneLine:  return presentation(fmt, "kg2ArSpecialPayPhoneLine", "Special pay phone line");
+            }
+            break;
+
+        case R2_COUNTRY_BRA:
+            switch ((KSignGroupII_Brazil)group)
+            {
+                case kg2BrOrdinary:         return presentation(fmt, "kg2BrOrdinary",            "Ordinary");
+                case kg2BrPriority:         return presentation(fmt, "kg2BrPriority",            "Priority");
+                case kg2BrMaintenance:      return presentation(fmt, "kg2BrMaintenance",         "Maintenance");
+                case kg2BrLocalPayPhone:    return presentation(fmt, "kg2BrLocalPayPhone",       "Local pay phone");
+                case kg2BrTrunkOperator:    return presentation(fmt, "kg2BrTrunkOperator",       "Trunk operator");
+                case kg2BrDataTrans:        return presentation(fmt, "kg2BrDataTrans",           "Data transfer");
+                case kg2BrNonLocalPayPhone: return presentation(fmt, "kg2BrNonLocalPayPhone",    "Non local pay phone");
+                case kg2BrCollectCall:      return presentation(fmt, "kg2BrCollectCall",         "Collect call");
+                case kg2BrOrdinaryInter:    return presentation(fmt, "kg2BrOrdinaryInter",       "Ordinary international");
+                case kg2BrTransfered:       return presentation(fmt, "kg2BrTransfered",          "Transfered");
+            }
+            break;
+
+        case R2_COUNTRY_CHI:
+            switch ((KSignGroupII_Chile)group)
+            {
+                case kg2ClOrdinary:               return presentation(fmt, "kg2ClOrdinary",               "Ordinary");
+                case kg2ClPriority:               return presentation(fmt, "kg2ClPriority",               "Priority");
+                case kg2ClMaintenance:            return presentation(fmt, "kg2ClMaintenance",            "Maintenance");
+                case kg2ClTrunkOperator:          return presentation(fmt, "kg2ClTrunkOperator",          "Trunk operator");
+                case kg2ClDataTrans:              return presentation(fmt, "kg2ClDataTrans",              "Data transfer");
+                case kg2ClUnidentifiedSubscriber: return presentation(fmt, "kg2ClUnidentifiedSubscriber", "Unidentified subscriber");
+            }
+            break;
+
+        case R2_COUNTRY_MEX:
+            switch ((KSignGroupII_Mexico)group)
+            {
+                case kg2MxTrunkOperator:    return presentation(fmt, "kg2MxTrunkOperator",       "Trunk operator");
+                case kg2MxOrdinary:         return presentation(fmt, "kg2MxOrdinary",            "Ordinary");
+                case kg2MxMaintenance:      return presentation(fmt, "kg2MxMaintenance",         "Maintenance");
+            }
+            break;
+
+        case R2_COUNTRY_URY:
+            switch ((KSignGroupII_Uruguay)group)
+            {
+                case kg2UyOrdinary:         return presentation(fmt, "kg2UyOrdinary",            "Ordinary");
+                case kg2UyPriority:         return presentation(fmt, "kg2UyPriority",            "Priority");
+                case kg2UyMaintenance:      return presentation(fmt, "kg2UyMaintenance",         "Maintenance");
+                case kg2UyLocalPayPhone:    return presentation(fmt, "kg2UyLocalPayPhone",       "Local pay phone");
+                case kg2UyTrunkOperator:    return presentation(fmt, "kg2UyTrunkOperator",       "Trunk operator");
+                case kg2UyDataTrans:        return presentation(fmt, "kg2UyDataTrans",           "Data transfer");
+                case kg2UyInternSubscriber: return presentation(fmt, "kg2UyInternSubscriber",    "International subscriber");
+            }
+            break;
+
+        case R2_COUNTRY_VEN:
+            switch ((KSignGroupII_Venezuela)group)
+            {
+                case kg2VeOrdinary:           return presentation(fmt, "kg2VeOrdinary",            "Ordinary");
+                case kg2VePriority:           return presentation(fmt, "kg2VePriority",            "Priority");
+                case kg2VeMaintenance:        return presentation(fmt, "kg2VeMaintenance",         "Maintenance");
+                case kg2VeLocalPayPhone:      return presentation(fmt, "kg2VeLocalPayPhone",       "Local pay phone");
+                case kg2VeTrunkOperator:      return presentation(fmt, "kg2VeTrunkOperator",       "Trunk operator");
+                case kg2VeDataTrans:          return presentation(fmt, "kg2VeDataTrans",           "Data transfer");
+                case kg2VeNoTransferFacility: return presentation(fmt, "kg2VeNoTransferFacility",  "No transfer facility");
+            }
+            break;
+    }
+#else
+    switch ((KSignGroupII)group)
+    {
+        case kg2Ordinary:         return presentation(fmt, "kg2Ordinary",            "Ordinary");
+        case kg2Priority:         return presentation(fmt, "kg2Priority",            "Priority");
+        case kg2Maintenance:      return presentation(fmt, "kg2Maintenance",         "Maintenance");
+        case kg2LocalPayPhone:    return presentation(fmt, "kg2LocalPayPhone",       "Local pay phone");
+        case kg2TrunkOperator:    return presentation(fmt, "kg2TrunkOperator",       "Trunk operator");
+        case kg2DataTrans:        return presentation(fmt, "kg2DataTrans",           "Data transfer");
+        case kg2NonLocalPayPhone: return presentation(fmt, "kg2NonLocalPayPhone",    "Non local pay phone");
+        case kg2CollectCall:      return presentation(fmt, "kg2CollectCall",         "Collect call");
+        case kg2OrdinaryInter:    return presentation(fmt, "kg2OrdinaryInter",       "Ordinary international");
+        case kg2Transfered:       return presentation(fmt, "kg2Transfered",          "Transfered");
+    }
+#endif
+
+    throw internal_not_found();
+}
+
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::signGroupII(KSignGroupII group, R2CountryType r2_country, Verbose::Presentation fmt)
+#else
+std::string Verbose::signGroupII(KSignGroupII group, Verbose::Presentation fmt)
+#endif
+{
+    try
+    {
+#if K3L_AT_LEAST(2,0,0)
+        return internal_signGroupII(group, r2_country);
+#else
+        return internal_signGroupII(group);
+#endif
+    }
+    catch (internal_not_found e)
+    {
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[KSignGroupII='%d']") % (int)group),
+            STG(FMT("Unknown group II (%d)") % (int)group));
+    }
+}
+
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::callFail(KSignaling sig, R2CountryType country, int32 info, Verbose::Presentation fmt)
+#else
+std::string Verbose::callFail(KSignaling sig, int32 info, Verbose::Presentation fmt)
+#endif
 {
     try
     {
@@ -994,23 +1099,35 @@ std::string Verbose::callFail(KSignaling sig, r2_country_type country, int32 inf
 #if K3L_AT_LEAST(1,5,4)
             case ksigLineSide:
 #endif
+#if K3L_AT_LEAST(2,1,0)
+            case ksigISUP:
+            case ksigFax:
+#endif
 #if K3L_AT_LEAST(1,6,0)
             case ksigCAS_EL7:
             case ksigE1LC:
                 return "NOT IMPLEMENTED";
-                
+
             case ksigAnalogTerminal:
 #endif
             case ksigContinuousEM:
             case ksigPulsedEM:
 
-			case ksigR2Digital:
-			case ksigOpenR2:
-				return internal_signGroupB((KSignGroupB)info, country);
+            case ksigR2Digital:
+            case ksigOpenR2:
+#if K3L_AT_LEAST(2,0,0)
+                return internal_signGroupB((KSignGroupB)info, country);
+#else
+                return internal_signGroupB((KSignGroupB)info);
+#endif
 
-			case ksigOpenCAS:
-			case ksigUserR2Digital:
-				return internal_signGroupB((KSignGroupB)info, R2_COUNTRY_BRA);
+            case ksigOpenCAS:
+            case ksigUserR2Digital:
+#if K3L_AT_LEAST(2,0,0)
+                return internal_signGroupB((KSignGroupB)info, R2_COUNTRY_BRA);
+#else
+                return internal_signGroupB((KSignGroupB)info);
+#endif
 
 #if K3L_AT_LEAST(1,5,0)
             case ksigSIP:
@@ -1036,9 +1153,9 @@ std::string Verbose::callFail(KSignaling sig, r2_country_type country, int32 inf
         /* this exception is used for breaking the control flow */
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[%s, callFail='%d']") % signaling(sig, fmt) % (int)info),
-		STG(FMT("Unknown call fail code for '%s' (%d)") % signaling(sig, fmt) % (int)info));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[%s, callFail='%d']") % signaling(sig, fmt) % (int)info),
+        STG(FMT("Unknown call fail code for '%s' (%d)") % signaling(sig, fmt) % (int)info));
 }
 
 std::string Verbose::channelFail(KSignaling sig, int32 code, Verbose::Presentation fmt)
@@ -1050,6 +1167,10 @@ std::string Verbose::channelFail(KSignaling sig, int32 code, Verbose::Presentati
             case ksigInactive:
             case ksigAnalog:
             case ksigSIP:
+#if K3L_AT_LEAST(2,1,0)
+            case ksigISUP:
+            case ksigFax:
+#endif
                 throw internal_not_found();
 
 #if K3L_AT_LEAST(1,6,0)
@@ -1058,14 +1179,14 @@ std::string Verbose::channelFail(KSignaling sig, int32 code, Verbose::Presentati
 
             case ksigAnalogTerminal:
             case ksigCAS_EL7:
-			case ksigE1LC:
+            case ksigE1LC:
 #endif
 
             case ksigContinuousEM:
             case ksigPulsedEM:
-            
+
             case ksigLineSide:
-            
+
             case ksigOpenCAS:
             case ksigOpenR2:
             case ksigR2Digital:
@@ -1095,9 +1216,9 @@ std::string Verbose::channelFail(KSignaling sig, int32 code, Verbose::Presentati
         /* this exception is used for breaking the control flow */
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[%s, channelFail='%d']") % signaling(sig, fmt) % (int)code),
-		STG(FMT("Unknown channel fail code for '%s' (%d)") % signaling(sig, fmt) % (int)code));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[%s, channelFail='%d']") % signaling(sig, fmt) % (int)code),
+        STG(FMT("Unknown channel fail code for '%s' (%d)") % signaling(sig, fmt) % (int)code));
 }
 
 std::string Verbose::internalFail(KInternalFail inf, Verbose::Presentation fmt)
@@ -1114,9 +1235,9 @@ std::string Verbose::internalFail(KInternalFail inf, Verbose::Presentation fmt)
         case kifClientCommFail:    return presentation(fmt, "kifClientCommFail",    "Client communication failure");
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KInternalFail='%d']") % (int)inf),
-		STG(FMT("Unknown internal failure (%d)") % (int)inf));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KInternalFail='%d']") % (int)inf),
+        STG(FMT("Unknown internal failure (%d)") % (int)inf));
 }
 
 std::string Verbose::linkErrorCounter(KLinkErrorCounter ec, Verbose::Presentation fmt)
@@ -1141,9 +1262,9 @@ std::string Verbose::linkErrorCounter(KLinkErrorCounter ec, Verbose::Presentatio
         case klecCount:             return ""; /* this should never be verbosed */
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KLinkErrorCounter='%d']") % (int)ec),
-		STG(FMT("Unknown link error counter (%d)") % (int)ec));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KLinkErrorCounter='%d']") % (int)ec),
+        STG(FMT("Unknown link error counter (%d)") % (int)ec));
 }
 
 std::string Verbose::callStatus(KCallStatus code, Verbose::Presentation fmt)
@@ -1156,9 +1277,9 @@ std::string Verbose::callStatus(KCallStatus code, Verbose::Presentation fmt)
         case kcsFail:       return presentation(fmt, "kcsFail",     "Failure");
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KCallStatus='%d']") % (int)code),
-    	STG(FMT("Unknown call status (%d)") % (int)code));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KCallStatus='%d']") % (int)code),
+        STG(FMT("Unknown call status (%d)") % (int)code));
 }
 
 std::string Verbose::linkStatus(KSignaling sig, int32 code, Verbose::Presentation fmt)
@@ -1181,6 +1302,12 @@ std::string Verbose::linkStatus(KSignaling sig, int32 code, Verbose::Presentatio
             return presentation(fmt, "[ksigGSM]", "GSM trunk");
 #endif
 
+#if K3L_AT_LEAST(2,1,0)
+        case ksigISUP:
+            return presentation(fmt, "[ksigISUP]", "ISUP trunk");
+        case ksigFax:
+            return presentation(fmt, "[ksigFax]", "FAX");
+#endif
         case ksigContinuousEM:
         case ksigPulsedEM:
 
@@ -1210,7 +1337,7 @@ std::string Verbose::linkStatus(KSignaling sig, int32 code, Verbose::Presentatio
             else
             {
                 Strings::Merger strs;
-                
+
                 if (kesSignalLost & code)         strs.add(presentation(fmt, "SignalLost",         "Signal lost"));
                 if (kesNetworkAlarm & code)       strs.add(presentation(fmt, "NetworkAlarm",       "Network alarm"));
                 if (kesFrameSyncLost & code)      strs.add(presentation(fmt, "FrameSyncLost",      "Frame sync lost"));
@@ -1220,15 +1347,15 @@ std::string Verbose::linkStatus(KSignaling sig, int32 code, Verbose::Presentatio
                 if (kesUnknownAlarm & code)       strs.add(presentation(fmt, "UnknownAlarm",       "Slip alarm"));
                 if (kesE1Error & code)            strs.add(presentation(fmt, "E1Error",            "E1 error"));
 
-				PRESENTATION_CHECK_RETURN(fmt,
-					STG(FMT("kes{%s}") % strs.merge(",")),
-                	strs.merge(", "));
+                PRESENTATION_CHECK_RETURN(fmt,
+                    STG(FMT("kes{%s}") % strs.merge(",")),
+                    strs.merge(", "));
             }
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[%s, linkStatus='%d']") % signaling(sig) % (int)code),
-		STG(FMT("Unknown link status for '%s' (%d)") % signaling(sig) % (int)code));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[%s, linkStatus='%d']") % signaling(sig) % (int)code),
+        STG(FMT("Unknown link status for '%s' (%d)") % signaling(sig) % (int)code));
 }
 
 std::string Verbose::channelStatus(KSignaling sig, int32 flags, Verbose::Presentation fmt)
@@ -1243,6 +1370,12 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags, Verbose::Present
 #if K3L_AT_LEAST(1,4,1)
             case ksigSIP:
                 return presentation(fmt, "[ksigSIP]", "SIP channel");
+#endif
+#if K3L_AT_LEAST(2,1,0)
+            case ksigISUP:
+                return presentation(fmt, "[ksigISUP]", "ISUP trunk");
+            case ksigFax:
+                return presentation(fmt, "[ksigFax]", "FAX");
 #endif
 
             case ksigAnalog:
@@ -1267,7 +1400,7 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags, Verbose::Present
                     case kfxsRinging:  return presentation(fmt, "kfxsRinging", "Ringing");
                     case kfxsFail:     return presentation(fmt, "kfxsFail",    "Failure");
                 }
-                
+
                 throw internal_not_found();
 
             case ksigGSM:
@@ -1315,7 +1448,7 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags, Verbose::Present
                 else
                 {
                     Strings::Merger strs;
-                    
+
                     if (flags & kecsBusy)
                         strs.add("Busy");
 
@@ -1347,11 +1480,11 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags, Verbose::Present
                     if (kecsRemoteLock & value)
                         strs.add(presentation(fmt, "RemoteLock", "Remote Lock"));
 
-					PRESENTATION_CHECK_RETURN(fmt,
-						STG(FMT("kecs{%s}") % strs.merge(",")),
-                    	strs.merge(", "));
+                    PRESENTATION_CHECK_RETURN(fmt,
+                        STG(FMT("kecs{%s}") % strs.merge(",")),
+                        strs.merge(", "));
                 }
-                
+
                 throw internal_not_found();
             }
         }
@@ -1361,9 +1494,9 @@ std::string Verbose::channelStatus(KSignaling sig, int32 flags, Verbose::Present
         /* we use this exception to break the control flow */
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[%s, channelStatus='%d']") % signaling(sig) % flags),
-		STG(FMT("Unknown channel status for '%s' (%d)") % signaling(sig) % flags));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[%s, channelStatus='%d']") % signaling(sig) % flags),
+        STG(FMT("Unknown channel status for '%s' (%d)") % signaling(sig) % flags));
 }
 
 std::string Verbose::status(KLibraryStatus code, Verbose::Presentation fmt)
@@ -1388,9 +1521,9 @@ std::string Verbose::status(KLibraryStatus code, Verbose::Presentation fmt)
 #endif
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KLibraryStatus='%d']") % (int)code),
-		STG(FMT("Unknown library status (%d)") % (int)code));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KLibraryStatus='%d']") % (int)code),
+        STG(FMT("Unknown library status (%d)") % (int)code));
 }
 
 std::string Verbose::h100configIndex(KH100ConfigIndex code, Verbose::Presentation fmt)
@@ -1417,9 +1550,9 @@ std::string Verbose::h100configIndex(KH100ConfigIndex code, Verbose::Presentatio
 #endif
     }
 
-	PRESENTATION_CHECK_RETURN(fmt,
-	    STG(FMT("[KH100ConfigIndex='%d']") % (int)code),
-    	STG(FMT("Unknown H.100 config index (%d)") % (int)code));
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KH100ConfigIndex='%d']") % (int)code),
+        STG(FMT("Unknown H.100 config index (%d)") % (int)code));
 }
 
 #if K3L_AT_LEAST(1,6,0)
@@ -1433,10 +1566,10 @@ std::string Verbose::callStartInfo(KCallStartInfo code, Verbose::Presentation fm
         case kcsiCarrierMessage:      return presentation(fmt, "kcsiCarrierMessage",      "Carrier Message");
         case kcsiUnknown:             return presentation(fmt, "kcsiUnknown",             "Unknown");
     }
-    
-	PRESENTATION_CHECK_RETURN(fmt,
-		STG(FMT("[KCallStartInfo='%d']") % (int)code),
-		STG(FMT("Unknown call answer info (%d)") % (int)code));
+
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KCallStartInfo='%d']") % (int)code),
+        STG(FMT("Unknown call answer info (%d)") % (int)code));
 }
 
 std::string Verbose::gsmCallCause(KGsmCallCause code, Verbose::Presentation fmt)
@@ -1447,9 +1580,9 @@ std::string Verbose::gsmCallCause(KGsmCallCause code, Verbose::Presentation fmt)
     }
     catch (internal_not_found e)
     {
-		PRESENTATION_CHECK_RETURN(fmt,
-			STG(FMT("[KGsmCallCause='%d']") % (int)code),
-			STG(FMT("Unknown GSM call cause (%d)") % (int)code));
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[KGsmCallCause='%d']") % (int)code),
+            STG(FMT("Unknown GSM call cause (%d)") % (int)code));
     }
 }
 
@@ -1539,9 +1672,9 @@ std::string Verbose::gsmMobileCause(KGsmMobileCause code, Verbose::Presentation 
     }
     catch (internal_not_found e)
     {
-		PRESENTATION_CHECK_RETURN(fmt,
-			STG(FMT("[KGsmMobileCause='%d']") % (int)code),
-			STG(FMT("Unknown GSM mobile caus (%d)") % (int)code));
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[KGsmMobileCause='%d']") % (int)code),
+            STG(FMT("Unknown GSM mobile cause (%d)") % (int)code));
     }
 }
 
@@ -1629,8 +1762,11 @@ std::string Verbose::internal_gsmMobileCause(KGsmMobileCause code, Verbose::Pres
         case kgmcInvalidBessageBodyLength:        return presentation(fmt, "kgmcInvalidBessageBodyLength",    "Invalid message body length");
         case kgmcInactiveSocket:                  return presentation(fmt, "kgmcInactiveSocket",              "Inactive socket");
         case kgmcSocketAlreadyOpen:               return presentation(fmt, "kgmcSocketAlreadyOpen",           "Socket already open");
+#if K3L_AT_LEAST(2,1,0)
+        case kgmcSuccess:                         return presentation(fmt, "kgmcSuccess",                     "Success");
+#endif
     }
-    
+
     throw internal_not_found();
 }
 
@@ -1650,6 +1786,9 @@ std::string Verbose::internal_gsmSmsCause(KGsmSmsCause code, Verbose::Presentati
 {
     switch (code)
     {
+#if K3L_AT_LEAST(2,1,0)
+        case kgscNone:                           return presentation(fmt, "kgscNone",                         "None");
+#endif
         case kgscUnassigned:                     return presentation(fmt, "kgscUnassigned",                   "Unassigned");
         case kgscOperatorDeterminedBarring:      return presentation(fmt, "kgscOperatorDeterminedBarring",    "Operator determined barring");
         case kgscCallBarred:                     return presentation(fmt, "kgscCallBarred",                   "Call barred");
@@ -1723,39 +1862,89 @@ std::string Verbose::internal_gsmSmsCause(KGsmSmsCause code, Verbose::Presentati
         case kgscInvalidPreferredMemStorage:     return presentation(fmt, "kgscInvalidPreferredMemStorage",   "Invalid preferred memory storage");
         case kgscUserTerminated:                 return presentation(fmt, "kgscUserTerminated",               "User terminated");
     }
-    
+
     throw internal_not_found();
 }
 
 std::string Verbose::q931ProgressIndication(KQ931ProgressIndication code, Verbose::Presentation fmt)
 {
-	try
-	{
-		return internal_q931ProgressIndication(code);
-	}
-	catch (internal_not_found e)
-	{
-		PRESENTATION_CHECK_RETURN(fmt,
-			STG(FMT("[KQ931ProgressIndication='%d']") % (int)code),
-			STG(FMT("Unknown Q931 progress indication (%d)") % (int)code));
-	}
+    try
+    {
+        return internal_q931ProgressIndication(code);
+    }
+    catch (internal_not_found e)
+    {
+        PRESENTATION_CHECK_RETURN(fmt,
+            STG(FMT("[KQ931ProgressIndication='%d']") % (int)code),
+            STG(FMT("Unknown Q931 progress indication (%d)") % (int)code));
+    }
 }
 
 std::string Verbose::internal_q931ProgressIndication(KQ931ProgressIndication code, Verbose::Presentation fmt)
 {
-	switch (code)
-	{
-		case kq931pTonesMaybeAvailable:     return presentation(fmt, "kq931pTonesMaybeAvailable",  "Tones may be available");
-		case kq931pDestinationIsNonIsdn:    return presentation(fmt, "kq931pDestinationIsNonIsdn", "Destination is not ISDN");
-		case kq931pOriginationIsNonIsdn:    return presentation(fmt, "kq931pOriginationIsNonIsdn", "Origination is not ISDN");
-		case kq931pCallReturnedToIsdn:      return presentation(fmt, "kq931pCallReturnedToIsdn",   "Call returned to ISDN");
-		case kq931pTonesAvailable:          return presentation(fmt, "kq931pTonesAvailable",       "Tones available");
-	}
+    switch (code)
+    {
+        case kq931pTonesMaybeAvailable:     return presentation(fmt, "kq931pTonesMaybeAvailable",  "Tones may be available");
+        case kq931pDestinationIsNonIsdn:    return presentation(fmt, "kq931pDestinationIsNonIsdn", "Destination is not ISDN");
+        case kq931pOriginationIsNonIsdn:    return presentation(fmt, "kq931pOriginationIsNonIsdn", "Origination is not ISDN");
+        case kq931pCallReturnedToIsdn:      return presentation(fmt, "kq931pCallReturnedToIsdn",   "Call returned to ISDN");
+        case kq931pTonesAvailable:          return presentation(fmt, "kq931pTonesAvailable",       "Tones available");
+    }
 
-	throw internal_not_found();
+    throw internal_not_found();
 }
 
 #endif /* K3L_AT_LEAST(1,6,0) */
+
+
+
+
+#if K3L_AT_LEAST(2,1,0)
+std::string Verbose::faxResult(KFaxResult code, Verbose::Presentation fmt)
+{
+    switch (code)
+    {
+        case kfaxrEndOfTransmission:    return presentation(fmt, "kfaxrEndOfTransmission", "EndOfTransmission");
+        case kfaxrStoppedByCommand:     return presentation(fmt, "kfaxrStoppedByCommand", "StoppedByCommand");
+        case kfaxrProtocolTimeout:      return presentation(fmt, "kfaxrProtocolTimeout", "ProtocolTimeout");
+        case kfaxrProtocolError:        return presentation(fmt, "kfaxrProtocolError", "ProtocolError");
+        case kfaxrRemoteDisconnection:  return presentation(fmt, "kfaxrRemoteDisconnection", "RemoteDisconnection");
+        case kfaxrFileError:            return presentation(fmt, "kfaxrFileError", "FileError");
+        case kfaxrUnknown:              return presentation(fmt, "kfaxrUnknown", "Unknown");
+        case kfaxrEndOfReception:       return presentation(fmt, "kfaxrEndOfReception", "EndOfReception");
+        case kfaxrCompatibilityError:   return presentation(fmt, "kfaxrCompatibilityError", "CompatibilityError");
+        case kfaxrQualityError:         return presentation(fmt, "kfaxrQualityError", "QualityError");
+    }
+
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KFaxResult='%d']") % (int)code),
+        STG(FMT("Unknown fax result (%d)") % (int)code));
+}
+
+std::string Verbose::faxFileErrorCause(KFaxFileErrorCause code, Verbose::Presentation fmt)
+{
+    switch (code)
+    {
+        case kfaxfecTransmissionStopped:       return presentation(fmt, "kfaxfecTransmissionStopped", "TransmissionStopped");
+        case kfaxfecTransmissionError:          return presentation(fmt, "kfaxfecTransmissionError", "TransmissionError");
+        case kfaxfecListCleared:                return presentation(fmt, "kfaxfecListCleared", "ListCleared");
+        case kfaxfecCouldNotOpen:               return presentation(fmt, "kfaxfecCouldNotOpen", "CouldNotOpen");
+        case kfaxfecInvalidHeader:              return presentation(fmt, "kfaxfecInvalidHeader", "InvalidHeader");
+        case kfaxfecDataNotFound:               return presentation(fmt, "kfaxfecDataNotFound", "DataNotFound");
+        case kfaxfecInvalidHeight:              return presentation(fmt, "kfaxfecInvalidHeight", "InvalidHeight");
+        case kfaxfecUnsupportedWidth:           return presentation(fmt, "kfaxfecUnsupportedWidth", "UnsupportedWidth");
+        case kfaxfecUnsupportedCompression:     return presentation(fmt, "kfaxfecUnsupportedCompression", "UnsupportedCompression");
+        case kfaxfecUnsupportedRowsPerStrip:    return presentation(fmt, "kfaxfecUnsupportedRowsPerStrip", "UnsupportedRowsPerStrip");
+        case kfaxfecUnknown:                    return presentation(fmt, "kfaxfecUnknown", "Unknown");
+    }
+
+    PRESENTATION_CHECK_RETURN(fmt,
+        STG(FMT("[KFaxFileErrorCause='%d']") % (int)code),
+        STG(FMT("Unknown fax file error cause (%d)") % (int)code));
+}
+
+#endif
+
 
 /********/
 
@@ -1793,7 +1982,7 @@ std::string Verbose::commandName(int32 code)
 #if K3L_AT_LEAST(1,4,0)
         case K_CM_VOIP_SEIZE:               return "CM_VOIP_SEIZE";
 
-#if !K3L_AT_LEAST(2,0,0) 
+#if !K3L_AT_LEAST(2,0,0)
         /* internal commands */
         case K_CM_VOIP_START_DEBUG:         return "CM_VOIP_START_DEBUG";
         case K_CM_VOIP_STOP_DEBUG:          return "CM_VOIP_STOP_DEBUG";
@@ -1801,7 +1990,7 @@ std::string Verbose::commandName(int32 code)
 #endif
 #endif
 
-#if K3L_AT_LEAST(1,5,2) && !K3L_AT_LEAST(2,0,0) 
+#if K3L_AT_LEAST(1,5,2) && !K3L_AT_LEAST(2,0,0)
         /* internal command */
         case K_CM_ISDN_DEBUG:               return "CM_ISDN_DEBUG";
 #endif
@@ -1848,7 +2037,7 @@ std::string Verbose::commandName(int32 code)
 
 #if K3L_AT_LEAST(1,6,0)
         case K_CM_ENABLE_CALL_ANSWER_INFO:  return "CM_ENABLE_CALL_ANSWER_INFO";
-        case K_CM_DISABLE_CALL_ANSWER_INFO: return "CM_DISABLE_CALL_ANSWER_INFO"; 
+        case K_CM_DISABLE_CALL_ANSWER_INFO: return "CM_DISABLE_CALL_ANSWER_INFO";
 #endif
 
         case K_CM_RESET_LINK:               return "CM_RESET_LINK";
@@ -1921,7 +2110,25 @@ std::string Verbose::commandName(int32 code)
         case K_CM_START_CADENCE:            return "CM_START_CADENCE";
         case K_CM_STOP_CADENCE:             return "CM_STOP_CADENCE";
         case K_CM_CHECK_NEW_SMS:            return "CM_CHECK_NEW_SMS";
+        case K_CM_SEND_TO_MODEM:            return "CM_SEND_TO_MODEM";
 #endif
+#if K3L_AT_LEAST(2,1,0)
+        case K_CM_START_FAX_TX:             return "CM_START_FAX_TX";
+        case K_CM_STOP_FAX_TX:              return "CM_STOP_FAX_TX";
+        case K_CM_ADD_FAX_FILE:             return "CM_ADD_FAX_FILE";
+        case K_CM_ADD_FAX_PAGE_BREAK:       return "CM_ADD_FAX_PAGE_BREAK";
+        case K_CM_START_FAX_RX:             return "CM_START_FAX_RX";
+        case K_CM_STOP_FAX_RX:              return "CM_STOP_FAX_RX";
+        case K_CM_SIM_CARD_SELECT:          return "CM_SIM_CARD_SELECT";
+#endif
+
+#if K3L_AT_LEAST(2,1,0)
+       case K_CM_NOTIFY_WATCHDOG:           return "CM_NOTIFY_WATCHDOG";
+       case K_CM_STOP_WATCHDOG:             return "CM_STOP_WATCHDOG";
+       case K_CM_WATCHDOG_COUNT:            return "CM_WATCHDOG_COUNT";
+       case K_CM_START_WATCHDOG:            return "CM_START_WATCHDOG";
+#endif
+
     }
 
     return STG(FMT("[command='%d']") % code);
@@ -2000,6 +2207,7 @@ std::string Verbose::eventName(int32 code)
 #if K3L_HAS_MPTY_SUPPORT
         case K_EV_CALL_MPTY_START:      return "EV_CALL_MPTY_START";
         case K_EV_CALL_MPTY_STOP:       return "EV_CALL_MPTY_STOP";
+        case K_EV_GSM_COMMAND_STATUS:   return "EV_GSM_COMMAND_STATUS";
 #endif
 #if !K3L_AT_LEAST(2,0,0)
         case K_EV_PONG:                 return "EV_PONG";
@@ -2015,26 +2223,50 @@ std::string Verbose::eventName(int32 code)
         case K_EV_VOIP_SEIZURE:         return "EV_VOIP_SEIZURE";
 #endif
         case K_EV_SEIZURE:              return "EV_SEIZURE";
+#if K3L_AT_LEAST(2,1,0)
+        case K_EV_FAX_CHANNEL_FREE:     return "EV_FAX_CHANNEL_FREE";
+        case K_EV_FAX_FILE_SENT:        return "EV_FAX_FILE_SENT";
+        case K_EV_FAX_FILE_FAIL:        return "EV_FAX_FILE_FAIL";
+    /*case K_EV_FAX_MESSAGE_CONFIRMATION:return "EV_FAX_MESSAGE_CONFIRMATION";*/
+        case K_EV_FAX_TX_TIMEOUT:       return "EV_FAX_TX_TIMEOUT";
+        case K_EV_FAX_PAGE_CONFIRMATION:return "EV_FAX_PAGE_CONFIRMATION";
+#endif
+
+#if K3L_AT_LEAST(2,1,0)
+        case K_EV_WATCHDOG_COUNT:       return "EV_WATCHDOG_COUNT";
+#endif
     }
-    
+
     return STG(FMT("[event='%d']") % code);
 }
 
 
-std::string Verbose::command(int32 dev, K3L_COMMAND *k3lcmd, r2_country_type r2_country, Verbose::Presentation fmt)
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::command(int32 dev, K3L_COMMAND *k3lcmd, R2CountryType r2_country, Verbose::Presentation fmt)
+#else
+std::string Verbose::command(int32 dev, K3L_COMMAND *k3lcmd, Verbose::Presentation fmt)
+#endif
 {
-	return command(k3lcmd->Cmd, dev, k3lcmd->Object, (const char *) k3lcmd->Params, r2_country, fmt);
+#if K3L_AT_LEAST(2,0,0)
+    return command(k3lcmd->Cmd, dev, k3lcmd->Object, (const char *) k3lcmd->Params, r2_country, fmt);
+#else
+    return command(k3lcmd->Cmd, dev, k3lcmd->Object, (const char *) k3lcmd->Params, fmt);
+#endif
 }
 
-std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const char * params, r2_country_type r2_country, Verbose::Presentation fmt)
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const char * params, R2CountryType r2_country, Verbose::Presentation fmt)
+#else
+std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const char * params, Verbose::Presentation fmt)
+#endif
 {
-    ushort dev = (ushort) dev_idx;
-    ushort obj = (ushort) obj_idx;
+    unsigned short int dev = (unsigned short int) dev_idx;
+    unsigned short int obj = (unsigned short int) obj_idx;
 
     kcommand code = (kcommand) cmd_code;
 
     std::string buf, extra;
-    
+
     switch (code)
     {
         case K_CM_SEIZE:
@@ -2114,11 +2346,15 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
 
         case K_CM_START_CADENCE:
         case K_CM_STOP_CADENCE:
+        case K_CM_SEND_TO_MODEM:
 #endif
 #if K3L_HAS_MPTY_SUPPORT
         case K_CM_HOLD_SWITCH:
         case K_CM_MPTY_CONF:
         case K_CM_MPTY_SPLIT:
+#endif
+#if K3L_AT_LEAST(2,1,0)
+        case K_CM_SIM_CARD_SELECT:
 #endif
             if (params != NULL)
             {
@@ -2148,17 +2384,17 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
                 default:  extra += "<unknown>";
             }
             extra  = "'";
-            
+
             return show(buf, commandName(code), Target(CHANNEL, dev, obj), extra);
 
         /****/
- 
+
 #if K3L_AT_LEAST(1,5,2) && !K3L_AT_LEAST(2,0,0)
         case K_CM_ISDN_DEBUG:
             extra  = "flags='";
             extra += isdnDebug((unsigned long)params);
             extra += "'";
-            
+
             return show(buf, commandName(code), Target(NONE), extra);
 #endif
 
@@ -2186,11 +2422,11 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
         /****/
 
 
-        
+
         case K_CM_CAS_CHANGE_LINE_STT:
         {
             const char status = (params ? *params : 0x00);
-            
+
             extra += "status='";
             extra += (status & 0x01 ? "1" : "0");
             extra += (status & 0x02 ? "1" : "0");
@@ -2200,11 +2436,11 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
 
             return show(buf, commandName(code), Target(CHANNEL, dev, obj), extra);
         }
-        
+
         case K_CM_CAS_SEND_MFC:
         {
             char mfc = (params ? *params : 0xff);
-            
+
             extra = STG(FMT("mfc='%d'") % (int) mfc);
 
             return show(buf, commandName(code), Target(CHANNEL, dev, obj), extra);
@@ -2272,7 +2508,7 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
             {
                 extra = "<unknown>";
             }
-                        
+
             return show(buf, commandName(code), Target(MIXER, dev, obj), extra);
         };
 
@@ -2334,7 +2570,7 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
                 case 2:  codec = "PCM-11khz";
                 default: codec = "<unknown>";
             }
-            
+
             std::stringstream stream;
 
             extra = STG(FMT("buffer='%p',size='%d',codec='%s'")
@@ -2342,14 +2578,14 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
 
             return show(buf, commandName(code), Target(PLAYER, dev, obj), extra);
         }
-        
+
         case K_CM_STOP_PLAY:
         case K_CM_PAUSE_PLAY:
         case K_CM_RESUME_PLAY:
 
         case K_CM_START_STREAM_BUFFER:
         case K_CM_STOP_STREAM_BUFFER:
-        
+
         case K_CM_ENABLE_PLAYER_AGC:
         case K_CM_DISABLE_PLAYER_AGC:
 
@@ -2366,7 +2602,7 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
             extra += "'";
 
             return show(buf, commandName(code), Target(MIXER, dev, obj), extra);
-        
+
         case CM_REMOVE_FROM_CONF:
             return show(buf, commandName(code), Target(MIXER, dev, obj));
 
@@ -2374,7 +2610,7 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
         case K_CM_PREPARE_FOR_LISTEN:
         {
             int msecs = (params ? *((int*)params) : -1);
-            
+
             extra = STG(FMT("msecs='%d'") % msecs);
 
             return show(buf, commandName(code), Target(PLAYER, dev, obj), extra);
@@ -2391,18 +2627,26 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
             return show(buf, commandName(code), Target(CHANNEL, dev, obj), extra);
         }
 
-		case K_CM_SET_LINE_CONDITION:
-		case K_CM_SEND_LINE_CONDITION:
-			extra  = "condition='";
-			extra += signGroupB((KSignGroupB) *((int *) params), r2_country);
-			extra += "'";
+        case K_CM_SET_LINE_CONDITION:
+        case K_CM_SEND_LINE_CONDITION:
+            extra  = "condition='";
+#if K3L_AT_LEAST(2,0,0)
+            extra += signGroupB((KSignGroupB) *((int *) params), r2_country);
+#else
+            extra += signGroupB((KSignGroupB) *((int *) params));
+#endif
+            extra += "'";
 
             return show(buf, commandName(code), Target(CHANNEL, dev, obj), extra);
 
-		case K_CM_SET_CALLER_CATEGORY:
-			extra  = "category='";
-			extra += signGroupII((KSignGroupII) *((int *) params), r2_country);
-			extra += "'";
+        case K_CM_SET_CALLER_CATEGORY:
+            extra  = "category='";
+#if K3L_AT_LEAST(2,0,0)
+            extra += signGroupII((KSignGroupII) *((int *) params), r2_country);
+#else
+            extra += signGroupII((KSignGroupII) *((int *) params));
+#endif
+            extra += "'";
 
             return show(buf, commandName(code), Target(CHANNEL, dev, obj), extra);
 
@@ -2433,11 +2677,11 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
             extra += "'";
 
             return show(buf, commandName(code), Target(DEVICE, dev), extra);
-        
+
         case K_CM_HARD_RESET:
             return show(buf, commandName(code), Target(LINK, dev, obj));
 
-#if !K3L_AT_LEAST(2,0,0) 
+#if !K3L_AT_LEAST(2,0,0)
         /* como funciona? */
         case K_CM_LOG_REQUEST:
         case K_CM_LOG_CREATE_DISPATCHER:
@@ -2446,16 +2690,43 @@ std::string Verbose::command(int32 cmd_code, int32 dev_idx, int32 obj_idx, const
         case K_CM_PING:
 #endif
             return show(buf, commandName(code), Target(NONE));
+#if K3L_AT_LEAST(2,1,0)
+        case K_CM_START_FAX_TX:
+        case K_CM_START_FAX_RX:
+        case K_CM_ADD_FAX_FILE:
+            extra  = "params='";
+            extra += (params ? params : "<empty>");
+            extra += "'";
+            return show(buf, commandName(code), Target(CHANNEL, dev, obj), extra);
+        case K_CM_STOP_FAX_TX:
+        case K_CM_STOP_FAX_RX:
+        case K_CM_ADD_FAX_PAGE_BREAK:
+            return show(buf, commandName(code), Target(CHANNEL, dev, obj));
+#endif
+
+#if K3L_AT_LEAST(2,1,0)
+        case K_CM_NOTIFY_WATCHDOG:
+        case K_CM_STOP_WATCHDOG:
+        case K_CM_START_WATCHDOG:
+            return show(buf, commandName(code) , Target(DEVICE, obj));
+        case K_CM_WATCHDOG_COUNT:
+            return show(buf, commandName(code) , Target(NONE));
+#endif
+
     }
 
     /* default command handler */
     return show(buf, commandName(code), Target(CHANNEL, dev, obj));
 }
 
-std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_country_type r2_country, Verbose::Presentation fmt)
+#if K3L_AT_LEAST(2,0,0)
+std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, R2CountryType r2_country, Verbose::Presentation fmt)
+#else
+std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, Verbose::Presentation fmt)
+#endif
 {
-    ushort dev = (ushort) ev->DeviceId;
-    ushort obj = (ushort) obj_idx;
+    unsigned short int dev = (unsigned short int) ev->DeviceId;
+    unsigned short int obj = (unsigned short int) obj_idx;
 
     kevent code = (kevent) ev->Code;
 
@@ -2507,15 +2778,23 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
 #endif
 
 #if K3L_AT_LEAST(1,6,0)
-		case K_EV_SMS_SEND_RESULT:
-			extra  = "result='";
+        case K_EV_SMS_SEND_RESULT:
+            extra  = "result='";
 #if K3L_AT_LEAST(2,0,0)
-			extra += gsmSmsCause((KGsmSmsCause)ev->AddInfo);
+            extra += gsmSmsCause((KGsmSmsCause)ev->AddInfo);
 #else
-			extra += gsmCallCause((KGsmCallCause)ev->AddInfo);
+            extra += gsmCallCause((KGsmCallCause)ev->AddInfo);
 #endif
             extra += "'";
             return show(buf, eventName(code), Target(CHANNEL, dev, obj), extra);
+
+#if K3L_HAS_MPTY_SUPPORT
+        case K_EV_GSM_COMMAND_STATUS:
+            extra  = "result='";
+            extra += gsmMobileCause((KGsmMobileCause)ev->AddInfo);
+            extra += "'";
+            return show(buf, eventName(code), Target(CHANNEL, dev, obj), extra);
+#endif
 
         case K_EV_CALL_ANSWER_INFO:
             extra  = "info='";
@@ -2535,7 +2814,7 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
             {
                 return show(buf, eventName(code), Target(CHANNEL, dev, obj));
             }
-        
+
         case K_EV_ISDN_PROGRESS_INDICATOR:
             if (ev->AddInfo != 0)
             {
@@ -2562,10 +2841,14 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
 
             return show(buf, eventName(code), Target(CHANNEL, dev, obj), extra);
 
-		case K_EV_CALL_FAIL:
-			extra  = "cause='";
-			extra += callFail(sig, r2_country, ev->AddInfo);
-			extra += "'";
+        case K_EV_CALL_FAIL:
+            extra  = "cause='";
+#if K3L_AT_LEAST(2,0,0)
+            extra += callFail(sig, r2_country, ev->AddInfo);
+#else
+            extra += callFail(sig, ev->AddInfo);
+#endif
+            extra += "'";
 
             if (ev->Params != NULL && ev->ParamSize != 0)
             {
@@ -2604,7 +2887,7 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
                 extra += (const char *) ev->Params;
                 extra += "'";
             }
-            
+
             if (!extra.empty())
                 return show(buf, eventName(code), Target(CHANNEL, dev, obj), extra);
             else
@@ -2660,7 +2943,7 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
             extra  = "tone='";
             extra += mixerTone((KMixerTone)ev->AddInfo);
             extra += "'";
-             
+
             return show(buf, eventName(code), Target(CHANNEL, dev, obj), extra);
 
         case K_EV_CADENCE_RECOGNIZED:
@@ -2712,14 +2995,8 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
 
         case K_EV_LINK_STATUS:
             // EV_LINK_STATUS has always zero in ObjectInfo (and AddInfo!)
-                
-            extra  = "status='";
-            extra += linkStatus(sig, ev->ObjectInfo);
-            extra += "'";
-            return show(buf, eventName(code), Target(LINK, dev, obj), extra);
-            
             /* fall throught... */
-            
+
 #if K3L_AT_LEAST(1,6,0)
         case K_EV_PHYSICAL_LINK_UP:
         case K_EV_PHYSICAL_LINK_DOWN:
@@ -2733,7 +3010,7 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
 
             std::string data((const char *)info->UserInfo,
                 std::min<size_t>(info->UserInfoLength, KMAX_USER_USER_LEN));
-            
+
             extra = STG(FMT("proto='%d',length='%d',data='%s'")
                 % info->ProtocolDescriptor % info->UserInfoLength % data);
 
@@ -2761,6 +3038,39 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
 #endif
             return show(buf, eventName(code), Target(NONE));
 
+#if K3L_AT_LEAST(2,1,0)
+        case K_EV_FAX_CHANNEL_FREE:
+            extra  = "status='";
+            extra += faxResult((KFaxResult)ev->AddInfo);
+            extra += "'";
+            return show(buf, eventName(code), Target(CHANNEL, dev, obj), extra);
+
+        case K_EV_FAX_FILE_SENT:
+            extra  = "filename='";
+            extra += (ev->Params ? (const char *) (ev->Params) : "<unknown>");
+            extra += "'";
+            return show(buf, eventName(code), Target(CHANNEL, dev, obj), extra);
+
+        case K_EV_FAX_FILE_FAIL:
+            extra  = "cause='";
+            extra += faxFileErrorCause((KFaxFileErrorCause)ev->AddInfo);
+            extra += "',filename='";
+            extra += (ev->Params ? (const char *) (ev->Params) : "<unknown>");
+            extra += "'";
+            return show(buf, eventName(code), Target(CHANNEL, dev, obj), extra);
+
+        /*case K_EV_FAX_MESSAGE_CONFIRMATION:*/
+        case K_EV_FAX_PAGE_CONFIRMATION:
+        case K_EV_FAX_TX_TIMEOUT:
+            return show(buf, eventName(code), Target(CHANNEL, dev, obj));
+#endif
+
+#if K3L_AT_LEAST(2,1,0)
+        case K_EV_WATCHDOG_COUNT:
+            extra = STG(FMT("count='%d'") % (char)ev->AddInfo);
+            return show(buf , eventName(code), Target(NONE), extra);
+#endif
+
     }
 
     // default handler...
@@ -2780,10 +3090,18 @@ std::string Verbose::event(KSignaling sig, int32 obj_idx, K3L_EVENT *ev, r2_coun
 
 std::string Verbose::show(std::string & buf, std::string name, Target tgt, std::string & extra)
 {
-    std::string tmp(",");
-    tmp += extra;
+    if (tgt.type == NONE)
+    {
+        generate(buf, name, tgt, extra);
+    }
+    else
+    {
+        std::string tmp(",");
+        tmp += extra;
 
-    generate(buf, name, tgt, tmp);
+        generate(buf, name, tgt, tmp);
+    }
+
     return buf;
 }
 
@@ -2800,7 +3118,10 @@ void Verbose::generate(std::string &buf, std::string &name, Target tgt, std::str
     switch (tgt.type)
     {
         case NONE:
-            buf += STG(FMT("<%s> (%s)") % name % extra);
+            if (extra.empty())
+                buf += STG(FMT("<%s>") % name);
+            else
+                buf += STG(FMT("<%s> (%s)") % name % extra);
             break;
 
         case DEVICE:

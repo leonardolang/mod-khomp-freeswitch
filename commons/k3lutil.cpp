@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,25 +23,25 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <k3lutil.hpp>
 
-std::string K3LUtil::channelStatus(int32 dev, int32 channel, 
+std::string K3LUtil::channelStatus(int32 dev, int32 channel,
         Verbose::Presentation fmt)
 {
     try
@@ -49,14 +49,14 @@ std::string K3LUtil::channelStatus(int32 dev, int32 channel,
         K3L_CHANNEL_CONFIG & config = _k3lapi.channel_config(dev, channel);
         K3L_CHANNEL_STATUS   status;
 
-        KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus (dev, 
+        KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus (dev,
                 channel + ksoChannel, &status, sizeof(status));
 
         switch (ret)
         {
-            case ksSuccess:  return Verbose::channelStatus(config.Signaling, 
+            case ksSuccess:  return Verbose::channelStatus(config.Signaling,
                     status.AddInfo, fmt);
-            default:         return (fmt == Verbose::EXACT ? "<unknown[fail]>" 
+            default:         return (fmt == Verbose::EXACT ? "<unknown[fail]>"
                                                             : "Unknown (fail)");
         }
     }
@@ -66,56 +66,56 @@ std::string K3LUtil::channelStatus(int32 dev, int32 channel,
     }
 }
 
-std::string K3LUtil::callStatus(int32 dev, int32 channel, 
+std::string K3LUtil::callStatus(int32 dev, int32 channel,
         Verbose::Presentation fmt)
 {
     K3L_CHANNEL_STATUS status;
 
-    KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus(dev, 
+    KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus(dev,
             channel + ksoChannel, &status, sizeof(status));
 
     switch (ret)
     {
         case ksSuccess:  return Verbose::callStatus(status.CallStatus, fmt);
-        default:         return (fmt == Verbose::EXACT ? "<unknown[fail]>" 
+        default:         return (fmt == Verbose::EXACT ? "<unknown[fail]>"
                                                         : "Unknown (fail)");
     }
 }
 
-std::string K3LUtil::linkStatus(int32 dev, int32 link, 
+std::string K3LUtil::linkStatus(int32 dev, int32 link,
         Verbose::Presentation fmt, KSignaling sig)
 {
     try
     {
-    	if (sig == ksigInactive)
-	    {
-	        K3L_LINK_CONFIG & config = _k3lapi.link_config(dev, link);
-    		sig = config.Signaling;
-	    }
+        if (sig == ksigInactive)
+        {
+            K3L_LINK_CONFIG & config = _k3lapi.link_config(dev, link);
+            sig = config.Signaling;
+        }
 
        	K3L_LINK_STATUS   status;
 
-        KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus (dev, 
+        KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus (dev,
                 link + ksoLink, &status, sizeof(status));
 
         switch (ret)
         {
             case ksSuccess:  return Verbose::linkStatus(sig, status.E1, fmt);
-            default:         return (fmt == Verbose::EXACT ? 
+            default:         return (fmt == Verbose::EXACT ?
                                 "<unknown[failure]>" : "Unknown (failure)");
         }
     }
     catch(K3LAPI::invalid_channel & e)
     {
-        return (fmt == Verbose::EXACT ? "<unknown[failure]>" 
+        return (fmt == Verbose::EXACT ? "<unknown[failure]>"
                                         : "Unknown (failure)");
     }
 }
 
 
-unsigned int K3LUtil::physicalLinkCount(int32 dev, bool fxs_too)
+unsigned int K3LUtil::physicalLinkCount(int32 dev, bool count_virtual)
 {
-    int count = 0;
+    unsigned int number = 0;
 
     try
     {
@@ -123,25 +123,30 @@ unsigned int K3LUtil::physicalLinkCount(int32 dev, bool fxs_too)
         {
 #if K3L_AT_LEAST(1,6,0)
             case kdtFXS:
-                count = (fxs_too ? (_k3lapi.channel_count(dev) == 64 ? 2 : 1) 
-                        : 0);
+                number = (count_virtual ? (_k3lapi.channel_count(dev) < 50 ? 1 : 2) : 0);
                 break;
 
             case kdtFXSSpx:
-                count = (fxs_too ? (_k3lapi.channel_count(dev) == 60 ? 2 : 1) 
-                        : 0);
+                number = (count_virtual ? (_k3lapi.channel_count(dev) < 30 ? 1 : 2) : 0);
                 break;
 #endif
+
+#if K3L_AT_LEAST(2,1,0)
+            case kdtE1FXSSpx:
+                number = (count_virtual ? 2 : 1);
+                break;
+#endif
+
             /* E1 boards */
             case kdtE1:
             case kdtE1Spx:
             case kdtE1IP:
-                count = _k3lapi.link_count(dev);
+                number = _k3lapi.link_count(dev);
                 break;
 
             case kdtPR:
             case kdtE1GW:
-                count = 1;
+                number = 1;
                 break;
 
 #if K3L_AT_LEAST(1,6,0)
@@ -155,7 +160,13 @@ unsigned int K3LUtil::physicalLinkCount(int32 dev, bool fxs_too)
 #endif
             case kdtConf:
             case kdtGWIP:
-                count = 0;
+#if K3L_AT_LEAST(2,1,0)
+            case kdtGSMUSB:
+            case kdtGSMUSBSpx:
+            case kdtReserved1:    // just to avoid warnings.
+            case kdtDevTypeCount: // just to avoid warnings.
+#endif
+                number = 0;
                 break;
         }
     }
@@ -164,17 +175,17 @@ unsigned int K3LUtil::physicalLinkCount(int32 dev, bool fxs_too)
         return 0;
     }
 
-    return count;
+    return number;
 }
 
 
-K3LUtil::ErrorCountType K3LUtil::linkErrorCount(int32 dev, int32 link, 
+K3LUtil::ErrorCountType K3LUtil::linkErrorCount(int32 dev, int32 link,
         Verbose::Presentation fmt)
 {
     ErrorCountType          result;
     K3L_LINK_ERROR_COUNTER  status;
 
-    KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus (dev, 
+    KLibraryStatus ret = (KLibraryStatus) k3lGetDeviceStatus (dev,
             link + ksoLinkMon, &status, sizeof(status));
 
     switch (ret)
@@ -182,10 +193,10 @@ K3LUtil::ErrorCountType K3LUtil::linkErrorCount(int32 dev, int32 link,
         case ksSuccess:
             for (unsigned int i = klecChangesToLock; i < klecCount; i++)
             {
-                result.insert(ErrorCountPairType(Verbose::linkErrorCounter
+                result.push_back(ErrorCountPairType(Verbose::linkErrorCounter
                         ((KLinkErrorCounter)i, fmt), status.ErrorCounters[i]));
             }
-            /* fall */ 
+            /* fall */
 
         default:
             return result;

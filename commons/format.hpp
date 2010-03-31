@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,20 +23,20 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #ifndef _FORMAT_H_
@@ -49,6 +49,12 @@
 #include <string>
 #include <queue>
 #include <iostream>
+#include <stdio.h>
+
+#ifdef WIN32 // WINDOWS
+#include <KHostSystem.h>
+#endif
+
 
 /* macros used for shortening lines and making the code clearer */
 #define STG(x) (x).str()
@@ -68,7 +74,7 @@ struct Format
 
     explicit Format(const char  * format_string, bool raise_exception = false);
     explicit Format(std::string   format_string, bool raise_exception = false);
-    
+
     void initialize(const char *);
 
     std::string str(void);
@@ -194,7 +200,9 @@ struct Format
                     if ((typeid(const char)          == typeid(V)) ||
                         (typeid(char)                == typeid(V)) ||
                         (typeid(const unsigned char) == typeid(V)) ||
-                        (typeid(unsigned char)       == typeid(V)))
+                        (typeid(unsigned char)       == typeid(V)) ||
+                        (typeid(const void)          == typeid(V)) ||
+                        (typeid(void)                == typeid(V)))
                     {
                         int len = strlen((const char*)value)+strings_base_length+1;
 
@@ -387,7 +395,7 @@ struct Format
     bool number_verify_signed_int( V value )
     {
         return
-            (sizeof(V) <= 4 || 
+            (sizeof(V) <= 4 ||
              typeid(V) == typeid(int) ||
              typeid(V) == typeid(const int) ||
              typeid(V) == typeid(volatile int));

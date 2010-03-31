@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,24 +23,25 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <string>
-#include <map>
+#include <utility>
+#include <list>
 
 #include <k3lapi.hpp>
 #include <verbose.hpp>
@@ -50,24 +51,24 @@
 
 struct K3LUtil
 {
-    typedef std::map  < std::string, unsigned int > ErrorCountType;
     typedef std::pair < std::string, unsigned int > ErrorCountPairType;
+    typedef std::list < ErrorCountPairType >        ErrorCountType;
 
     K3LUtil(K3LAPI & k3lapi): _k3lapi(k3lapi) {};
 
-    std::string callStatus(int32 dev, int32 channel, 
+    std::string callStatus(int32 dev, int32 channel,
             Verbose::Presentation fmt = Verbose::HUMAN);
 
-    std::string channelStatus(int32, int32, 
+    std::string channelStatus(int32, int32,
             Verbose::Presentation fmt = Verbose::HUMAN);
 
-    std::string linkStatus(int32, int32, 
-            Verbose::Presentation fmt = Verbose::HUMAN, 
+    std::string linkStatus(int32, int32,
+            Verbose::Presentation fmt = Verbose::HUMAN,
             KSignaling sig = ksigInactive);
 
-    unsigned int physicalLinkCount(int32 dev, bool fxs_too = false);
+    unsigned int physicalLinkCount(int32 dev, bool count_virtual = false);
 
-    ErrorCountType linkErrorCount(int32, int32, 
+    ErrorCountType linkErrorCount(int32, int32,
             Verbose::Presentation fmt = Verbose::HUMAN);
 
  protected:

@@ -1,10 +1,12 @@
-/*  
-    KHOMP endpoint provider for FreeSWITCH(tm)
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
-  The contents of this file are subject to the Mozilla Public License Version 1.1
-  (the "License"); you may not use this file except in compliance with the
-  License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
+/*******************************************************************************
+
+    KHOMP generic endpoint/channel library.
+    Copyright (C) 2007-2010 Khomp Ind. & Com.
+
+  The contents of this file are subject to the Mozilla Public License
+  Version 1.1 (the "License"); you may not use this file except in compliance
+  with the License. You may obtain a copy of the License at
+  http://www.mozilla.org/MPL/
 
   Software distributed under the License is distributed on an "AS IS" basis,
   WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
@@ -15,29 +17,29 @@
   case the provisions of "LGPL License" are applicable instead of those above.
 
   If you wish to allow use of your version of this file only under the terms of
-  the LGPL License and not to allow others to use your version of this file under
-  the MPL, indicate your decision by deleting the provisions above and replace them
-  with the notice and other provisions required by the LGPL License. If you do not
-  delete the provisions above, a recipient may use your version of this file under
-  either the MPL or the LGPL License.
+  the LGPL License and not to allow others to use your version of this file
+  under the MPL, indicate your decision by deleting the provisions above and
+  replace them with the notice and other provisions required by the LGPL
+  License. If you do not delete the provisions above, a recipient may use your
+  version of this file under either the MPL or the LGPL License.
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
-    along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
-*/
+    along with this library; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+*******************************************************************************/
 
 #ifndef _GENERATED_K3L_H_
 #define _GENERATED_K3L_H_
@@ -105,6 +107,9 @@ enum KTxRx
 #define KMAX_BUFFER_ADDRESSES		16
 #define KMAX_LOG                    1024
 #define KMAX_SIP_DATA               248
+#define KMAX_GSM_CALLS              6
+#define KMAX_GSM_OPER_NAME          32
+#define KMAX_GSM_IMEI_SIZE          16
 #endif
 #if !defined KVOIPDEFS_H
 #define KVOIPDEFS_H
@@ -293,12 +298,41 @@ struct KVoIPSeize
 
 #define CM_DISABLE_CALL_ANSWER_INFO 0x41
 
+#define CM_START_WATCHDOG           0x45
+
+#define CM_STOP_WATCHDOG            0x46
+
+#define CM_NOTIFY_WATCHDOG          0x47
+
+#define CM_WATCHDOG_COUNT           0x48
+
+#define CM_HOLD_SWITCH             0x4A
+
+#define CM_MPTY_CONF               0x4B
+
+#define CM_MPTY_SPLIT              0x4C
+
+#define CM_SIM_CARD_SELECT         0x4D
+
+#define CM_START_FAX_TX				0x50
+
+#define CM_STOP_FAX_TX			0x51
+
+#define CM_ADD_FAX_FILE				0x52
+
+#define CM_ADD_FAX_PAGE_BREAK		0x53
+
+#define CM_START_FAX_RX				0x54
+
+#define CM_STOP_FAX_RX			    0x55
 
 #define CM_RESET_LINK				0xF1
 
 #define CM_CLEAR_LINK_ERROR_COUNTER 0xF2
 
 #define CM_SEND_DEVICE_SECURITY_KEY 0xF3
+
+#define CM_RESET_MODEM              0xF4
 
 
 #define EV_CHANNEL_FREE				0x01
@@ -380,6 +414,14 @@ struct KVoIPSeize
 
 #define EV_SMS_SEND_RESULT          0x46
 
+#define EV_CALL_MPTY_START			0x47
+
+#define EV_CALL_MPTY_STOP			0x48
+
+#define EV_GSM_COMMAND_STATUS		0x49
+
+#define EV_WATCHDOG_COUNT           0x60
+
 #define EV_CHANNEL_FAIL				0x30
 
 #define EV_REFERENCE_FAIL			0x31
@@ -402,6 +444,9 @@ struct KVoIPSeize
 
 #define EV_REQUEST_DEVICE_SECURITY_KEY 0xF3
 
+#define EV_DISK_IS_FULL		0xF4
+
+
 #define CM_SEND_DTMF				0xD1
 
 #define CM_STOP_AUDIO 				0xD2
@@ -411,6 +456,15 @@ struct KVoIPSeize
 #define EV_VOIP_SEIZURE					0x40
 
 #define EV_SEIZURE					0x41
+
+#define EV_FAX_CHANNEL_FREE			0x50
+
+#define EV_FAX_FILE_SENT			0x51
+#define EV_FAX_FILE_FAIL			0x52
+#define EV_FAX_MESSAGE_CONFIRMATION 0x53
+#define EV_FAX_TX_TIMEOUT			0x54
+#define EV_FAX_PAGE_CONFIRMATION EV_FAX_MESSAGE_CONFIRMATION
+#define EV_FAX_REMOTE_INFO			0x55
 
 #endif
 
@@ -1164,11 +1218,14 @@ enum KGsmMobileCause
     kgmcDataLost                    = 280,
     kgmcInvalidBessageBodyLength    = 281,
     kgmcInactiveSocket              = 282,
-    kgmcSocketAlreadyOpen           = 283
+    kgmcSocketAlreadyOpen           = 283,
+    
+    kgmcSuccess                     = 0x7fff
 };
 
 enum KGsmSmsCause
 {
+    kgscNone                        = 0,
     kgscUnassigned                  = 1,
     kgscOperatorDeterminedBarring   = 8,
     kgscCallBarred                  = 10,
@@ -1242,11 +1299,81 @@ enum KGsmSmsCause
     kgscInvalidPreferredMemStorage  = 516,
     kgscUserTerminated              = 517
 };
+
+enum KGsmRegistryStatus
+{
+	kgrsNotRegistered = 0x00,
+	kgrsRegistered    = 0x01,
+	kgrsSearching     = 0x02,
+	kgrsDenied        = 0x03,
+	kgrsUnknown       = 0x04,
+	kgrsRoaming       = 0x05,
+	kgrsInitializing  = 0xff,
+};
+enum KGsmCallStatus
+{
+	kgcstActive   = 0x0,
+	kgcstHeld     = 0x1,
+	kgcstDialing  = 0x2,
+	kgcstAlerting = 0x3,
+	kgcstIncoming = 0x4,
+	kgcstWaiting  = 0x5,
+	kgcstReleased = 0x6,
+};
+enum KGsmCallMode
+{
+	kgcmVoice   = 0x0,
+	kgcmData    = 0x1,
+	kgcmFax     = 0x2,
+	kgcmUnknown = 0x3
+};
+enum KGsmCallFlags
+{
+	kgcflMultiparty           = 0x01,
+	kgcflInternationalNumber  = 0x02,
+	kgcflMobileTerminatedCall = 0x04,
+};
+enum KGsmChannelFeatures
+{
+	kgcfMultiparty  = 0x01,
+	kgcfCallForward = 0x02, 
+};
+#endif
+#ifndef K3L_STATS_H
+#define K3L_STATS_H
+
+enum KGeneralCallStatIndex
+{
+    kcsiInbound,            
+    kcsiOutbound,           
+    kcsiOutCompleted,       
+    kcsiOutFailed,          
+    kcsiRemoteDisc,         
+    kcsiLocalDisc,          
+    kcsiLastGeneralCallStat
+};
+
+enum KFailedCallStatIndex
+{
+    kcsiFailedBusy = kcsiLastGeneralCallStat,
+    kcsiFailedNoAnswer,
+    kcsiFailedRejected,
+    kcsiFailedAddrChanged,
+    kcsiFailedInvalidAddr,
+    kcsiFailedOutOfService,
+    kcsiFailedCongestion,
+    kcsiFailedNetworkFailure,
+    kcsiFailedOther,
+    kcsiLastFailedCallStat
+};
+const uint32 kcsiMaxCallStats = kcsiLastFailedCallStat;
+typedef uint32 KStatIndex;
+
 #endif
 #ifndef k3lVersion_h
 #define k3lVersion_h
 #define k3lApiMajorVersion	2
-#define k3lApiMinorVersion	0
+#define k3lApiMinorVersion	1
 #define k3lApiBuildVersion	0
 #endif
 #if !defined K3L_H
@@ -1254,19 +1381,24 @@ enum KGsmSmsCause
 
 enum KDeviceType
 {
-	kdtE1     = 0,
-	kdtFXO    = 1,
-	kdtConf   = 2,
-	kdtPR     = 3,
-	kdtE1GW   = 4,
-	kdtFXOVoIP = 5,
-	kdtE1IP	  = 6,
-	kdtE1Spx  = 7,
-    kdtGWIP   = 8,
-    kdtFXS    = 9,
-    kdtFXSSpx = 10,
-    kdtGSM    = 11,
-    kdtGSMSpx = 12
+	kdtE1           = 0,
+	kdtFXO          = 1,
+	kdtConf         = 2,
+	kdtPR           = 3,
+	kdtE1GW         = 4,
+	kdtFXOVoIP      = 5,
+	kdtE1IP	        = 6,
+	kdtE1Spx        = 7,
+    kdtGWIP         = 8,
+    kdtFXS          = 9,
+    kdtFXSSpx       = 10,
+    kdtGSM          = 11,
+    kdtGSMSpx       = 12,
+	kdtReserved1  	= 13,
+    kdtGSMUSB       = 14,
+    kdtGSMUSBSpx    = 15,
+    kdtE1FXSSpx 	= 16,
+	kdtDevTypeCount
 };
 enum KSignaling
 {
@@ -1288,6 +1420,8 @@ enum KSignaling
 	ksigCAS_EL7			= 15,
     ksigGSM             = 16,
 	ksigE1LC			= 17,
+	ksigISUP			= 18,
+	ksigFax				= 19,
 };
 enum KE1DeviceModel
 {
@@ -1314,7 +1448,8 @@ enum KFXODeviceModel
 {
 	kdmFXO80    = 0,
 	kdmFXOHI    = 1,
-	kdmFXO160HI = 2
+	kdmFXO160HI = 2,
+    kdmFXO240HI = 3
 };
 enum KFXOVoIPDeviceModel 
 {
@@ -1353,28 +1488,45 @@ enum KE1SpxDeviceModel
 };
 enum KGSMDeviceModel
 {
-    kdmGSM      = 0
+    kdmGSM      = 0,
+    kdmGSMEX    = 1
 };
 enum KGSMSpxDeviceModel
 {
-    kdmGSMSpx   = 0
+    kdmGSMSpx   = 0,
+    kdmGSMSpxEX = 1
+};
+enum KGSMUSBDeviceModel
+{
+    kdmGSMUSB      = 0
+};
+enum KGSMUSBSpxDeviceModel
+{
+    kdmGSMUSBSpx   = 0
+};
+enum KE1FXSDeviceModel
+{
+    kdmE1FXSSpx     = 0,
+    kdmE1FXSSpxEX   = 1
 };
 enum KSystemObject
 {
-	ksoLink		= 0x00,		
-	ksoLinkMon	= 0x20,		
-	ksoChannel	= 0x1000,	
-	ksoH100		= 0x200,	
-	ksoFirmware = 0x80,		
-	ksoDevice	= 0x100,	
-	ksoAPI		= 0x150		
+	ksoLink       = 0x00,   
+	ksoLinkMon    = 0x20,   
+	ksoFirmware   = 0x80,   
+	ksoDevice     = 0x100,  
+	ksoAPI        = 0x150,  
+	ksoH100       = 0x200,  
+	ksoChannel	  = 0x1000,	
+	ksoGsmChannel = 0x2000, 
 };
 enum KFirmwareId
 {
 	kfiE1600A,				
 	kfiE1600B,				
 	kfiFXO80,				
-    kfiGSM40                
+    kfiGSM40,               
+    kfiGSMUSB
 };
 enum KE1Status
 {
@@ -1500,6 +1652,26 @@ struct K3L_CHANNEL_STATUS
 	int32 AddInfo;			
 	int32 EnabledFeatures;	
 };
+struct K3L_GSM_CALL_STATUS
+{
+	KGsmCallStatus Status;
+	KGsmCallMode Mode;
+	char Number[ KMAX_DIAL_NUMBER ];
+	int32 Flags; 
+};
+struct K3L_GSM_CHANNEL_STATUS
+{
+	uint8 SignalStrength; 
+	uint8 ErrorRate;      
+	KGsmRegistryStatus RegistryStatus;
+	char OperName[ KMAX_GSM_OPER_NAME ];
+	K3L_GSM_CALL_STATUS CallStatus[ KMAX_GSM_CALLS ];
+	int32 UnreadSmsCount;  
+	int32 EnabledFeatures; 
+    char IMEI[ KMAX_GSM_IMEI_SIZE ];
+    unsigned char SIM; 
+    unsigned char Reserved[15]; 
+};
 struct K3L_LINK_STATUS
 {
 	int16 E1; 
@@ -1618,6 +1790,7 @@ struct K3L_E1600B_FW_CONFIG
 };
 typedef K3L_E1600B_FW_CONFIG K3L_GSM40_FW_CONFIG;
 typedef K3L_E1600B_FW_CONFIG K3L_FXO80_FW_CONFIG;
+typedef K3L_E1600B_FW_CONFIG K3L_GSMUSB_FW_CONFIG;
 struct K3L_COMMAND
 {
 	int32 Object;			
@@ -1630,7 +1803,8 @@ enum KEventObjectId
 	koiDevice		= 0x00,
 	koiChannel		= 0x01,
 	koiPlayer		= 0x02,
-	koiLink			= 0x03
+	koiLink			= 0x03,
+    koiSystem       = 0x04
 };
 
 struct K3L_EVENT
@@ -1681,7 +1855,8 @@ enum KLinkErrorCounter
 	klecLostOfFrame         =  3,
 	klecLostOfMultiframe    =  4,
 	klecRemoteAlarm			=  5,
-	klecUnknowAlarm			=  6,
+    klecSlipAlarm           =  6,
+	klecUnknowAlarm			=  klecSlipAlarm,
 	klecPRBS				=  7,
 	klecWrogrBits			=  8,
 	klecJitterVariation		=  9,
@@ -1710,8 +1885,45 @@ enum KLibParams
     klpSeizureEventCompat,      
     klpDisableTDMBufferWarnings,
     klpDisableInternalVoIP,     
-    klpLogCallControl,        
+    klpLogCallControl,          
+    klpDoNotLogApiInterface,    
 	klpMaxParams
+};
+
+enum KFaxChannelStatus
+{
+	kfaxcsFree,
+	kfaxcsWaitingForFaxSignal,
+	kfaxcsSendingFax,
+	kfaxcsReceivingFax,
+	kfaxcsFail
+};
+enum KFaxResult
+{
+	kfaxrEndOfTransmission,
+	kfaxrStoppedByCommand,
+	kfaxrProtocolTimeout,
+	kfaxrProtocolError,
+	kfaxrRemoteDisconnection,
+	kfaxrFileError,
+	kfaxrUnknown,
+    kfaxrEndOfReception,
+	kfaxrCompatibilityError,
+	kfaxrQualityError
+};
+enum KFaxFileErrorCause
+{
+	kfaxfecTransmissionStopped,
+	kfaxfecTransmissionError,
+	kfaxfecListCleared,
+	kfaxfecCouldNotOpen,	
+	kfaxfecInvalidHeader,
+	kfaxfecDataNotFound,
+	kfaxfecInvalidHeight,
+	kfaxfecUnsupportedWidth,
+	kfaxfecUnsupportedCompression,
+	kfaxfecUnsupportedRowsPerStrip,
+	kfaxfecUnknown
 };
 
 typedef stt_code ( Kstdcall K3L_CALLBACK )();
@@ -1737,6 +1949,7 @@ int32 Kstdcall k3lGetDeviceCount();
 int32 Kstdcall k3lGetDeviceType( int32 DeviceId );
 int32 Kstdcall k3lGetEventParam( K3L_EVENT *Evt, const sbyte *Name, sbyte *Buffer, int32 BufferSize );
 int32 Kstdcall k3lSetGlobalParam( int32 ParamIndex, int32 ParamValue );
+int32 Kstdcall k3lGetChannelStats( int32 DevId, int32 Channel, KStatIndex si, uint32 *StatData );
 }
 #if __GNUC__ >= 4
 #pragma GCC visibility pop

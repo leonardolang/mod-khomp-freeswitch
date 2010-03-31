@@ -39,68 +39,31 @@
 
 */
 
-#include <limits.h>
+#ifndef _CONFIG_COMMONS_HPP_
+#define _CONFIG_COMMONS_HPP_
 
-#include <list>
-#include <vector>
-#include <string>
+/****************************************************************************/
+/* ASTERISK */
+#if   defined(COMMONS_LIBRARY_USING_ASTERISK)
+ #define COMMONS_IMPLEMENTATION asterisk
+/****************************************************************************/
+/* CALLWEAVER */
+#elif defined(COMMONS_LIBRARY_USING_CALLWEAVER)
+ #define COMMONS_IMPLEMENTATION callweaver
+/****************************************************************************/
+/* FREESWITCH */
+#elif defined(COMMONS_LIBRARY_USING_FREESWITCH)
+ #define COMMONS_IMPLEMENTATION freeswitch
+/****************************************************************************/
+/* GNU/LINUX (generic) */
+#elif defined(COMMONS_LIBRARY_USING_GNU_LINUX)
+ #define COMMONS_IMPLEMENTATION gnulinux
+/****************************************************************************/
+#else
+ #error Unknown implementation selected. Please define COMMONS_LIBRARY_USING_* correctly.
+#endif
 
-#include <types.hpp>
+#define COMMONS_INCLUDE(file) <COMMONS_IMPLEMENTATION/file>
 
-#include <format.hpp>
+#endif  /* _CONFIG_COMMONS_HPP_ */
 
-/* Generic string funcions */
-
-#ifndef _STRINGS_HPP_
-#define _STRINGS_HPP_
-
-struct Strings
-{
-    typedef std::list<std::string>      list_type;
-    typedef std::vector<std::string>  vector_type;
-
-    struct Merger
-    {
-        void          add(std::string);
-
-        std::string merge(const std::string &);
-        std::string merge(const char *);
-
-        bool empty() { return _list.empty(); };
-
-     protected:
-        list_type   _list;
-    };
-
- public:
-    struct invalid_value
-    {
-        invalid_value(const char  * value): _value(value) {};
-        invalid_value(std::string   value): _value(value) {};
-
-        std::string & value() { return _value; }
-
-     protected:
-         std::string _value;
-    };
-
-    struct not_implemented {};
-
-    static unsigned int tokenize(const std::string &, vector_type &, const std::string & delims = ",;:",
-                                 long int max_toxens = LONG_MAX, bool keep_empty = true);
-
-    static bool        toboolean(std::string);
-    static std::string fromboolean(bool);
-
-    static long               tolong(std::string, int base = 10);
-    static unsigned long      toulong(std::string, int base = 10);
-    static unsigned long long toulonglong(std::string, int base = 10);
-    static double             todouble(std::string);
-
-    static std::string lower(std::string);
-    static std::string hexadecimal(std::string);
-
-    static std::string trim(const std::string&, const std::string& trim_chars = " \f\n\r\t\v");
-};
-
-#endif // _STRINGS_HPP_ //

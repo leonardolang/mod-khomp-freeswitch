@@ -1,7 +1,7 @@
-/*
+/*  
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.
-
+    Copyright (C) 2007-2009 Khomp Ind. & Com.  
+  
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,32 +23,40 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
-
+    This library is free software; you can redistribute it and/or  
+    modify it under the terms of the GNU Lesser General Public  
+    License as published by the Free Software Foundation; either  
+    version 2.1 of the License, or (at your option) any later version.  
+  
+    This library is distributed in the hope that it will be useful,  
+    but WITHOUT ANY WARRANTY; without even the implied warranty of  
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
+    Lesser General Public License for more details.  
+  
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
+  
 */
 
-#ifndef _NONCOPYABLE_HPP_
-#define _NONCOPYABLE_HPP_
+#include "saved_condition.hpp"
 
-struct NonCopyable
+bool SavedCondition::wait(unsigned int msec)
 {
-    NonCopyable() {};
- private:
-    NonCopyable(NonCopyable const &)             { };
-    NonCopyable & operator=(NonCopyable const &) { return *this; };
-};
+	bool ret = true;
 
-#endif /* _NONCOPYABLE_HPP_ */
+    switch_mutex_lock(_mutex);
 
+    if (!_signaled)
+	{
+        /* msec * 1000 = The amount of time in microseconds to wait. */
+		if (switch_thread_cond_timedwait(_condition, _mutex, (switch_interval_time_t)msec * 1000) != 0)
+			ret = false;
+	}
+        
+    _signaled = false;
+
+	switch_mutex_unlock(_mutex);
+
+	return ret;
+}

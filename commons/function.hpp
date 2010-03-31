@@ -51,7 +51,7 @@ namespace Function
     /**/
 
     template < typename FunctionTraits >
-    struct StorageBase: RefCount < StorageBase < FunctionTraits > >
+    struct StorageBase: NEW_REFCOUNTER(StorageBase < FunctionTraits >)
     {
         typedef typename FunctionTraits::BaseType BaseType;
 
@@ -79,7 +79,8 @@ namespace Function
         {};
 
         StorageBase(const StorageBase & o)
-        : _object(o._object), _function(o._function), _malloced(o._malloced)
+        : INC_REFCOUNTER(o, StorageBase < FunctionTraits >),
+           _object(o._object), _function(o._function), _malloced(o._malloced)
         {};
 
         virtual ~StorageBase() {};

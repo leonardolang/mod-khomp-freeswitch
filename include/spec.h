@@ -41,56 +41,55 @@
 
 *******************************************************************************/
 
-#ifndef _GLOBALS_H_
-#define _GLOBALS_H_
-#include "k3lapi.hpp"
+#ifndef _SPEC_HPP_
+#define _SPEC_HPP_
 
-#include <config_options.hpp>
-#include <k3lutil.hpp>
-#include <verbose.hpp>
-#include <regex.hpp>
+#include <function.hpp>
+#include "khomp_pvt.h"
 
-#include <vector>
-#include <string>
-#include <fstream>
-
-extern "C"
+typedef enum
 {
-    #include <switch.h>
+    SPR_CONTINUE,
+    SPR_SUCCESS,
+    SPR_FAIL,
 }
+SpecRetType;
 
-/* As this is a static-variable-only struct, member variable *
- * names need not to get "_" in front of the name            */
-
-struct Globals
+typedef enum
 {
-    static const unsigned int switch_packet_duration  =                          30; // in ms
-    static const unsigned int boards_packet_duration  =                          16; // in ms
+    SPF_FIRST  = 0x01,
+    SPF_CYCLIC = 0x02,
+}
+SpecFlagType;
 
-    static const unsigned int switch_packet_size      = switch_packet_duration *  8; // in bytes
-    static const unsigned int boards_packet_size      = boards_packet_duration *  8; // in bytes
+typedef unsigned int SpecFlagsType;
 
-    static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
 
-    static K3LAPI        k3lapi;
-    static K3LUtil       k3lutil;
-    static Verbose       verbose;
+typedef Function::Function3 < bool, unsigned int, unsigned int, SpecFlagsType & > SpecFunType;
 
-    static std::string     base_path;
-    static std::ofstream   generic_file;
 
-    /* Config options class */
-    static ConfigOptions options;
+//SpecRetType processSpecAtom(std::string &, SpecFlagsType &, SpecFunType &);
+//SpecRetType processSpecAtoms(std::string &, SpecFlagsType &, SpecFunType &);
+//bool processCallChannelString(std::string &, Board::KhompPvt *&, int *, bool need_free = true);
 
-    static switch_endpoint_interface_t *khomp_endpoint_interface;
-    static switch_api_interface_t      *api_interface;
-    static switch_memory_pool_t        *module_pool;
+/* Request a Board::KhompPvt based on dialplan string.
 
-    static int             running;
-    static int             calls;
+-- Format of dialplan string. --
 
-    static unsigned int    flags;
-    static switch_mutex_t *mutex;
-};
+Dial(Khomp/B2C58/4832625644)
+ |      |    |       |
+ |      |    |       |
+ |      |    |       |
+ |      |    |       +- Destination number.
+ |      |    |
+ |      |    +- Identifier for board 2, channel 58.
+ |      |
+ |      +- Khomp channel identifier.
+ |
+ +- Dial Application.
+*/
 
-#endif /* _GLOBALS_H_ */
+Board::KhompPvt * process_dial_string (const char *, int *);
+
+#endif /* _SPEC_HPP_ */
+

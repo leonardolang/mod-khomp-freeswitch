@@ -39,68 +39,23 @@
 
 */
 
-#include <limits.h>
+#ifndef _SAVED_CONDITION_COMMON_HPP_
+#define _SAVED_CONDITION_COMMON_HPP_
 
-#include <list>
-#include <vector>
-#include <string>
+#include <config_commons.hpp>
 
-#include <types.hpp>
+//#include <refcounter.hpp>
 
-#include <format.hpp>
-
-/* Generic string funcions */
-
-#ifndef _STRINGS_HPP_
-#define _STRINGS_HPP_
-
-struct Strings
+struct SavedConditionCommon
 {
-    typedef std::list<std::string>      list_type;
-    typedef std::vector<std::string>  vector_type;
+    SavedConditionCommon() : _signaled(false) {}
 
-    struct Merger
-    {
-        void          add(std::string);
-
-        std::string merge(const std::string &);
-        std::string merge(const char *);
-
-        bool empty() { return _list.empty(); };
-
-     protected:
-        list_type   _list;
-    };
-
- public:
-    struct invalid_value
-    {
-        invalid_value(const char  * value): _value(value) {};
-        invalid_value(std::string   value): _value(value) {};
-
-        std::string & value() { return _value; }
-
-     protected:
-         std::string _value;
-    };
-
-    struct not_implemented {};
-
-    static unsigned int tokenize(const std::string &, vector_type &, const std::string & delims = ",;:",
-                                 long int max_toxens = LONG_MAX, bool keep_empty = true);
-
-    static bool        toboolean(std::string);
-    static std::string fromboolean(bool);
-
-    static long               tolong(std::string, int base = 10);
-    static unsigned long      toulong(std::string, int base = 10);
-    static unsigned long long toulonglong(std::string, int base = 10);
-    static double             todouble(std::string);
-
-    static std::string lower(std::string);
-    static std::string hexadecimal(std::string);
-
-    static std::string trim(const std::string&, const std::string& trim_chars = " \f\n\r\t\v");
+ protected:
+    bool _signaled;
 };
 
-#endif // _STRINGS_HPP_ //
+
+#include COMMONS_INCLUDE(saved_condition.hpp)
+
+#endif /* _SAVED_CONDITION_COMMON_HPP_ */
+

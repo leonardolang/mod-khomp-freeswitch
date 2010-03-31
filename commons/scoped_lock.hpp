@@ -39,68 +39,57 @@
 
 */
 
-#include <limits.h>
+#include <simple_lock.hpp>
 
-#include <list>
-#include <vector>
-#include <string>
-
-#include <types.hpp>
-
-#include <format.hpp>
-
-/* Generic string funcions */
-
-#ifndef _STRINGS_HPP_
-#define _STRINGS_HPP_
-
-struct Strings
+struct ScopedLockBasic
 {
-    typedef std::list<std::string>      list_type;
-    typedef std::vector<std::string>  vector_type;
+    ScopedLockBasic(void)
+    : _locked(true) {};
 
-    struct Merger
-    {
-        void          add(std::string);
+    ScopedLockBasic(bool locked)
+    : _locked(locked) {};
 
-        std::string merge(const std::string &);
-        std::string merge(const char *);
+    virtual ~ScopedLockBasic() {};
 
-        bool empty() { return _list.empty(); };
-
-     protected:
-        list_type   _list;
-    };
-
- public:
-    struct invalid_value
-    {
-        invalid_value(const char  * value): _value(value) {};
-        invalid_value(std::string   value): _value(value) {};
-
-        std::string & value() { return _value; }
-
-     protected:
-         std::string _value;
-    };
-
-    struct not_implemented {};
-
-    static unsigned int tokenize(const std::string &, vector_type &, const std::string & delims = ",;:",
-                                 long int max_toxens = LONG_MAX, bool keep_empty = true);
-
-    static bool        toboolean(std::string);
-    static std::string fromboolean(bool);
-
-    static long               tolong(std::string, int base = 10);
-    static unsigned long      toulong(std::string, int base = 10);
-    static unsigned long long toulonglong(std::string, int base = 10);
-    static double             todouble(std::string);
-
-    static std::string lower(std::string);
-    static std::string hexadecimal(std::string);
-
-    static std::string trim(const std::string&, const std::string& trim_chars = " \f\n\r\t\v");
+ protected:
+    bool _locked;
 };
 
-#endif // _STRINGS_HPP_ //
+
+struct ScopedLock : public ScopedLockBasic
+{
+    struct LockFailed {};
+
+    ScopedLock(SimpleLock & mutex)
+    : ScopedLockBasic(false), _mutex(mutex)
+    {
+        switch (_mutex.lock())
+        {
+            case SimpleLock::ISINUSE:
+            case SimpleLock::FAILURE:
+                throw LockFailed();
+            default:
+                break;
+        }
+
+        _locked = true;
+    }
+
+    ~ScopedLock()
+    {
+        unlock();
+    }
+
+    void unlock()
+    {
+        if (_locked)
+        {
+            _locked = false;
+            _mutex.unlock();
+        }
+    }
+
+ protected:
+    SimpleLock & _mutex;
+};
+

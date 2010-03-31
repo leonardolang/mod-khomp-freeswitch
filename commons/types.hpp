@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,20 +23,20 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #ifndef _TYPES_HPP_
@@ -51,5 +51,31 @@
 
 #define K3L_EXACT(major,minor,build) \
     ((k3lApiMajorVersion == major) && (k3lApiMinorVersion == minor) && (k3lApiBuildVersion >= build))
+
+/*** Used for checking information on classes and stuff.. ***/
+
+template< typename T >
+class IsClass
+{
+  protected:
+    template< typename X > static char ( &A( void(X::*)() ) )[1];
+    template< typename X > static char ( &A( X ) )[2];
+  public:
+    static bool const Result = sizeof( A< T >(0) ) == 1;
+};
+
+/*** Used for template metaprogramming ***/
+
+template < bool Value, typename Then, typename Else >
+struct Select
+{
+    typedef Then Result;
+};
+
+template < typename Then, typename Else >
+struct Select < false, Then, Else >
+{
+    typedef Else Result;
+};
 
 #endif /* _TYPES_HPP_ */

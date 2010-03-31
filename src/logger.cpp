@@ -41,56 +41,9 @@
 
 *******************************************************************************/
 
-#ifndef _GLOBALS_H_
-#define _GLOBALS_H_
-#include "k3lapi.hpp"
+#include "logger.h"
+#include "globals.h"
 
-#include <config_options.hpp>
-#include <k3lutil.hpp>
-#include <verbose.hpp>
-#include <regex.hpp>
+K::LogManager K::Logger::Logg;
 
-#include <vector>
-#include <string>
-#include <fstream>
-
-extern "C"
-{
-    #include <switch.h>
-}
-
-/* As this is a static-variable-only struct, member variable *
- * names need not to get "_" in front of the name            */
-
-struct Globals
-{
-    static const unsigned int switch_packet_duration  =                          30; // in ms
-    static const unsigned int boards_packet_duration  =                          16; // in ms
-
-    static const unsigned int switch_packet_size      = switch_packet_duration *  8; // in bytes
-    static const unsigned int boards_packet_size      = boards_packet_duration *  8; // in bytes
-
-    static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
-
-    static K3LAPI        k3lapi;
-    static K3LUtil       k3lutil;
-    static Verbose       verbose;
-
-    static std::string     base_path;
-    static std::ofstream   generic_file;
-
-    /* Config options class */
-    static ConfigOptions options;
-
-    static switch_endpoint_interface_t *khomp_endpoint_interface;
-    static switch_api_interface_t      *api_interface;
-    static switch_memory_pool_t        *module_pool;
-
-    static int             running;
-    static int             calls;
-
-    static unsigned int    flags;
-    static switch_mutex_t *mutex;
-};
-
-#endif /* _GLOBALS_H_ */
+K::LogInternalManager K::Logger::Logg2;

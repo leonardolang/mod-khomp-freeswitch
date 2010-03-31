@@ -41,56 +41,54 @@
 
 *******************************************************************************/
 
-#ifndef _GLOBALS_H_
-#define _GLOBALS_H_
-#include "k3lapi.hpp"
+#include "lock.h"
 
-#include <config_options.hpp>
-#include <k3lutil.hpp>
-#include <verbose.hpp>
-#include <regex.hpp>
+/* ScopedPvtLock */
 
-#include <vector>
-#include <string>
-#include <fstream>
-
-extern "C"
+ScopedPvtLock::ScopedPvtLock(KhompPvt * pvt)
+: ScopedLockBasic(false), _pvt(pvt)
 {
-    #include <switch.h>
+    //DBG(LOCK, DP(_pvt, "c"));
+
+    if (! _pvt)
+        throw ScopedLockFailed(ScopedLockFailed::NULL_PVT, "null KhompPvt");
+
+    switch(_pvt->_mutex.lock())
+    {
+        case SimpleLock::FAILURE:
+            throw ScopedLockFailed(ScopedLockFailed::FAILED, "Failure");
+            break;
+        case SimpleLock::ISINUSE:
+            throw ScopedLockFailed(ScopedLockFailed::FAILED, "In use");
+            break;
+        default:
+            break;
+    }
+
+    _locked = true;
+
+    //DBG(LOCK, DP(_pvt, "r"));
 }
 
-/* As this is a static-variable-only struct, member variable *
- * names need not to get "_" in front of the name            */
-
-struct Globals
+ScopedPvtLock::~ScopedPvtLock()
 {
-    static const unsigned int switch_packet_duration  =                          30; // in ms
-    static const unsigned int boards_packet_duration  =                          16; // in ms
+    //DBG(LOCK, DP(_pvt, "c"));
+    unlock();
+    //DBG(LOCK, DP(_pvt, "r"));
+}
 
-    static const unsigned int switch_packet_size      = switch_packet_duration *  8; // in bytes
-    static const unsigned int boards_packet_size      = boards_packet_duration *  8; // in bytes
+void ScopedPvtLock::unlock()
+{
+    //DBG(LOCK, DP(_pvt, "c"));
 
-    static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
+    if (_locked)
+    {
+        //DBG(LOCK, DP(_pvt, "unlocking!"));
 
-    static K3LAPI        k3lapi;
-    static K3LUtil       k3lutil;
-    static Verbose       verbose;
+        _locked = false;
+        _pvt->_mutex.unlock();
+    }
 
-    static std::string     base_path;
-    static std::ofstream   generic_file;
+    //DBG(LOCK, DP(_pvt, "r"));
+}
 
-    /* Config options class */
-    static ConfigOptions options;
-
-    static switch_endpoint_interface_t *khomp_endpoint_interface;
-    static switch_api_interface_t      *api_interface;
-    static switch_memory_pool_t        *module_pool;
-
-    static int             running;
-    static int             calls;
-
-    static unsigned int    flags;
-    static switch_mutex_t *mutex;
-};
-
-#endif /* _GLOBALS_H_ */

@@ -45,30 +45,218 @@
 #ifndef _REFCOUNTER_HPP_
 #define _REFCOUNTER_HPP_
 
-template < typename Implementor >
-struct RefCount
+#define NEW_REFCOUNTER(...)    public ReferenceCounter< __VA_ARGS__ >
+#define INC_REFCOUNTER(o, ...) ReferenceCounter< __VA_ARGS__ >(static_cast< const ReferenceCounter < __VA_ARGS__ > & >(o))
+
+#include <stdlib.h>
+
+#include <noncopyable.hpp>
+#include <atomic.hpp>
+
+#ifdef DEBUG
+# include <iostream>
+#endif
+
+struct ReferenceData: public NonCopyable
 {
-    RefCount()
-    : _reference_count(new unsigned int(1))
+    ReferenceData()
+    : _data_count(1)
     {};
 
-    RefCount(const RefCount & o)
-    : _reference_count(o._reference_count)
+    inline unsigned int increment(void)
     {
-        ++(*_reference_count);
+        if (!_data_count)
+            abort();
+
+        Atomic::doAdd(&_data_count);
+
+        return _data_count;
+    }
+
+    inline unsigned int decrement(void)
+    {
+        if (!_data_count)
+            abort();
+
+        Atomic::doSub(&_data_count);
+        return _data_count;
+    }
+
+    volatile unsigned int _data_count;
+};
+
+template < typename T >
+struct ReferenceCounter
+{
+    typedef T Type;
+
+    ReferenceCounter(bool create_counter = true)
+    : _reference_count(0)
+    {
+        reference_restart(create_counter);
+
+#ifdef DEBUG
+        std::cerr <<  ((void*)this) << ": ReferenceCounter() [ref_count="
+            << (_reference_count ? (*_reference_count) : -1) << "]" << std::endl;
+#endif
     };
 
-    ~RefCount()
+    ReferenceCounter(const ReferenceCounter & o)
+    : _reference_count(0)
     {
-        --(*_reference_count);
+        reference_reflect(o);
 
-        if (!_reference_count)
-            static_cast< Implementor * >(this)->unreference();
+#ifdef DEBUG
+        std::cerr << ((void*)this) << ": ReferenceCounter(" << ((void*)(&o)) << ") [ref_count="
+            << (_reference_count ? (*_reference_count) : -1) << "]" << std::endl;
+#endif
     };
 
- private:
-    unsigned int * _reference_count;
+    virtual ~ReferenceCounter()
+    {
+#ifdef DEBUG
+        std::cerr << ((void*)this) << ": ~ReferenceCounter() [ref_count="
+            << (_reference_count ? (*_reference_count) : -1) << "]" << std::endl;
+#endif
+        reference_disconnect(_reference_count);
+    }
+
+    ReferenceCounter & operator=(const ReferenceCounter & o)
+    {
+        reference_reflect(o);
+
+#ifdef DEBUG
+        std::cerr << ((void*)this) << ": ReferenceCounter::operator=(" << ((void*)(&o)) << ") [ref_count="
+            << (_reference_count ? (*_reference_count) : -1) << "]" << std::endl;
+#endif
+
+        return *this;
+    };
+
+ protected:
+    inline void reference_restart(bool create_counter = false)
+    {
+        reference_connect(create_counter ? new ReferenceData() : 0);
+    }
+
+    inline void reference_reflect(const ReferenceCounter & other)
+    {
+        reference_connect(other._reference_count);
+    }
+
+    inline void reference_connect(ReferenceData * newref)
+    {
+        ReferenceData * oldref = _reference_count;
+
+        _reference_count = newref;
+
+        if (newref)
+            _reference_count->increment();
+
+        if (oldref)
+            reference_disconnect(oldref);
+    };
+
+    inline void reference_disconnect(ReferenceData *& counter)
+    {
+        if (counter)
+        {
+            unsigned int result = counter->decrement();
+
+            if (!result)
+            {
+                static_cast< Type * >(this)->unreference();
+                delete counter;
+            }
+
+            counter = 0;
+        }
+    };
+
+  private:
+    ReferenceData * _reference_count;
+};
+
+template < typename T >
+struct ReferenceContainer: NEW_REFCOUNTER(ReferenceContainer< T >)
+{
+    /* type */
+    typedef T Type;
+
+    /* shorthand */
+    typedef ReferenceCounter < ReferenceContainer< Type > > Counter;
+
+    // TODO: make this a generic exception someday
+    struct NotFound {};
+
+    ReferenceContainer()
+    : Counter(false),
+      _reference_value(0)
+    {};
+
+    ReferenceContainer(Type * value)
+    : _reference_value(value)
+    {};
+
+    ReferenceContainer(const ReferenceContainer & value)
+    : Counter(false),
+      _reference_value(0)
+    {
+        operator()(value);
+    };
+
+    virtual ~ReferenceContainer()
+    {};
+
+    ReferenceContainer operator=(const ReferenceContainer & value)
+    {
+        operator()(value);
+        return *this;
+    };
+
+    /**/
+
+    void unreference()
+    {
+        if (_reference_value)
+        {
+            delete _reference_value;
+            _reference_value = 0;
+        }
+    }
+
+    // simulates a copy constructor
+    void operator()(const ReferenceContainer & value)
+    {
+        Counter::reference_reflect(value);
+
+        _reference_value = const_cast<Type *>(value._reference_value);
+    };
+
+    // shortcut for operator below
+    void operator=(const Type * value)
+    {
+        operator()(value);
+    };
+
+    // accept value (pointer)!
+    void operator()(const Type * value)
+    {
+         Counter::reference_restart((value != 0));
+
+        _reference_value = const_cast<Type *>(value);
+    };
+
+    // return value (pointer)!
+    Type * operator()(void)
+    {
+        return _reference_value;
+    };
+
+  protected:
+    Type * _reference_value;
+
+  protected:
 };
 
 #endif /* _REFCOUNTER_HPP_ */
-

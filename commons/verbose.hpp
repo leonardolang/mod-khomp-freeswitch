@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,20 +23,20 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <string>
@@ -47,7 +47,7 @@
 
 // k3lApiMajorVersion
 #ifndef CM_PING
-# include <k3lVersion.h> 
+# include <k3lVersion.h>
 # include <KTools.h>
 #endif
 
@@ -178,7 +178,25 @@ struct Verbose
         K_CM_START_CADENCE                   = CM_START_CADENCE,
         K_CM_STOP_CADENCE                    = CM_STOP_CADENCE,
         K_CM_CHECK_NEW_SMS                   = CM_CHECK_NEW_SMS,
+        K_CM_SEND_TO_MODEM                   = CM_SEND_TO_MODEM,
 #endif
+#if K3L_AT_LEAST(2,1,0)
+        K_CM_START_FAX_TX                    = CM_START_FAX_TX,
+        K_CM_STOP_FAX_TX                     = CM_STOP_FAX_TX,
+        K_CM_ADD_FAX_FILE                    = CM_ADD_FAX_FILE,
+        K_CM_ADD_FAX_PAGE_BREAK              = CM_ADD_FAX_PAGE_BREAK,
+        K_CM_START_FAX_RX                    = CM_START_FAX_RX,
+        K_CM_STOP_FAX_RX                     = CM_STOP_FAX_RX,
+        K_CM_SIM_CARD_SELECT                 = CM_SIM_CARD_SELECT,
+#endif
+
+#if K3L_AT_LEAST(2,1,0)
+        K_CM_NOTIFY_WATCHDOG                = CM_NOTIFY_WATCHDOG,
+        K_CM_STOP_WATCHDOG                  = CM_STOP_WATCHDOG,
+        K_CM_WATCHDOG_COUNT                 = CM_WATCHDOG_COUNT,
+        K_CM_START_WATCHDOG                 = CM_START_WATCHDOG,
+#endif
+
     }
     kcommand;
 
@@ -230,6 +248,7 @@ struct Verbose
 #if K3L_HAS_MPTY_SUPPORT
         K_EV_CALL_MPTY_START                 = EV_CALL_MPTY_START,
         K_EV_CALL_MPTY_STOP                  = EV_CALL_MPTY_STOP,
+        K_EV_GSM_COMMAND_STATUS              = EV_GSM_COMMAND_STATUS,
 #endif
         K_EV_CHANNEL_FAIL                    = EV_CHANNEL_FAIL,
         K_EV_REFERENCE_FAIL                  = EV_REFERENCE_FAIL,
@@ -243,6 +262,20 @@ struct Verbose
         K_EV_CLIENT_RECONNECT                = EV_CLIENT_RECONNECT,
         K_EV_VOIP_SEIZURE                    = EV_VOIP_SEIZURE,
         K_EV_SEIZURE                         = EV_SEIZURE,
+
+#if K3L_AT_LEAST(2,1,0)
+        K_EV_FAX_CHANNEL_FREE                = EV_FAX_CHANNEL_FREE,
+        K_EV_FAX_FILE_SENT                   = EV_FAX_FILE_SENT,
+        K_EV_FAX_FILE_FAIL                   = EV_FAX_FILE_FAIL,
+        K_EV_FAX_MESSAGE_CONFIRMATION        = EV_FAX_MESSAGE_CONFIRMATION,
+        K_EV_FAX_TX_TIMEOUT                  = EV_FAX_TX_TIMEOUT,
+        K_EV_FAX_PAGE_CONFIRMATION           = EV_FAX_PAGE_CONFIRMATION,
+#endif
+
+#if K3L_AT_LEAST(2,1,0)
+        K_EV_WATCHDOG_COUNT                 = EV_WATCHDOG_COUNT,
+#endif
+
 #if !K3L_AT_LEAST(2,0,0)
         K_EV_PONG                            = EV_PONG,
 #endif
@@ -258,7 +291,7 @@ struct Verbose
         R2_COUNTRY_URY = 5,
         R2_COUNTRY_VEN = 6
     }
-    r2_country_type;
+    R2CountryType;
 
     typedef enum
     {
@@ -271,8 +304,12 @@ struct Verbose
 
     Verbose(K3LAPI & api): _api(api) {};
 
-    std::string event(int32, K3L_EVENT*, r2_country_type r2_country = R2_COUNTRY_BRA,
+#if K3L_AT_LEAST(2,0,0)
+    std::string event(int32, K3L_EVENT*, R2CountryType r2_country = R2_COUNTRY_BRA,
         Presentation fmt = HUMAN);
+#else
+    std::string event(int32, K3L_EVENT*, Presentation fmt = HUMAN);
+#endif
 
     std::string channelStatus(int32, int32, int32, Presentation fmt = HUMAN);
 
@@ -291,14 +328,23 @@ struct Verbose
     static std::string echoLocation(KEchoLocation, Presentation fmt = HUMAN);
     static std::string echoCancellerConfig(KEchoCancellerConfig, Presentation fmt = HUMAN);
 
-    static std::string event(KSignaling, int32, K3L_EVENT*, r2_country_type,
+#if K3L_AT_LEAST(2,0,0)
+    static std::string event(KSignaling, int32, K3L_EVENT*, R2CountryType = R2_COUNTRY_BRA,
         Presentation fmt = HUMAN);
+#else
+    static std::string event(KSignaling, int32, K3L_EVENT*, Presentation fmt = HUMAN);
+#endif
 
-    static std::string command(int32, K3L_COMMAND*, r2_country_type,
+#if K3L_AT_LEAST(2,0,0)
+    static std::string command(int32, K3L_COMMAND*, R2CountryType = R2_COUNTRY_BRA,
          Presentation fmt = HUMAN);
+    static std::string command(int32, int32, int32, const char *, R2CountryType = R2_COUNTRY_BRA,
+         Presentation fmt = HUMAN);
+#else
+    static std::string command(int32, K3L_COMMAND*, Presentation fmt = HUMAN);
+    static std::string command(int32, int32, int32, const char *, Presentation fmt = HUMAN);
+#endif
 
-    static std::string command(int32, int32, int32, const char *, r2_country_type,
-         Presentation fmt = HUMAN);
 
     static std::string deviceName(KDeviceType, int32, Presentation fmt = HUMAN);
 
@@ -312,7 +358,13 @@ struct Verbose
     static std::string mixerSource(KMixerSource, Presentation fmt = HUMAN);
 
     static std::string seizeFail(KSeizeFail, Presentation fmt = HUMAN);
-    static std::string callFail(KSignaling, r2_country_type, int32, Presentation fmt = HUMAN);
+
+#if K3L_AT_LEAST(2,0,0)
+    static std::string callFail(KSignaling, R2CountryType, int32, Presentation fmt = HUMAN);
+#else
+    static std::string callFail(KSignaling, int32, Presentation fmt = HUMAN);
+#endif
+
     static std::string channelFail(KSignaling, int32, Presentation fmt = HUMAN);
     static std::string internalFail(KInternalFail, Presentation fmt = HUMAN);
 
@@ -323,11 +375,19 @@ struct Verbose
     static std::string callStatus(KCallStatus, Presentation fmt = HUMAN);
     static std::string status(KLibraryStatus, Presentation fmt = HUMAN);
 
-    static std::string signGroupB(KSignGroupB, r2_country_type contry = R2_COUNTRY_BRA,
+#if K3L_AT_LEAST(2,0,0)
+    static std::string signGroupB(KSignGroupB, R2CountryType contry = R2_COUNTRY_BRA,
         Presentation fmt = HUMAN);
+#else
+    static std::string signGroupB(KSignGroupB, Presentation fmt = HUMAN);
+#endif
 
-    static std::string signGroupII(KSignGroupII, r2_country_type contry = R2_COUNTRY_BRA,
+#if K3L_AT_LEAST(2,0,0)
+    static std::string signGroupII(KSignGroupII, R2CountryType contry = R2_COUNTRY_BRA,
         Presentation fmt = HUMAN);
+#else
+    static std::string signGroupII(KSignGroupII, Presentation fmt = HUMAN);
+#endif
 
     static std::string h100configIndex(KH100ConfigIndex, Presentation fmt = HUMAN);
 
@@ -352,9 +412,14 @@ struct Verbose
     static std::string gsmCallCause(KGsmCallCause, Presentation fmt = HUMAN);
     static std::string gsmMobileCause(KGsmMobileCause, Presentation fmt = HUMAN);
     static std::string gsmSmsCause(KGsmSmsCause, Presentation fmt = HUMAN);
-    
+
     static std::string q931ProgressIndication(KQ931ProgressIndication,
         Presentation fmt = HUMAN);
+#endif
+
+#if K3L_AT_LEAST(2,1,0)
+    static std::string faxResult(KFaxResult code, Presentation fmt = HUMAN);
+    static std::string faxFileErrorCause(KFaxFileErrorCause code, Presentation fmt = HUMAN);
 #endif
 
     /* end of static (class) stuff */
@@ -370,14 +435,19 @@ struct Verbose
     static std::string internal_isdnCause(KQ931Cause, Presentation fmt = HUMAN);
 #endif
 
-    static std::string internal_signGroupB(KSignGroupB, r2_country_type contry, Presentation fmt = HUMAN);
-    static std::string internal_signGroupII(KSignGroupII, r2_country_type contry, Presentation fmt = HUMAN);
+#if K3L_AT_LEAST(2,0,0)
+    static std::string internal_signGroupB(KSignGroupB, R2CountryType contry, Presentation fmt = HUMAN);
+    static std::string internal_signGroupII(KSignGroupII, R2CountryType contry, Presentation fmt = HUMAN);
+#else
+    static std::string internal_signGroupB(KSignGroupB, Presentation fmt = HUMAN);
+    static std::string internal_signGroupII(KSignGroupII, Presentation fmt = HUMAN);
+#endif
 
 #if K3L_AT_LEAST(1,6,0)
     static std::string internal_gsmCallCause(KGsmCallCause, Presentation fmt = HUMAN);
     static std::string internal_gsmMobileCause(KGsmMobileCause, Presentation fmt = HUMAN);
     static std::string internal_gsmSmsCause(KGsmSmsCause, Presentation fmt = HUMAN);
-    
+
     static std::string internal_q931ProgressIndication(KQ931ProgressIndication, Presentation fmt = HUMAN);
 #endif
 

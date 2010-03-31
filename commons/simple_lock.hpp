@@ -39,68 +39,66 @@
 
 */
 
-#include <limits.h>
+#ifndef _SIMPLE_LOCK_COMMON_HPP_
+#define _SIMPLE_LOCK_COMMON_HPP_
 
-#include <list>
-#include <vector>
-#include <string>
+#include <config_commons.hpp>
 
-#include <types.hpp>
+#include <unistd.h>
+#include <noncopyable.hpp>
 
-#include <format.hpp>
+#include <refcounter.hpp>
 
-/* Generic string funcions */
+/* This struct uses static polymorphism, and derived classes should implement  *
+ * the "lock/trylock/unlock()" methods for correct code compilation.           *
+ * The base class also features reference counting, so derived classes should  *
+ * implement the "unreference()" method for releasing resources.               */
 
-#ifndef _STRINGS_HPP_
-#define _STRINGS_HPP_
-
-struct Strings
+template < typename Implementor >
+struct SimpleLockCommon: NEW_REFCOUNTER( SimpleLockCommon < Implementor > )
 {
-    typedef std::list<std::string>      list_type;
-    typedef std::vector<std::string>  vector_type;
+    friend class ReferenceCounter < SimpleLockCommon < Implementor > >;
 
-    struct Merger
+    typedef enum
     {
-        void          add(std::string);
+        ISINUSE = 0, // operation not succeded (no error)
+        SUCCESS = 1, // operation succeded (no error)
+        FAILURE = 2, // mutex or state is somehow invalid (error! run for your life!)
+    }
+    Result;
 
-        std::string merge(const std::string &);
-        std::string merge(const char *);
+    SimpleLockCommon()
+    {};
 
-        bool empty() { return _list.empty(); };
+    SimpleLockCommon(const SimpleLockCommon & o)
+    : INC_REFCOUNTER(o, SimpleLockCommon)
+    {};
 
-     protected:
-        list_type   _list;
-    };
+    virtual ~SimpleLockCommon()
+    {};
 
- public:
-    struct invalid_value
+    inline Result lock()
     {
-        invalid_value(const char  * value): _value(value) {};
-        invalid_value(std::string   value): _value(value) {};
+        return static_cast<Implementor*>(this)->lock();
+    }
 
-        std::string & value() { return _value; }
+    inline Result trylock()
+    {
+        return static_cast<Implementor*>(this)->trylock();
+    }
 
-     protected:
-         std::string _value;
-    };
+    inline void unlock()
+    {
+        static_cast<Implementor*>(this)->unlock();
+    }
 
-    struct not_implemented {};
-
-    static unsigned int tokenize(const std::string &, vector_type &, const std::string & delims = ",;:",
-                                 long int max_toxens = LONG_MAX, bool keep_empty = true);
-
-    static bool        toboolean(std::string);
-    static std::string fromboolean(bool);
-
-    static long               tolong(std::string, int base = 10);
-    static unsigned long      toulong(std::string, int base = 10);
-    static unsigned long long toulonglong(std::string, int base = 10);
-    static double             todouble(std::string);
-
-    static std::string lower(std::string);
-    static std::string hexadecimal(std::string);
-
-    static std::string trim(const std::string&, const std::string& trim_chars = " \f\n\r\t\v");
+  protected:
+    void unreference(void)
+    {
+        static_cast<Implementor*>(this)->unreference();
+    }
 };
 
-#endif // _STRINGS_HPP_ //
+#include COMMONS_INCLUDE(simple_lock.hpp)
+
+#endif /* _SIMPLE_LOCK_COMMON_HPP_ */

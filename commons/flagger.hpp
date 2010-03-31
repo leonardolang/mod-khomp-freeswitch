@@ -39,68 +39,64 @@
 
 */
 
-#include <limits.h>
+#include <map>
 
-#include <list>
-#include <vector>
-#include <string>
+#include <initializer.hpp>
 
-#include <types.hpp>
+#ifndef _FLAGGER_HPP_
+#define _FLAGGER_HPP_
 
-#include <format.hpp>
-
-/* Generic string funcions */
-
-#ifndef _STRINGS_HPP_
-#define _STRINGS_HPP_
-
-struct Strings
+template < typename Flag >
+struct Flagger
 {
-    typedef std::list<std::string>      list_type;
-    typedef std::vector<std::string>  vector_type;
-
-    struct Merger
+ protected:
+    struct Bool
     {
-        void          add(std::string);
+        Bool():        value(false) {};
+        Bool(bool &v): value(v)     {};
 
-        std::string merge(const std::string &);
-        std::string merge(const char *);
-
-        bool empty() { return _list.empty(); };
-
-     protected:
-        list_type   _list;
+        bool value;
     };
+
+    typedef std::map< Flag, Bool >  Map;
 
  public:
-    struct invalid_value
+    typedef  Initializer< Flag >  InitFlags;
+
+    Flagger() {};
+
+    Flagger(InitFlags flags)
     {
-        invalid_value(const char  * value): _value(value) {};
-        invalid_value(std::string   value): _value(value) {};
-
-        std::string & value() { return _value; }
-
-     protected:
-         std::string _value;
+        for (typename InitFlags::iterator i = flags.begin(); i != flags.end(); i++)
+        {
+            Flag & flag = (*i);
+            _map[flag].value = true;
+        };
     };
 
-    struct not_implemented {};
+    void set(Flag elt, bool value = true)
+    {
+        _map[elt].value = value;
+    }
 
-    static unsigned int tokenize(const std::string &, vector_type &, const std::string & delims = ",;:",
-                                 long int max_toxens = LONG_MAX, bool keep_empty = true);
+    bool is_set(Flag elt)
+    {
+        return _map[elt].value;
+    }
 
-    static bool        toboolean(std::string);
-    static std::string fromboolean(bool);
+    Flagger & operator&(Flag elt)
+    {
+        set(elt);
+        return *this;
+    };
 
-    static long               tolong(std::string, int base = 10);
-    static unsigned long      toulong(std::string, int base = 10);
-    static unsigned long long toulonglong(std::string, int base = 10);
-    static double             todouble(std::string);
+    bool operator[](Flag elt)
+    {
+        return is_set(elt);
+    };
 
-    static std::string lower(std::string);
-    static std::string hexadecimal(std::string);
-
-    static std::string trim(const std::string&, const std::string& trim_chars = " \f\n\r\t\v");
+ protected:
+     Map _map;
 };
 
-#endif // _STRINGS_HPP_ //
+#endif /* _FLAGGER_HPP_ */

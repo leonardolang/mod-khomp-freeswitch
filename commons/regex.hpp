@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,20 +23,20 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <sys/types.h>
@@ -44,10 +44,14 @@
 
 #include <limits.h>
 
+#include <iostream>
 #include <string>
+#include <stdexcept>
+#include <vector>
 
 #include <refcounter.hpp>
 #include <noncopyable.hpp>
+#include <stdarg.h>
 
 #ifndef _REGEX_HPP_
 #define _REGEX_HPP_
@@ -67,6 +71,8 @@ struct Regex
         M_NO_BEGIN_OF_LINE    = REG_NOTBOL,
         M_NO_END_OF_LINE      = REG_NOTEOL,
     };
+
+    typedef std::vector < std::string >   ReplaceVector;
 
     struct Expression : public NonCopyable
     {
@@ -113,7 +119,7 @@ struct Regex
         unsigned int   _flags;
     };
 
-    struct Match: public RefCount < Match >
+    struct Match: NEW_REFCOUNTER(Match)
     {
         Match(const char * basestring, Expression & expression, unsigned int flags = 0)
         : _basestring(basestring), _expression(expression), _subcounter(0), _submatches(0),
@@ -130,7 +136,8 @@ struct Regex
         }
 
         Match(const Match & o)
-        : _basestring(o._basestring), _expression(o._expression),
+        : INC_REFCOUNTER(o, Match),
+          _basestring(o._basestring), _expression(o._expression),
           _subcounter(o._subcounter), _submatches(o._submatches),
           _have_match(o._have_match), _flags(o._flags)
         {
@@ -153,7 +160,7 @@ struct Regex
 
             return false;
         }
-                
+
         std::string submatch(int number)
         {
             if (!matched(number))
@@ -163,15 +170,33 @@ struct Regex
                 _submatches[number].rm_eo - _submatches[number].rm_so);
         }
 
+        /**
+        * \brief replaces strings matched by parentesis
+        * \param each item of the vector is a parentesis replaced
+        * \return string replaced
+        * \note The overload method match only one string in parentesis.
+        * \author Eduardo Nunes Pereira
+        *
+        * If fails the empty string is returned.
+        */
+        std::string replace(ReplaceVector);
+        std::string replace(std::string);
+
         std::string operator[](int number)
         {
             return submatch(number);
+        }
+
+        unsigned int get_subcounter()
+        {
+            return _subcounter;
         }
 
      private:
         void initialize(void);
 
      protected:
+        std::string    _replaced_string;
         std::string    _basestring;
         Expression   & _expression;
 

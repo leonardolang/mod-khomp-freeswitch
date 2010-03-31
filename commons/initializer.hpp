@@ -39,68 +39,42 @@
 
 */
 
-#include <limits.h>
-
-#include <list>
 #include <vector>
-#include <string>
 
-#include <types.hpp>
+#ifndef _INITIALIZER_HPP_
+#define _INITIALIZER_HPP_
 
-#include <format.hpp>
-
-/* Generic string funcions */
-
-#ifndef _STRINGS_HPP_
-#define _STRINGS_HPP_
-
-struct Strings
+template < typename Type >
+struct Initializer: public std::vector< Type >
 {
-    typedef std::list<std::string>      list_type;
-    typedef std::vector<std::string>  vector_type;
+    typedef std::vector< Type > super;
 
-    struct Merger
+    Initializer(Type   e) { push_back(e); };
+    Initializer(Type & e) { push_back(e); };
+
+    Initializer & operator&(Initializer v)
     {
-        void          add(std::string);
-
-        std::string merge(const std::string &);
-        std::string merge(const char *);
-
-        bool empty() { return _list.empty(); };
-
-     protected:
-        list_type   _list;
+        insert(super::end(), v.begin(), v.end());
+        return *this;
     };
 
- public:
-    struct invalid_value
+    Initializer & operator&(Initializer & v)
     {
-        invalid_value(const char  * value): _value(value) {};
-        invalid_value(std::string   value): _value(value) {};
-
-        std::string & value() { return _value; }
-
-     protected:
-         std::string _value;
+        insert(super::end(), v.begin(), v.end());
+        return *this;
     };
 
-    struct not_implemented {};
+    Initializer & operator&(Type v)
+    {
+        insert(super::end(), v);
+        return *this;
+    };
 
-    static unsigned int tokenize(const std::string &, vector_type &, const std::string & delims = ",;:",
-                                 long int max_toxens = LONG_MAX, bool keep_empty = true);
-
-    static bool        toboolean(std::string);
-    static std::string fromboolean(bool);
-
-    static long               tolong(std::string, int base = 10);
-    static unsigned long      toulong(std::string, int base = 10);
-    static unsigned long long toulonglong(std::string, int base = 10);
-    static double             todouble(std::string);
-
-    static std::string lower(std::string);
-    static std::string hexadecimal(std::string);
-
-    static std::string trim(const std::string&, const std::string& trim_chars = " \f\n\r\t\v");
+    Initializer & operator&(Type  & v)
+    {
+        insert(super::end(), v);
+        return *this;
+    };
 };
 
-#endif // _STRINGS_HPP_ //
+#endif /* _INITIALIZER_HPP_ */

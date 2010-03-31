@@ -41,56 +41,70 @@
 
 *******************************************************************************/
 
-#ifndef _GLOBALS_H_
-#define _GLOBALS_H_
-#include "k3lapi.hpp"
+#ifndef _Logger_H_
+#define _Logger_H_
 
-#include <config_options.hpp>
-#include <k3lutil.hpp>
-#include <verbose.hpp>
-#include <regex.hpp>
+#include <switch.h>
+#include <simple_lock.hpp>
+#include <logger.hpp>
+#include "defs.h"
+#include "format.hpp"
 
-#include <vector>
-#include <string>
-#include <fstream>
-
-extern "C"
+namespace K
 {
-    #include <switch.h>
-}
 
-/* As this is a static-variable-only struct, member variable *
- * names need not to get "_" in front of the name            */
+struct SwitchConsoleLog {}; 
 
-struct Globals
+struct SwitchPrinter: public Logger::DefaultPrinter
 {
-    static const unsigned int switch_packet_duration  =                          30; // in ms
-    static const unsigned int boards_packet_duration  =                          16; // in ms
+    typedef Logger::DefaultPrinter Super;
+   
+    typedef Tagged::Union < std::ostream *, Tagged::Union < int, Tagged::Union < SwitchConsoleLog > > > BaseType;
 
-    static const unsigned int switch_packet_size      = switch_packet_duration *  8; // in bytes
-    static const unsigned int boards_packet_size      = boards_packet_duration *  8; // in bytes
+    SwitchPrinter(std::string & msg): Super(msg) {}; 
 
-    static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
+    using Super::operator();
 
-    static K3LAPI        k3lapi;
-    static K3LUtil       k3lutil;
-    static Verbose       verbose;
-
-    static std::string     base_path;
-    static std::ofstream   generic_file;
-
-    /* Config options class */
-    static ConfigOptions options;
-
-    static switch_endpoint_interface_t *khomp_endpoint_interface;
-    static switch_api_interface_t      *api_interface;
-    static switch_memory_pool_t        *module_pool;
-
-    static int             running;
-    static int             calls;
-
-    static unsigned int    flags;
-    static switch_mutex_t *mutex;
+    bool operator()(const SwitchConsoleLog & ignored)
+    {   
+        switch_log_printf(SWITCH_CHANNEL_LOG_CLEAN,SWITCH_LOG_CONSOLE,"%s",_msg.c_str());
+        return true;
+    };  
 };
 
-#endif /* _GLOBALS_H_ */
+/* Log manager declaration. */
+typedef Logger::Manager <class_type, output_type, SwitchPrinter, SimpleLock>  LogManager;
+
+/* Forward declaration */
+struct LogInternalManager; 
+
+struct Logger
+{
+    /* Logger instance. */
+    static LogManager Logg;
+
+    /* Util Logger instance. */
+    static LogInternalManager Logg2;
+};
+
+/* Internal logging facility declaration */
+struct LogInternalManager
+{
+    template < typename args_type >
+    bool operator()(class_type classe, int fd, args_type args)
+    {
+        switch (classe)
+        {
+            case C_CLI:
+                return K::Logger::Logg(classe, fd, args);
+
+            default:
+                return K::Logger::Logg(classe, args);
+        }
+    }
+};
+
+
+};
+
+#endif /* _Logger_H_ */

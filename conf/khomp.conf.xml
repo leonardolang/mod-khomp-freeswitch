@@ -8,28 +8,113 @@
     <param name="dialplan" value="XML"/>
     <!-- Default context for inbound/outbound calls -->
     <param name="context" value="default"/>
+
+    <!-- Channel config -->
+    <channels>
+        <!--
+        <param name="echo-canceller" value="yes" />
+        <param name="auto-gain-control" value="yes" />
+        <param name="out-of-band-dtmfs" value="yes" />
+        <param name="suppression-delay" value="yes" />
+        <param name="auto-fax-adjustment" value="yes" />
+        <param name="fax-adjustment-timeout" value="30" />
+        <param name="pulse-forwarding" value="yes" />
+        <param name="r2-strict-behaviour" value="no" />
+        <param name="r2-preconnect-wait" value="250" />
+        <param name="native-bridge" value="yes" />
+        <param name="context-digital" value="khomp-DD-LL" />
+        <param name="context-fxs" value="khomp-DD-CC" />
+        <param name="context-fxs-alt" value="khomp-DD" />
+        <param name="context-fxo" value="khomp-DD-CC" />
+        <param name="context-fxo-alt" value="khomp-DD" />
+        <param name="context-gsm-call" value="khomp-DD-CC" />
+        <param name="context-gsm-call-alt" value="khomp-DD" />
+        <param name="context-gsm-sms" value="khomp-sms-DD-CC" />
+        <param name="context-pr" value="khomp-DD-CC" />
+        <param name="log-to-console" value="standard" />
+        <param name="log-to-disk" value="standard" />
+        <param name="trace" value="" />
+        <param name="output-volume" value="0" />
+        <param name="input-volume" value="0" />
+        <param name="amaflags" value="default" />
+        <param name="callgroup" value="0" />
+        <param name="pickupgroup" value="0" />
+        <param name="accountcode" value="KhompBoard" />
+        <param name="language" value="pt_BR" />
+        <param name="mohclass" value="default" />
+        <param name="fxs-global-orig" value="0200" />
+        <param name="fxs-co-dialtone" value="0,90" />
+        <param name="fxs-bina" value="yes" />
+        <param name="has-ctbus" value="no" />
+        <param name="disconnect-delay" value="0" />
+        <param name="delay-ringback-co" value="1500" />
+        <param name="delay-ringback-pbx" value="2500" />
+        <param name="optimize-audio-path" value="no" />
+        <param name="ignore-letter-dtmfs" value="yes" />
+        <param name="fxo-send-pre-audio" value="yes" />
+        <param name="fxs-digit-timeout" value="7 " />
+        <param name="drop-collect-call" value="no" />
+        <param name="kommuter-activation" value="auto" />
+        <param name="kommuter-timeout" value="10" />
+        -->
+    </channels>
+
+    <groups>
+        <!--
+        <param name="pstn" value="b0l0+b0c0" />
+        -->
+    </groups>
+
+    <cadences>
+        <!--
+        <param name="fast-busy" value="100,100" />
+        <param name="ringback" value="1000,4000" />
+        <param name="pbx-dialtone" value="1000,100" />
+        <param name="vm-dialtone " value="1000,100,100,100" />
+        <param name="co-dialtone " value="0,0" />
+        -->
+    </cadences>
+
+    <fxs-branches>
+        <!--
+        <param name="880" value="111,222" />
+        -->
+    </fxs-branches>
+
+    <fxs-hotlines>
+        <!--
+        <param name="899" value="1232123" />
+        -->
+    </fxs-hotlines>
+
+    <fxs-options>
+        <!--
+        <param name="80" value="pickupgroup:10" />
+        -->
+    </fxs-options>
   </settings>
 
-  <profile name="New profile">
-    <!-- A configuration profile (preset) -->
-    <!-- What else can be define here? -->
-    <param name="echo-canceller" value="false" />
-    <param name="channel_search" value="ascending" />
+ <!-- New span definition to be used on dialplan -->
+ <!-- TODO: Span should be used only for outbound or inbound as well? -->
+  <span id="0">
     <param name="dialplan" value="XML"/>
     <param name="context" value="default"/>
-  </profile>
+    <!-- Dial String is used for outbound for selecting board/channel -->
+    <!-- TODO: How do we say board 1, channel 20 AND board 2, channel 1? -->
+    <param name="dialstring" value="0/1"/>
+  </span>
 
-  <group name="group1">
-    <!-- Members are defined using REGEX (PCRE) on the format board/channel -->
-    <!-- Can have several lines and allow spans to have multiple members -->
-    <param name="member" value="[0-1]/[0-59]" />
-  </group>
+  <span id="span1">
+    <param name="dialplan" value="test"/>
+    <param name="context" value="default"/>
+    <param name="dialstring" value="0/0"/>
+  </span>
 
- <!-- New span definition to be used on dialplan -->
-  <span id="0">
-    <!-- Connect profile with group -->
-    <param name="profile" value="New profile" />
-    <param name="group" value="group1" />
+  <span id="2">
+    <param name="dialplan" value="curl"/>
+    <param name="context" value="default"/>
+    <param name="dialstring" value="0/[0-9]"/>
   </span>
 
 </configuration>
+

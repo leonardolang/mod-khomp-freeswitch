@@ -98,7 +98,4 @@ switch_status_t channel_on_destroy(switch_core_session_t *session);
 
 switch_status_t channel_answer_channel(switch_core_session_t *session);
 
-/* Create a new channel on incoming call */
-bool khomp_channel_from_event(K3LAPI::target &, K3L_EVENT *);
-
 #endif /* _MOD_KHOMP_H_ */

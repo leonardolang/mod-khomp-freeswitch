@@ -39,68 +39,65 @@
 
 */
 
-#include <limits.h>
+#ifndef _THREAD_COMMON_HPP_
+#define _THREAD_COMMON_HPP_
 
-#include <list>
-#include <vector>
-#include <string>
+#include <config_commons.hpp>
 
 #include <types.hpp>
+//#include <function.hpp>
 
-#include <format.hpp>
-
-/* Generic string funcions */
-
-#ifndef _STRINGS_HPP_
-#define _STRINGS_HPP_
-
-struct Strings
+struct ThreadCommon
 {
-    typedef std::list<std::string>      list_type;
-    typedef std::vector<std::string>  vector_type;
+  protected:
+    template<typename FuncPtrType>
+    struct DecomposeFuncPtr;
 
-    struct Merger
+    template<typename ReturnType, typename ArgType>
+    struct DecomposeFuncPtr<ReturnType(*)(ArgType)>
     {
-        void          add(std::string);
-
-        std::string merge(const std::string &);
-        std::string merge(const char *);
-
-        bool empty() { return _list.empty(); };
-
-     protected:
-        list_type   _list;
+        typedef ReturnType Return;
     };
 
- public:
-    struct invalid_value
+    template<typename SomeClass>
+    struct DecomposeFuncPtr
     {
-        invalid_value(const char  * value): _value(value) {};
-        invalid_value(std::string   value): _value(value) {};
-
-        std::string & value() { return _value; }
-
-     protected:
-         std::string _value;
+        typedef void Return;
     };
 
-    struct not_implemented {};
+    template<typename ReturnType>
+    struct DecomposeFuncPtr<ReturnType(*)()>
+    {
+        typedef ReturnType Return;
+    };
 
-    static unsigned int tokenize(const std::string &, vector_type &, const std::string & delims = ",;:",
-                                 long int max_toxens = LONG_MAX, bool keep_empty = true);
+    template< typename FunctionType >
+    struct DecomposeFunction
+    {
+        typedef typename Select < IsClass< FunctionType >::Result, int,
+            typename DecomposeFuncPtr< FunctionType >::Return >::Result
+        Return;
+    };
 
-    static bool        toboolean(std::string);
-    static std::string fromboolean(bool);
+  public:
+    struct ThreadDataCommon
+    {
+        ThreadDataCommon() {}
 
-    static long               tolong(std::string, int base = 10);
-    static unsigned long      toulong(std::string, int base = 10);
-    static unsigned long long toulonglong(std::string, int base = 10);
-    static double             todouble(std::string);
+        virtual ~ThreadDataCommon() {}
 
-    static std::string lower(std::string);
-    static std::string hexadecimal(std::string);
+        virtual int run() = 0;
 
-    static std::string trim(const std::string&, const std::string& trim_chars = " \f\n\r\t\v");
+        ThreadCommon * _thread;
+
+        void * _self;
+        void * _attribute;
+    };
+
+    ThreadCommon() {}
 };
 
-#endif // _STRINGS_HPP_ //
+
+#include COMMONS_INCLUDE(thread.hpp)
+
+#endif /* _THREAD_COMMON_HPP_ */

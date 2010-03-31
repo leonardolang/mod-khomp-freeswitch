@@ -41,56 +41,96 @@
 
 *******************************************************************************/
 
-#ifndef _GLOBALS_H_
-#define _GLOBALS_H_
-#include "k3lapi.hpp"
+#include <utils.h>
 
-#include <config_options.hpp>
-#include <k3lutil.hpp>
-#include <verbose.hpp>
-#include <regex.hpp>
+/* Command */
 
-#include <vector>
-#include <string>
-#include <fstream>
-
-extern "C"
+bool ChanCommandHandler::writeNoSignal(const CommandRequest & cmd)
 {
-    #include <switch.h>
-}
-
-/* As this is a static-variable-only struct, member variable *
- * names need not to get "_" in front of the name            */
-
-struct Globals
-{
-    static const unsigned int switch_packet_duration  =                          30; // in ms
-    static const unsigned int boards_packet_duration  =                          16; // in ms
-
-    static const unsigned int switch_packet_size      = switch_packet_duration *  8; // in bytes
-    static const unsigned int boards_packet_size      = boards_packet_duration *  8; // in bytes
-
-    static const unsigned int    cng_buffer_size      =          boards_packet_size; // in bytes
-
-    static K3LAPI        k3lapi;
-    static K3LUtil       k3lutil;
-    static Verbose       verbose;
-
-    static std::string     base_path;
-    static std::ofstream   generic_file;
-
-    /* Config options class */
-    static ConfigOptions options;
-
-    static switch_endpoint_interface_t *khomp_endpoint_interface;
-    static switch_api_interface_t      *api_interface;
-    static switch_memory_pool_t        *module_pool;
-
-    static int             running;
-    static int             calls;
-
-    static unsigned int    flags;
-    static switch_mutex_t *mutex;
+    _fifo->_mutex.lock();
+    bool status = _fifo->_buffer.provide(cmd);
+    _fifo->_mutex.unlock();
+    return status;
 };
 
-#endif /* _GLOBALS_H_ */
+bool ChanCommandHandler::write(const CommandRequest & cmd)
+{
+    bool status = writeNoSignal(cmd);
+
+    if (status) signal();
+
+    return status;
+};
+
+void ChanCommandHandler::unreference()
+{
+    
+    if (!_fifo)
+        return;
+    
+    if(_fifo->_thread)
+    {
+        _fifo->_thread->join();
+        delete _fifo->_thread;
+        _fifo->_thread = NULL;
+    }
+
+    delete _fifo;
+    _fifo = NULL;
+};
+
+
+/* Event */
+
+bool ChanEventHandler::provide(const EventRequest & evt)
+{
+    _fifo->_mutex.lock();
+    bool status = _fifo->_buffer.provide(evt);
+    _fifo->_mutex.unlock();
+    return status;
+};
+
+bool ChanEventHandler::writeNoSignal(const EventRequest & evt)
+{
+    bool status = true;
+    _fifo->_mutex.lock();
+
+    try
+    {
+        _fifo->_buffer.provider_start().mirror(evt);
+        _fifo->_buffer.provider_commit();
+    }
+    catch(...) //BufferFull & e
+    {
+        status = false;
+    }
+
+    _fifo->_mutex.unlock();
+    return status;
+};
+
+bool ChanEventHandler::write(const EventRequest & evt)
+{
+    bool status = writeNoSignal(evt);
+
+    if (status) signal();
+
+    return status;
+};
+
+void ChanEventHandler::unreference()
+{
+    
+    if (!_fifo)
+        return;
+    
+    if(_fifo->_thread)
+    {
+        _fifo->_thread->join();
+        delete _fifo->_thread;
+        _fifo->_thread = NULL;
+    }
+
+    delete _fifo;
+    _fifo = NULL;
+};

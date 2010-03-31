@@ -1,7 +1,7 @@
-/*  
+/*
     KHOMP generic endpoint/channel library.
-    Copyright (C) 2007-2009 Khomp Ind. & Com.  
-  
+    Copyright (C) 2007-2009 Khomp Ind. & Com.
+
   The contents of this file are subject to the Mozilla Public License Version 1.1
   (the "License"); you may not use this file except in compliance with the
   License. You may obtain a copy of the License at http://www.mozilla.org/MPL/
@@ -23,20 +23,20 @@
 
   The LGPL header follows below:
 
-    This library is free software; you can redistribute it and/or  
-    modify it under the terms of the GNU Lesser General Public  
-    License as published by the Free Software Foundation; either  
-    version 2.1 of the License, or (at your option) any later version.  
-  
-    This library is distributed in the hope that it will be useful,  
-    but WITHOUT ANY WARRANTY; without even the implied warranty of  
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU  
-    Lesser General Public License for more details.  
-  
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
     You should have received a copy of the GNU Lesser General Public License
     along with this library; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA 
-  
+    51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 */
 
 #include <strings.hpp>
@@ -74,30 +74,71 @@ std::string Strings::Merger::merge(const char *sep)
     return merge(ssep);
 }
 
-void Strings::tokenize(const std::string & str, Strings::vector_type & tokens,
-    const std::string & delims, long int max_tokens)
+unsigned int Strings::tokenize(const std::string & str, Strings::vector_type & tokens,
+    const std::string & delims, long int max_tokens, bool keep_empty)
 {
+    std::string::size_type base = 0;
+
     std::string::size_type init = str.find_first_not_of(delims, 0);
     std::string::size_type fini = str.find_first_of(delims, init);
 
     long int cur_token = 1;
-    
+
     while (std::string::npos != init)
     {
+        if (keep_empty && base < init)
+        {
+            std::string::size_type cur_empty = init - base;
+
+            while (cur_empty && cur_token < max_tokens)
+            {
+                tokens.push_back("");
+
+                ++cur_token;
+                --cur_empty;
+            }
+        }
+
         if (std::string::npos != fini && cur_token < max_tokens)
         {
+            base = fini + 1;
+
             tokens.push_back(str.substr(init, fini - init));
             ++cur_token;
         }
         else
         {
+            base = str.size(); // find_first_of(delims, init);
+
             tokens.push_back(str.substr(init, str.size() - init));
-            break;
+           	break;
         }
 
-        init = str.find_first_not_of(delims, fini);
-        fini = str.find_first_of(delims, init);
+   	    init = str.find_first_not_of(delims, fini);
+       	fini = str.find_first_of(delims, init);
     }
+
+    if (keep_empty && base != str.size())
+    {
+        std::string::size_type cur_empty = str.size() - base + 1;
+
+   	    while (cur_empty && cur_token < max_tokens)
+       	{
+            tokens.push_back("");
+
+   	        ++cur_token;
+       		--cur_empty;
+        }
+
+        if (cur_empty)
+        {
+            std::string::size_type pos = base + cur_empty - 1;
+            tokens.push_back(str.substr(pos, str.size() - pos));
+            ++cur_token;
+        }
+    }
+
+    return (cur_token - 1);
 }
 
 bool Strings::toboolean(std::string str)
@@ -105,7 +146,7 @@ bool Strings::toboolean(std::string str)
     std::string tmp(str);
 
     Strings::lower(tmp);
-    
+
     if ((tmp == "true")  || (tmp == "yes")) return true;
     if ((tmp == "false") || (tmp == "no"))  return false;
 
@@ -152,6 +193,18 @@ unsigned long long Strings::toulonglong(std::string str, int base)
 #endif
 }
 
+double Strings::todouble(std::string str)
+{
+    char *str_end = 0;
+
+    double value = strtod(str.c_str(), &str_end);
+
+    if (str_end && *str_end == 0)
+        return value;
+
+    throw invalid_value(str);
+}
+
 std::string Strings::fromboolean(bool value)
 {
     if (value) return "true";
@@ -186,9 +239,9 @@ std::string Strings::hexadecimal(std::string value)
 std::string Strings::trim(const std::string& str, const std::string& trim_chars)
 {
     std::string result(str);
-    
+
     result.erase( result.find_last_not_of( trim_chars ) + 1 );
     result.erase( 0, result.find_first_not_of( trim_chars ) );
-    
+
     return result;
 }
